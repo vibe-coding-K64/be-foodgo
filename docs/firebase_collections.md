@@ -1,25 +1,45 @@
-# Tai lieu Firebase Firestore - FoodGo Customers
+# Tài liệu Firebase Firestore - FoodGo Backend
 
-Tai lieu nay ghi lai tat ca cac Firebase Firestore Collections duoc su dung trong du an `fe_foodgo_customers`, bao gom cau truc truong du lieu (fields), kieu du lieu, du lieu mau (mock data), va muc dich su dung trong code.
+Tài liệu này ghi lại tất cả các Firebase Firestore Collections được sử dụng trong dự án `be_foodgo`, bao gồm cấu trúc trường dữ liệu (fields), kiểu dữ liệu, dữ liệu mẫu (mock data), và mục đích sử dụng trong code.
 
 ---
 
-## Muc luc
+## Mục lục
 
-1. [Cau truc tong quan](#1-cau-truc-tong-quan)
-2. [Bang goc (Root Collections)](#2-bang-goc-root-collections)
+1. [Cấu trúc tổng quan](#1-cấu-trúc-tổng-quan)
+2. [Bảng gốc (Root Collections)](#2-bảng-gốc-root-collections)
    - [2.1. users](#21-users)
    - [2.2. system_configs](#22-system_configs)
    - [2.3. wallets](#23-wallets)
    - [2.4. transactions](#24-transactions)
-3. [Bang nhanh hoac Sub-collections](#3-bang-nhanh-hoac-sub-collections)
-4. [Danh sach cac truong co ban](#4-danh-sach-cac-truong-co-ban)
+   - [2.5. system_categories](#25-system_categories)
+   - [2.6. stores](#26-stores)
+   - [2.7. products](#27-products)
+   - [2.8. banners](#28-banners)
+   - [2.9. vouchers](#29-vouchers)
+   - [2.10. reviews](#210-reviews)
+   - [2.11. orders](#211-orders)
+   - [2.12. customer_profiles](#212-customer_profiles)
+   - [2.13. driver_profiles](#213-driver_profiles)
+   - [2.14. merchant_profiles](#214-merchant_profiles)
+   - [2.15. admin_profiles](#215-admin_profiles)
+   - [2.16. system_vouchers](#216-system_vouchers)
+3. [Bảng nhánh hoặc Sub-collections](#3-bảng-nhánh-hoặc-sub-collections)
+   - [3.1. customer_profiles/{userId}/addresses](#31-customer_profilesuseridaddresses)
+   - [3.2. customer_profiles/{userId}/payment_methods](#32-customer_profilesuseridpayment_methods)
+   - [3.3. customer_profiles/{userId}/notifications](#33-customer_profilesuseridnotifications)
+   - [3.4. customer_profiles/{userId}/cart](#34-customer_profilesuseridcart)
+   - [3.5. customer_profiles/{userId}/my_vouchers](#35-customer_profilesuseridmy_vouchers)
+   - [3.6. driver_profiles/{userId}/notifications](#36-driver_profilesuseridnotifications)
+   - [3.7. merchant_profiles/{userId}/notifications](#37-merchant_profilesuseridnotifications)
+   - [3.8. users/{userId}/search_history](#38-usersuseridsearch_history)
+4. [Danh sách các trường cơ bản](#4-danh-sách-các-trường-cơ-bản)
 
 ---
 
-## 1. Cau truc tong quan
+## 1. Cấu trúc tổng quan
 
-Firestore su dung cau truc phan cap nhu sau:
+Firestore sử dụng cấu trúc phân cấp như sau:
 
 ```
 Firestore Root
@@ -55,38 +75,36 @@ Firestore Root
 
 ---
 
-## 2. Bang goc (Root Collections)
+## 2. Bảng gốc (Root Collections)
 
 ### 2.1. `users`
 
-**Muc dich su dung:** Luu tru thong tin tai khoan nguoi dung co ban, dung de xac thuc dang nhap.
+**Mục đích sử dụng:** Lưu trữ thông tin tài khoản người dùng cơ bản, dùng để xác thực đăng nhập.
 
-**Duong dan:** `/users/{userId}`
+**Đường dẫn:** `/users/{userId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong    | Kieu du lieu      | Bat buoc | Mo ta                                                                       |
+| STT | Tên trường    | Kiểu dữ liệu      | Bắt buộc | Mô tả                                                                       |
 | --- | ------------- | ----------------- | -------- | --------------------------------------------------------------------------- |
-| 1   | `id`          | String            | Co       | ID document tu Firestore (tu dong tao)                                      |
-| 2   | `email`       | String            | Co       | Dia chi email nguoi dung                                                    |
-| 3   | `password`    | String            | Co       | Mat khau (can ma hoa)                                                       |
-| 4   | `fullName`    | String            | Co       | Ho va ten day du                                                            |
-| 5   | `phoneNumber` | String            | Co       | So dien thoai di dong                                                       |
-| 6   | `photoUrl`    | String (nullable) | Khong    | Duong dan anh dai dien                                                      |
-| 7   | `roles`       | ArrayNumber       | Khong    | Danh sach quyen. 1=Khach hang, 2=Tai xe, 3=Quan ban, 4=Admin. Mac dinh: [1] |
-| 8   | `createdAt`   | Timestamp         | Co       | Thoi diem tao tai khoan                                                     |
-| 9   | `updatedAt`   | Timestamp         | Khong    | Thoi diem cap nhat gan nhat                                                 |
+| 1   | `id`          | String            | Có       | ID document từ Firestore (tự động tạo)                                      |
+| 2   | `email`       | String            | Có       | Địa chỉ email người dùng                                                    |
+| 3   | `password`    | String            | Có       | Mật khẩu (cần mã hóa)                                                       |
+| 4   | `fullName`    | String            | Có       | Họ và tên đầy đủ                                                            |
+| 5   | `phoneNumber` | String            | Có       | Số điện thoại di động                                                       |
+| 6   | `photoUrl`    | String (nullable) | Không    | Đường dẫn ảnh đại diện                                                      |
+| 7   | `roles`       | ArrayNumber       | Không    | Danh sách quyền. 1=Khách hàng, 2=Tài xế, 3=Quán bán, 4=Admin. Mặc định: [1] |
+| 8   | `createdAt`   | Timestamp         | Có       | Thời điểm tạo tài khoản                                                     |
+| 9   | `updatedAt`   | Timestamp         | Không    | Thời điểm cập nhật gần nhất                                                 |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "user_001",
   "email": "khachhang@gmail.com",
   "password": "password123",
-  "fullName": "Khoi",
+  "fullName": "Khôi",
   "phoneNumber": "0123456789",
   "photoUrl": "https://example.com/avatar/user001.jpg",
   "roles": [1, 2, 3],
@@ -95,37 +113,35 @@ Firestore Root
 }
 ```
 
-**Nguoi dung test:** user_001 (roles: [1,2,3] - Khach hang + Tai xe + Quan ban), user_002 (roles: [4] - Admin)
+**Người dùng test:** user_001 (roles: [1,2,3] - Khách hàng + Tài xế + Quán bán), user_002 (roles: [4] - Admin)
 
 ---
 
 ### 2.2. `system_configs`
 
-**Muc dich su dung:** Luu tru cac thong so cau hinh he thong nhu phi platform, phi giao hang, ti le hoa hong, che do bao tri, va cac gioi han ve vi.
+**Mục đích sử dụng:** Lưu trữ các thông số cấu hình hệ thống như phí platform, phí giao hàng, tỷ lệ hoa hồng, chế độ bảo trì, và các giới hạn về ví.
 
-**Duong dan:** `/system_configs/{configId}`
+**Đường dẫn:** `/system_configs/{configId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong                      | Kieu du lieu  | Bat buoc | Mo ta                                      |
+| STT | Tên trường                      | Kiểu dữ liệu  | Bắt buộc | Mô tả                                      |
 | --- | ------------------------------- | ------------- | -------- | ------------------------------------------ |
-| 1   | `id`                            | String        | Co       | ID document                                |
-| 2   | `platformFeePercentage`         | Number        | Co       | Phan tram phi nền tảng (VD: 15 = 15%)     |
-| 3   | `baseDeliveryFee`               | Number        | Co       | Phi giao hang co ban (VND)                 |
-| 4   | `minDeliveryFee`                | Number        | Co       | Phi giao hang toi thieu (VND)              |
-| 5   | `maxDeliveryFee`                | Number        | Co       | Phi giao hang toi da (VND)                 |
-| 6   | `driverCommissionPercentage`     | Number        | Co       | % hoa hong cho tai xe (VD: 80 = 80%)      |
-| 7   | `merchantCommissionPercentage`   | Number        | Co       | % hoa hong cho cua hang (VD: 85 = 85%)    |
-| 8   | `minWithdrawalAmount`           | Number        | Co       | So du rut toi thieu (VND)                  |
-| 9   | `maxWithdrawalAmount`           | Number        | Co       | So du rut toi da (VND)                     |
-| 10  | `appVersion`                    | String        | Co       | Phien ban ung dung hien tai                |
-| 11  | `maintenanceMode`               | Boolean       | Co       | Che do bao tri (true = dang bao tri)       |
-| 12  | `createdAt`                     | Timestamp     | Co       | Thoi diem tao                              |
-| 13  | `updatedAt`                     | Timestamp     | Co       | Thoi diem cap nhat gan nhat                |
+| 1   | `id`                            | String        | Có       | ID document                                |
+| 2   | `platformFeePercentage`         | Number        | Có       | Phần trăm phí nền tảng (VD: 15 = 15%)     |
+| 3   | `baseDeliveryFee`               | Number        | Có       | Phí giao hàng cơ bản (VND)                |
+| 4   | `minDeliveryFee`                | Number        | Có       | Phí giao hàng tối thiểu (VND)              |
+| 5   | `maxDeliveryFee`                | Number        | Có       | Phí giao hàng tối đa (VND)                |
+| 6   | `driverCommissionPercentage`     | Number        | Có       | % hoa hồng cho tài xế (VD: 80 = 80%)      |
+| 7   | `merchantCommissionPercentage`   | Number        | Có       | % hoa hồng cho cửa hàng (VD: 85 = 85%)    |
+| 8   | `minWithdrawalAmount`           | Number        | Có       | Số dư rút tối thiểu (VND)                 |
+| 9   | `maxWithdrawalAmount`           | Number        | Có       | Số dư rút tối đa (VND)                    |
+| 10  | `appVersion`                    | String        | Có       | Phiên bản ứng dụng hiện tại               |
+| 11  | `maintenanceMode`               | Boolean       | Có       | Chế độ bảo trì (true = đang bảo trì)      |
+| 12  | `createdAt`                     | Timestamp     | Có       | Thời điểm tạo                             |
+| 13  | `updatedAt`                     | Timestamp     | Có       | Thời điểm cập nhật gần nhất              |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
@@ -149,27 +165,25 @@ Firestore Root
 
 ### 2.3. `wallets`
 
-**Muc dich su dung:** Luu tru vi tien cho merchant va driver, gom so du hien tai, tong thu nhap, tong da rut, va so du cho.
+**Mục đích sử dụng:** Lưu trữ ví tiền cho merchant và driver, gồm số dư hiện tại, tổng thu nhập, tổng đã rút, và số dư chờ.
 
-**Duong dan:** `/wallets/{walletId}`
+**Đường dẫn:** `/wallets/{walletId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong          | Kieu du lieu  | Bat buoc | Mo ta                               |
+| STT | Tên trường          | Kiểu dữ liệu  | Bắt buộc | Mô tả                               |
 | --- | ------------------- | ------------- | -------- | ----------------------------------- |
-| 1   | `id`                | String        | Co       | ID document                         |
-| 2   | `userId`            | String        | Co       | ID nguoi dung so huu vi             |
-| 3   | `role`              | String        | Co       | Vai tro: "merchant" hoac "driver"    |
-| 4   | `balance`           | Number        | Co       | So du hien tai (VND)                |
-| 5   | `totalEarned`       | Number        | Co       | Tong thu nhap tu truoc toi nay (VND)|
-| 6   | `totalWithdrawn`    | Number        | Co       | Tong so da rut (VND)                |
-| 7   | `pendingBalance`    | Number        | Co       | So du cho (chua giai ngan, VND)     |
-| 8   | `createdAt`         | Timestamp     | Co       | Thoi diem tao vi                    |
-| 9   | `updatedAt`         | Timestamp     | Co       | Thoi diem cap nhat gan nhat         |
+| 1   | `id`                | String        | Có       | ID document                         |
+| 2   | `userId`            | String        | Có       | ID người dùng sở hữu ví            |
+| 3   | `role`              | String        | Có       | Vai trò: "merchant" hoặc "driver"    |
+| 4   | `balance`           | Number        | Có       | Số dư hiện tại (VND)               |
+| 5   | `totalEarned`       | Number        | Có       | Tổng thu nhập từ trước đến nay (VND)|
+| 6   | `totalWithdrawn`    | Number        | Có       | Tổng số đã rút (VND)               |
+| 7   | `pendingBalance`    | Number        | Có       | Số dư chờ (chưa giải ngân, VND)     |
+| 8   | `createdAt`         | Timestamp     | Có       | Thời điểm tạo ví                   |
+| 9   | `updatedAt`         | Timestamp     | Có       | Thời điểm cập nhật gần nhất        |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
@@ -189,29 +203,27 @@ Firestore Root
 
 ### 2.4. `transactions`
 
-**Muc dich su dung:** Luu tru lich su giao dich cua vi, bao gom cac loai nhu thanh toan don hang, thu nhap giao hang, va rut tien.
+**Mục đích sử dụng:** Lưu trữ lịch sử giao dịch của ví, bao gồm các loại như thanh toán đơn hàng, thu nhập giao hàng, và rút tiền.
 
-**Duong dan:** `/transactions/{transactionId}`
+**Đường dẫn:** `/transactions/{transactionId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong      | Kieu du lieu  | Bat buoc | Mo ta                                     |
+| STT | Tên trường      | Kiểu dữ liệu  | Bắt buộc | Mô tả                                     |
 | --- | --------------- | ------------- | -------- | ----------------------------------------- |
-| 1   | `id`            | String        | Co       | ID document                               |
-| 2   | `walletId`      | String        | Co       | ID vi lien quan                           |
-| 3   | `userId`        | String        | Co       | ID nguoi thuc hien giao dich              |
-| 4   | `type`          | String        | Co       | Loai giao dich: order_payment, delivery_income, withdrawal, refund |
-| 5   | `amount`        | Number        | Co       | Tong so tien giao dich (VND)              |
-| 6   | `fee`           | Number        | Co       | Phi giao dich (VND)                       |
-| 7   | `netAmount`     | Number        | Co       | So tien thuc nhan = amount - fee (VND)    |
-| 8   | `description`   | String        | Khong    | Mo ta giao dich                           |
-| 9   | `orderId`       | String (null) | Khong    | ID don hang lien quan (neu co)             |
-| 10  | `status`        | String        | Co       | Trang thai: pending, completed, failed    |
-| 11  | `createdAt`     | Timestamp     | Co       | Thoi diem tao                             |
+| 1   | `id`            | String        | Có       | ID document                               |
+| 2   | `walletId`      | String        | Có       | ID ví liên quan                           |
+| 3   | `userId`        | String        | Có       | ID người thực hiện giao dịch             |
+| 4   | `type`          | String        | Có       | Loại giao dịch: order_payment, delivery_income, withdrawal, refund |
+| 5   | `amount`        | Number        | Có       | Tổng số tiền giao dịch (VND)             |
+| 6   | `fee`           | Number        | Có       | Phí giao dịch (VND)                       |
+| 7   | `netAmount`     | Number        | Có       | Số tiền thực nhận = amount - fee (VND)   |
+| 8   | `description`   | String        | Không    | Mô tả giao dịch                           |
+| 9   | `orderId`       | String (null) | Không    | ID đơn hàng liên quan (nếu có)           |
+| 10  | `status`        | String        | Có       | Trạng thái: pending, completed, failed    |
+| 11  | `createdAt`     | Timestamp     | Có       | Thời điểm tạo                            |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
@@ -222,51 +234,49 @@ Firestore Root
   "amount": 76500.0,
   "fee": 11475.0,
   "netAmount": 65025.0,
-  "description": "Don hang order_001 - Phien ban tru phi hoa hong",
+  "description": "Đơn hàng order_001 - Phiên bản trừ phí hoa hồng",
   "orderId": "order_001",
   "status": "completed",
   "createdAt": "2026-04-07T00:00:00Z"
 }
 ```
 
-**Cac loai giao dich (type):**
+**Các loại giao dịch (type):**
 
-| type              | Mo ta                          |
+| type              | Mô tả                          |
 | ----------------- | ------------------------------ |
-| `order_payment`   | Thanh toan don hang (merchant) |
-| `delivery_income` | Thu nhap giao hang (driver)     |
-| `withdrawal`      | Rut tien                       |
-| `refund`          | Hoan tien                      |
+| `order_payment`   | Thanh toán đơn hàng (merchant) |
+| `delivery_income` | Thu nhập giao hàng (driver)     |
+| `withdrawal`      | Rút tiền                       |
+| `refund`          | Hoàn tiền                      |
 
 ---
 
 ### 2.5. `system_categories`
 
-**Muc dich su dung:** Luu tru danh sach danh muc mon an/loai cua hang hien thi tren trang chu (Com, Pho/Bun, Tra sua, An vat, ...).
+**Mục đích sử dụng:** Lưu trữ danh sách danh mục món ăn/loại cửa hàng hiển thị trên trang chủ (Cơm, Phở/Bún, Trà sữa, Ăn vặt...).
 
-**Duong dan:** `/system_categories/{categoryId}`
+**Đường dẫn:** `/system_categories/{categoryId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong  | Kieu du lieu         | Bat buoc | Mo ta                                     |
+| STT | Tên trường  | Kiểu dữ liệu         | Bắt buộc | Mô tả                                     |
 | --- | ----------- | -------------------- | -------- | ----------------------------------------- |
-| 1   | `id`        | String               | Co       | ID document tu Firestore                  |
-| 2   | `name`      | String               | Co       | Ten danh muc (VD: "Com", "Tra sua")       |
-| 3   | `icon`      | String               | Co       | Ten icon (VD: "restaurant", "local_cafe") |
-| 4   | `order`     | Number               | Co       | Thu tu sap xep hien thi                   |
-| 5   | `imageUrl`  | String               | Co       | Duong dan anh danh muc                    |
-| 6   | `createdAt` | Timestamp            | Co       | Thoi diem tao                             |
-| 7   | `updatedAt` | Timestamp            | Co       | Thoi diem cap nhat                        |
-| 8   | `deletedAt` | Timestamp (nullable) | Khong    | Thoi diem xoa (neu co soft delete)        |
+| 1   | `id`        | String               | Có       | ID document từ Firestore                  |
+| 2   | `name`      | String               | Có       | Tên danh mục (VD: "Cơm", "Trà sữa")      |
+| 3   | `icon`      | String               | Có       | Tên icon (VD: "restaurant", "local_cafe") |
+| 4   | `order`     | Number               | Có       | Thứ tự sắp xếp hiển thị                  |
+| 5   | `imageUrl`  | String               | Có       | Đường dẫn ảnh danh mục                   |
+| 6   | `createdAt` | Timestamp            | Có       | Thời điểm tạo                            |
+| 7   | `updatedAt` | Timestamp            | Có       | Thời điểm cập nhật                       |
+| 8   | `deletedAt` | Timestamp (nullable)  | Không    | Thời điểm xóa (nếu có soft delete)       |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "cate_001",
-  "name": "Com",
+  "name": "Cơm",
   "icon": "restaurant",
   "order": 1,
   "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
@@ -276,61 +286,59 @@ Firestore Root
 }
 ```
 
-**Cac muc hien co:** Com (cate_001), Pho/Bun (cate_002), Tra sua (cate_003), An vat (cate_004), Ga ran (cate_005), Mon Han (cate_006), Mon Nhat (cate_007), Banh mi (cate_008), Lau/Buffet (cate_009), Tra cay (cate_010).
+**Các mục hiện có:** Cơm (cate_001), Phở/Bún (cate_002), Trà sữa (cate_003), Ăn vặt (cate_004), Gà rán (cate_005), Món Hàn (cate_006), Món Nhật (cate_007), Bánh mì (cate_008), Lẩu/Buffet (cate_009), Trà trái cây (cate_010).
 
 ---
 
 ### 2.6. `stores`
 
-**Muc dich su dung:** Luu tru thong tin chi tiet cua cac quan an/cua hang, bao gom ten, dia chi, danh gia, phi giao hang, thoi gian giao, va danh sach danh muc noi bo cua quan.
+**Mục đích sử dụng:** Lưu trữ thông tin chi tiết của các quán ăn/cửa hàng, bao gồm tên, địa chỉ, đánh giá, phí giao hàng, thời gian giao, và danh sách danh mục nội bộ của quán.
 
-**Duong dan:** `/stores/{storeId}`
+**Đường dẫn:** `/stores/{storeId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong              | Kieu du lieu      | Bat buoc | Mo ta                                                        |
+| STT | Tên trường              | Kiểu dữ liệu      | Bắt buộc | Mô tả                                                        |
 | --- | ----------------------- | ----------------- | -------- | ------------------------------------------------------------ |
-| 1   | `id`                    | String            | Co       | ID document tu Firestore                                     |
-| 2   | `name`                  | String            | Co       | Ten quan an                                                  |
-| 3   | `address`               | String            | Co       | Dia chi cu the (VD: "123 Le Van Viet, TP. Thu Duc")          |
-| 4   | `rating`                | Number            | Co       | Diem danh gia trung binh (0.0 - 5.0)                         |
-| 5   | `reviewCount`           | Number            | Co       | Tong so danh gia                                             |
-| 6   | `avtUrl`                | String            | Co       | Duong dan anh dai dien (avatar)                              |
-| 7   | `backUrl`               | String            | Co       | Duong dan anh bia (backdrop)                                 |
-| 8   | `isOpen`                | Boolean           | Co       | Quan co dang mo khong                                        |
-| 9   | `deliveryTime`          | String            | Co       | Thoi gian giao uoc tinh (VD: "20-30 phut")                   |
-| 10  | `deliveryFee`           | Number            | Co       | Phi giao hang (VND)                                          |
-| 11  | `categoryIds`           | ArrayString       | Khong    | Danh sach ID danh muc he thong ma quan nay thuoc             |
-| 12  | `restaurant_categories` | MapString, Object | Khong    | Danh muc noi bo cua quan (VD: mon chinh, mon phu, nuoc uong) |
-| 13  | `createdAt`             | Timestamp         | Co       | Thoi diem tao                                                |
-| 14  | `updatedAt`             | Timestamp         | Co       | Thoi diem cap nhat                                           |
+| 1   | `id`                    | String            | Có       | ID document từ Firestore                                     |
+| 2   | `name`                  | String            | Có       | Tên quán ăn                                                 |
+| 3   | `address`               | String            | Có       | Địa chỉ cụ thể (VD: "123 Lê Văn Việt, TP. Thủ Đức")        |
+| 4   | `rating`                | Number            | Có       | Điểm đánh giá trung bình (0.0 - 5.0)                        |
+| 5   | `reviewCount`           | Number            | Có       | Tổng số đánh giá                                            |
+| 6   | `avtUrl`                | String            | Có       | Đường dẫn ảnh đại diện (avatar)                            |
+| 7   | `backUrl`               | String            | Có       | Đường dẫn ảnh bìa (backdrop)                                |
+| 8   | `isOpen`                | Boolean           | Có       | Quán có đang mở không                                        |
+| 9   | `deliveryTime`          | String            | Có       | Thời gian giao ước tính (VD: "20-30 phút")                   |
+| 10  | `deliveryFee`           | Number            | Có       | Phí giao hàng (VND)                                          |
+| 11  | `categoryIds`           | ArrayString       | Không    | Danh sách ID danh mục hệ thống mà quán này thuộc            |
+| 12  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
+| 13  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
+| 14  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "store_001",
-  "name": "Com tam Phuc Loc Tho",
-  "address": "123 Le Van Viet, TP. Thu Duc",
+  "name": "Cơm tám Phúc Lộc Thọ",
+  "address": "123 Lê Văn Việt, TP. Thủ Đức",
   "rating": 4.8,
   "reviewCount": 500,
   "avtUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
   "backUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
   "isOpen": true,
-  "deliveryTime": "20-30 phut",
+  "deliveryTime": "20-30 phút",
   "deliveryFee": 15000.0,
   "categoryIds": ["cate_001", "cate_004"],
   "restaurant_categories": {
     "rest_cate_001": {
-      "name": "Mon chinh",
+      "name": "Món chính",
       "order": 1,
       "createdAt": "2026-04-07T00:00:00Z",
       "updatedAt": "2026-04-07T00:00:00Z"
     },
     "rest_cate_002": {
-      "name": "Mon phu",
+      "name": "Món phụ",
       "order": 2,
       "createdAt": "2026-04-07T00:00:00Z",
       "updatedAt": "2026-04-07T00:00:00Z"
@@ -341,42 +349,40 @@ Firestore Root
 }
 ```
 
-**Cac quan hien co:** store_001 (Com tam Phuc Loc Tho), store_002 (Tra sua Tocotoco), store_003 (Ga ran KFC Nguyen Cuu), store_004 (Bun bo Hue Ba Le).
+**Các quán hiện có:** store_001 (Cơm tám Phúc Lộc Thọ), store_002 (Trà sữa Tocotoco), store_003 (Gà rán KFC Nguyễn Cửu), store_004 (Bún bò Huế Ba Lê).
 
 ---
 
 ### 2.7. `products`
 
-**Muc dich su dung:** Luu tru thong tin san pham/mon an cua tung quan, bao gom gia, mo ta, tuy chon (size, topping), trang thai ton kho, va thong tin quang cao.
+**Mục đích sử dụng:** Lưu trữ thông tin sản phẩm/món ăn của từng quán, bao gồm giá, mô tả, tùy chọn (size, topping), trạng thái tồn kho, và thông tin quảng cáo.
 
-**Duong dan:** `/products/{productId}`
+**Đường dẫn:** `/products/{productId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong     | Kieu du lieu | Bat buoc | Mo ta                                        |
+| STT | Tên trường     | Kiểu dữ liệu | Bắt buộc | Mô tả                                        |
 | --- | -------------- | ------------ | -------- | -------------------------------------------- |
-| 1   | `id`           | String       | Co       | ID document tu Firestore                     |
-| 2   | `storeId`      | String       | Co       | ID quan chua san pham nay                    |
-| 3   | `categoryId`   | String       | Co       | ID danh muc he thong                         |
-| 4   | `categoryName` | String       | Co       | Ten danh muc he thong                        |
-| 5   | `name`         | String       | Co       | Ten mon an                                   |
-| 6   | `description`  | String       | Co       | Mo ta chi tiet mon an                        |
-| 7   | `basePrice`    | Number       | Co       | Gia co so (chua tinh size/topping)           |
-| 8   | `imageUrl`     | String       | Co       | Duong dan anh mon an                         |
-| 9   | `isOutOfStock` | Boolean      | Co       | Co dang het hang khong                       |
-| 10  | `isFeatured`   | Boolean      | Co       | Co phai mon noi bat khong                    |
-| 11  | `optionGroups` | ArrayObject  | Khong    | Danh sach nhom tuy chon (size, topping, ...) |
-| 12  | `createdAt`    | Timestamp    | Co       | Thoi diem tao                                |
-| 13  | `updatedAt`    | Timestamp    | Co       | Thoi diem cap nhat                           |
+| 1   | `id`           | String       | Có       | ID document từ Firestore                     |
+| 2   | `storeId`      | String       | Có       | ID quán chứa sản phẩm này                   |
+| 3   | `categoryId`   | String       | Có       | ID danh mục hệ thống                        |
+| 4   | `categoryName` | String       | Có       | Tên danh mục hệ thống                       |
+| 5   | `name`         | String       | Có       | Tên món ăn                                   |
+| 6   | `description`  | String       | Có       | Mô tả chi tiết món ăn                        |
+| 7   | `basePrice`    | Number       | Có       | Giá cơ sở (chưa tính size/topping)          |
+| 8   | `imageUrl`     | String       | Có       | Đường dẫn ảnh món ăn                        |
+| 9   | `isOutOfStock` | Boolean      | Có       | Có đang hết hàng không                        |
+| 10  | `isFeatured`   | Boolean      | Có       | Có phải món nổi bật không                    |
+| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)   |
+| 12  | `createdAt`    | Timestamp    | Có       | Thời điểm tạo                               |
+| 13  | `updatedAt`    | Timestamp    | Có       | Thời điểm cập nhật                          |
 
-
-**Cau truc optionGroups (truong phuc tap):**
+**Cấu trúc optionGroups (trường phức tạp):**
 
 ```json
 "optionGroups": [
   {
-    "name": "Kich thuoc",
+    "name": "Kích thước",
     "options": [
       {"name": "M", "price": 0.0},
       {"name": "L", "price": 5000.0}
@@ -385,33 +391,33 @@ Firestore Root
   {
     "name": "Topping",
     "options": [
-      {"name": "Tran chau", "price": 5000.0},
-      {"name": "Thach", "price": 3000.0}
+      {"name": "Trân châu", "price": 5000.0},
+      {"name": "Thạch", "price": 3000.0}
     ]
   }
 ]
 ```
 
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "prod_001",
   "storeId": "store_001",
   "categoryId": "cate_001",
-  "categoryName": "Com",
-  "name": "Com tam suon bi cha",
-  "description": "Com tam ngon chuan vi Sai Gon voi suon nuong thom phuc",
+  "categoryName": "Cơm",
+  "name": "Cơm tám sườn bì chả",
+  "description": "Cơm tám ngon chuẩn vị Sài Gòn với sườn nướng thơm phức",
   "basePrice": 45000.0,
   "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
   "isOutOfStock": false,
   "isFeatured": true,
   "optionGroups": [
     {
-      "name": "Kich thuoc",
+      "name": "Kích thước",
       "options": [
-        {"name": "Vua", "price": 0.0},
-        {"name": "Lon", "price": 10000.0}
+        {"name": "Vừa", "price": 0.0},
+        {"name": "Lớn", "price": 10000.0}
       ]
     }
   ],
@@ -420,38 +426,36 @@ Firestore Root
 }
 ```
 
-**Tong so san pham mau:** 15 san pham, phan bo cho 4 quan (store_001 den store_004).
+**Tổng số sản phẩm mẫu:** 15 sản phẩm, phân bổ cho 4 quán (store_001 đến store_004).
 
 ---
 
 ### 2.8. `banners`
 
-**Muc dich su dung:** Luu tru thong tin banner quang cao hien thi tren trang chu (carousel).
+**Mục đích sử dụng:** Lưu trữ thông tin banner quảng cáo hiển thị trên trang chủ (carousel).
 
-**Duong dan:** `/banners/{bannerId}`
+**Đường dẫn:** `/banners/{bannerId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong  | Kieu du lieu      | Bat buoc | Mo ta                             |
+| STT | Tên trường  | Kiểu dữ liệu      | Bắt buộc | Mô tả                             |
 | --- | ----------- | ----------------- | -------- | --------------------------------- |
-| 1   | `id`        | String            | Co       | ID document tu Firestore          |
-| 2   | `title`     | String            | Co       | Tieu de banner                    |
-| 3   | `imageUrl`  | String            | Co       | Duong dan anh banner              |
-| 4   | `storeId`   | String (nullable) | Khong    | Neu banner danh cho 1 quan cu the |
-| 5   | `storeName` | String (nullable) | Khong    | Ten quan (neu co)                 |
-| 6   | `isActive`  | Boolean           | Co       | Banner co dang hoat dong khong    |
-| 7   | `order`     | Number            | Co       | Thu tu hien thi                   |
-| 8   | `createdAt` | Timestamp         | Co       | Thoi diem tao                     |
-| 9   | `updatedAt` | Timestamp         | Co       | Thoi diem cap nhat                |
+| 1   | `id`        | String            | Có       | ID document từ Firestore          |
+| 2   | `title`     | String            | Có       | Tiêu đề banner                   |
+| 3   | `imageUrl`  | String            | Có       | Đường dẫn ảnh banner              |
+| 4   | `storeId`   | String (nullable) | Không    | Nếu banner dành cho 1 quán cụ thể |
+| 5   | `storeName` | String (nullable) | Không    | Tên quán (nếu có)                  |
+| 6   | `isActive`  | Boolean           | Có       | Banner có đang hoạt động không     |
+| 7   | `order`     | Number            | Có       | Thứ tự hiển thị                   |
+| 8   | `createdAt` | Timestamp         | Có       | Thời điểm tạo                     |
+| 9   | `updatedAt` | Timestamp         | Có       | Thời điểm cập nhật                |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "banner_001",
-  "title": "Sieu sale giua thang",
+  "title": "Siêu sale giữa tháng",
   "imageUrl": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&q=80",
   "storeId": null,
   "storeName": null,
@@ -462,44 +466,42 @@ Firestore Root
 }
 ```
 
-**Cac banner hien co:** banner_001 (Sieu sale giua thang), banner_002 (Freeship 0 dong), banner_003 (Le hoi am thuc), banner_004 (Uong tra van chiu).
+**Các banner hiện có:** banner_001 (Siêu sale giữa tháng), banner_002 (Freeship 0 đồng), banner_003 (Lễ hội ẩm thực), banner_004 (Uống trà vẫn chiều).
 
 ---
 
-### 2.9. `vouchers` (Voucher he thong / Public)
+### 2.9. `vouchers` (Voucher hệ thống / Public)
 
-**Muc dich su dung:** Luu tru thong tin voucher co san trong he thong, hien thi tai trangUu dai de khach hang xem. (Luu y: day la collection `vouchers`, phan biet voi `system_vouchers` ben duoi.)
+**Mục đích sử dụng:** Lưu trữ thông tin voucher có sẵn trong hệ thống, hiển thị tại trang Ưu đãi để khách hàng xem. (Lưu ý: đây là collection `vouchers`, phân biệt với `system_vouchers` bên dưới.)
 
-**Duong dan:** `/vouchers/{voucherId}`
+**Đường dẫn:** `/vouchers/{voucherId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong       | Kieu du lieu | Bat buoc | Mo ta                               |
+| STT | Tên trường       | Kiểu dữ liệu | Bắt buộc | Mô tả                               |
 | --- | ---------------- | ------------ | -------- | ----------------------------------- |
-| 1   | `id`             | String       | Co       | ID document tu Firestore            |
-| 2   | `title`          | String       | Co       | Tieu de voucher                     |
-| 3   | `subtitle`       | String       | Co       | Mo ta ngan gon                      |
-| 4   | `pointsRequired` | Number       | Co       | So diem can de doi voucher nay      |
-| 5   | `imageUrl`       | String       | Co       | Duong dan anh voucher               |
-| 6   | `remaining`      | Number       | Co       | So luong voucher con lai            |
-| 7   | `terms`          | String       | Co       | Dieu khoan su dung                  |
-| 8   | `minOrderValue`  | Number       | Co       | Don hang toi thieu de su dung (VND) |
-| 9   | `createdAt`      | Timestamp    | Co       | Thoi diem tao                       |
-| 10  | `updatedAt`      | Timestamp    | Co       | Thoi diem cap nhat                  |
+| 1   | `id`             | String       | Có       | ID document từ Firestore            |
+| 2   | `title`          | String       | Có       | Tiêu đề voucher                     |
+| 3   | `subtitle`       | String       | Có       | Mô tả ngắn gọn                      |
+| 4   | `pointsRequired` | Number       | Có       | Số điểm cần để đổi voucher này     |
+| 5   | `imageUrl`       | String       | Có       | Đường dẫn ảnh voucher               |
+| 6   | `remaining`      | Number       | Có       | Số lượng voucher còn lại            |
+| 7   | `terms`          | String       | Có       | Điều khoản sử dụng                  |
+| 8   | `minOrderValue`  | Number       | Có       | Đơn hàng tối thiểu để sử dụng (VND) |
+| 9   | `createdAt`      | Timestamp    | Có       | Thời điểm tạo                       |
+| 10  | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật                  |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "sys_voucher_001",
-  "title": "Giam 20K cho don tu 100K",
-  "subtitle": "Danh cho khach hang moi",
+  "title": "Giảm 20K cho đơn từ 100K",
+  "subtitle": "Dành cho khách hàng mới",
   "pointsRequired": 200,
   "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
   "remaining": 100,
-  "terms": "Ap dung cho tat ca quan an.",
+  "terms": "Áp dụng cho tất cả quán ăn.",
   "minOrderValue": 100000.0,
   "createdAt": "2026-04-07T00:00:00Z",
   "updatedAt": "2026-04-07T00:00:00Z"
@@ -510,39 +512,37 @@ Firestore Root
 
 ### 2.10. `reviews`
 
-**Muc dich su dung:** Luu tru danh gia cua khach hang ve cac quan an, bao gom sao, binh luan, va hinh anh kem theo.
+**Mục đích sử dụng:** Lưu trữ đánh giá của khách hàng về các quán ăn, bao gồm sao, bình luận, và hình ảnh kèm theo.
 
-**Duong dan:** `/reviews/{reviewId}`
+**Đường dẫn:** `/reviews/{reviewId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong      | Kieu du lieu         | Bat buoc | Mo ta                           |
+| STT | Tên trường      | Kiểu dữ liệu         | Bắt buộc | Mô tả                           |
 | --- | --------------- | -------------------- | -------- | ------------------------------- |
-| 1   | `id`            | String               | Co       | ID document tu Firestore        |
-| 2   | `storeId`       | String               | Co       | ID quan duoc danh gia           |
-| 3   | `userId`        | String               | Co       | ID nguoi danh gia               |
-| 4   | `userName`      | String               | Co       | Ten nguoi danh gia              |
-| 5   | `userAvatarUrl` | String               | Co       | URL avatar nguoi danh gia       |
-| 6   | `starRating`    | Number               | Co       | Diem sao (1-5)                  |
-| 7   | `comment`       | String               | Co       | Noi dung binh luan              |
-| 8   | `imageUrls`     | ArrayString          | Khong    | Danh sach URL hinh anh kem theo |
-| 9   | `createdAt`     | Timestamp            | Co       | Thoi diem tao danh gia          |
-| 10  | `updatedAt`     | Timestamp            | Co       | Thoi diem cap nhat              |
-| 11  | `deletedAt`     | Timestamp (nullable) | Khong    | Thoi diem xoa (neu co)          |
+| 1   | `id`            | String               | Có       | ID document từ Firestore        |
+| 2   | `storeId`       | String               | Có       | ID quán được đánh giá           |
+| 3   | `userId`        | String               | Có       | ID người đánh giá               |
+| 4   | `userName`      | String               | Có       | Tên người đánh giá              |
+| 5   | `userAvatarUrl` | String               | Có       | URL avatar người đánh giá        |
+| 6   | `starRating`    | Number               | Có       | Điểm sao (1-5)                  |
+| 7   | `comment`       | String               | Có       | Nội dung bình luận              |
+| 8   | `imageUrls`     | ArrayString          | Không    | Danh sách URL hình ảnh kèm theo |
+| 9   | `createdAt`     | Timestamp            | Có       | Thời điểm tạo đánh giá          |
+| 10  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật              |
+| 11  | `deletedAt`     | Timestamp (nullable) | Không    | Thời điểm xóa (nếu có)          |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "rev_001",
   "storeId": "store_001",
   "userId": "user_001",
-  "userName": "Khoi",
+  "userName": "Khôi",
   "userAvatarUrl": "https://example.com/avatar/user001.jpg",
   "starRating": 5,
-  "comment": "Do an rat ngon, giao hang nhanh, dong goi ky luong.",
+  "comment": "Đồ ăn rất ngon, giao hàng nhanh, đóng gói kỹ lưỡng.",
   "imageUrls": [
     "https://example.com/review/rev001_1.jpg",
     "https://example.com/review/rev001_2.jpg"
@@ -553,82 +553,78 @@ Firestore Root
 }
 ```
 
-**Tong so danh gia mau:** 8 danh gia, phan bo cho 4 quan.
+**Tổng số đánh giá mẫu:** 8 đánh giá, phân bổ cho 4 quán.
 
 ---
 
 ### 2.11. `orders`
 
-**Muc dich su dung:** Luu tru thong tin don hang cua khach hang, bao gom danh sach mon, tong tien, trang thai, thong tin giao hang, va thong tin tai xe (neu co).
+**Mục đích sử dụng:** Lưu trữ thông tin đơn hàng của khách hàng, bao gồm danh sách món, tổng tiền, trạng thái, thông tin giao hàng, và thông tin tài xế (nếu có).
 
-**Duong dan:** `/orders/{orderId}`
+**Đường dẫn:** `/orders/{orderId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong        | Kieu du lieu         | Bat buoc | Mo ta                                           |
+| STT | Tên trường        | Kiểu dữ liệu         | Bắt buộc | Mô tả                                           |
 | --- | ----------------- | -------------------- | -------- | ----------------------------------------------- |
-| 1   | `id`              | String               | Co       | ID document tu Firestore                        |
-| 2   | `userId`          | String               | Co       | ID nguoi dat hang                               |
-| 3   | `storeId`         | String               | Co       | ID quan chuan bi don                            |
-| 4   | `storeName`       | String               | Co       | Ten quan                                        |
-| 5   | `items`           | ArrayObject          | Co       | Danh sach mon an trong don                      |
-| 6   | `totalAmount`     | Number               | Co       | Tong tien don hang (VND)                        |
-| 7   | `deliveryFee`     | Number               | Co       | Phi giao hang (VND)                             |
-| 8   | `status`          | Number               | Co       | Trang thai don hang (0-4)                       |
-| 9   | `deliveryAddress` | String               | Co       | Dia chi giao hang                               |
-| 10  | `paymentMethod`   | String               | Co       | Phuong thuc thanh toan (cash, momo, zalo, card) |
-| 11  | `driverId`        | String (nullable)    | Khong    | ID tai xe nhan don                              |
-| 12  | `driverName`      | String (nullable)    | Khong    | Ten tai xe                                      |
-| 13  | `driverPhone`     | String (nullable)    | Khong    | SDT tai xe                                      |
-| 14  | `vehiclePlate`    | String (nullable)    | Khong    | Bien so xe                                      |
-| 15  | `createdAt`       | Timestamp            | Co       | Thoi diem tao don                               |
-| 16  | `updatedAt`       | Timestamp            | Co       | Thoi diem cap nhat gan nhat                     |
-| 17  | `deletedAt`       | Timestamp (nullable) | Khong    | Thoi diem xoa                                   |
+| 1   | `id`              | String               | Có       | ID document từ Firestore                        |
+| 2   | `userId`          | String               | Có       | ID người đặt hàng                               |
+| 3   | `storeId`         | String               | Có       | ID quán chuẩn bị đơn                            |
+| 4   | `storeName`       | String               | Có       | Tên quán                                        |
+| 5   | `items`           | ArrayObject          | Có       | Danh sách món ăn trong đơn                      |
+| 6   | `totalAmount`     | Number               | Có       | Tổng tiền đơn hàng (VND)                        |
+| 7   | `deliveryFee`     | Number               | Có       | Phí giao hàng (VND)                             |
+| 8   | `status`          | Number               | Có       | Trạng thái đơn hàng (0-4)                       |
+| 9   | `deliveryAddress` | String               | Có       | Địa chỉ giao hàng                               |
+| 10  | `paymentMethod`   | String               | Có       | Phương thức thanh toán (cash, momo, zalo, card) |
+| 11  | `driverId`        | String (nullable)    | Không    | ID tài xế nhận đơn                              |
+| 12  | `driverName`      | String (nullable)    | Không    | Tên tài xế                                      |
+| 13  | `driverPhone`     | String (nullable)    | Không    | SĐT tài xế                                      |
+| 14  | `vehiclePlate`    | String (nullable)    | Không    | Biển số xe                                      |
+| 15  | `createdAt`       | Timestamp            | Có       | Thời điểm tạo đơn                               |
+| 16  | `updatedAt`       | Timestamp            | Có       | Thời điểm cập nhật gần nhất                    |
+| 17  | `deletedAt`       | Timestamp (nullable) | Không    | Thời điểm xóa                                   |
 
+**Các giá trị status:**
 
-**Cac gia tri status:**
-
-
-| Gia tri | Ten           | Mo ta                      |
+| Giá trị | Tên           | Mô tả                      |
 | ------- | ------------- | -------------------------- |
-| 0       | Cho xac nhan  | Don hang cho quan xac nhan |
-| 1       | Dang chuan bi | Quan dang chuan bi mon     |
-| 2       | Dang giao     | Tai xe dang giao hang      |
-| 3       | Hoan thanh    | Da giao thanh cong         |
-| 4       | Da huy        | Don hang da bi huy         |
+| 0       | Chờ xác nhận  | Đơn hàng chờ quán xác nhận |
+| 1       | Đang chuẩn bị | Quán đang chuẩn bị món     |
+| 2       | Đang giao     | Tài xế đang giao hàng       |
+| 3       | Hoàn thành    | Đã giao thành công          |
+| 4       | Đã hủy        | Đơn hàng đã bị hủy          |
 
-
-**Cau truc items:**
+**Cấu trúc items:**
 
 ```json
 "items": [
   {
     "foodId": "prod_001",
-    "name": "Com tam suon bi cha",
+    "name": "Cơm tám sườn bì chả",
     "price": 45000.0,
     "quantity": 2,
     "imageUrl": "https://example.com/comtam.jpg",
     "options": [
-      {"name": "Tran chau", "price": 5000.0},
-      {"name": "Thach ca phe", "price": 8000.0}
+      {"name": "Trân châu", "price": 5000.0},
+      {"name": "Thạch cà phê", "price": 8000.0}
     ]
   }
 ]
 ```
 
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "order_001",
   "userId": "user_001",
   "storeId": "store_001",
-  "storeName": "Com tam Phuc Loc Tho",
+  "storeName": "Cơm tám Phúc Lộc Thọ",
   "items": [
     {
       "foodId": "prod_001",
-      "name": "Com tam suon bi cha",
+      "name": "Cơm tám sườn bì chả",
       "price": 45000.0,
       "quantity": 2,
       "imageUrl": "https://example.com/comtam.jpg"
@@ -637,10 +633,10 @@ Firestore Root
   "totalAmount": 140000.0,
   "deliveryFee": 15000.0,
   "status": 2,
-  "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+  "deliveryAddress": "Ký túc xá UTC2, Quận 9, TP.HCM",
   "paymentMethod": "momo",
   "driverId": "user_001",
-  "driverName": "Le Van B",
+  "driverName": "Lê Văn B",
   "driverPhone": "0912345678",
   "vehiclePlate": "59A-123.45",
   "createdAt": "2026-04-07T00:00:00Z",
@@ -649,29 +645,27 @@ Firestore Root
 }
 ```
 
-**Tong so don hang mau:** 7 don hang, cac trang thai khac nhau.
+**Tổng số đơn hàng mẫu:** 7 đơn hàng, các trạng thái khác nhau.
 
 ---
 
 ### 2.12. `customer_profiles`
 
-**Muc dich su dung:** Bang nhanh luu tru profile mo rong cua khach hang, chua diem thanh vien, hang thanh vien, va cac sub-collections (dia chi, thanh toan, thong bao, gio hang, voucher).
+**Mục đích sử dụng:** Bảng nhánh lưu trữ profile mở rộng của khách hàng, chứa điểm thành viên, hạng thành viên, và các sub-collections (địa chỉ, thanh toán, thông báo, giỏ hàng, voucher).
 
-**Duong dan:** `/customer_profiles/{userId}`
+**Đường dẫn:** `/customer_profiles/{userId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong       | Kieu du lieu | Bat buoc | Mo ta                                               |
+| STT | Tên trường       | Kiểu dữ liệu | Bắt buộc | Mô tả                                               |
 | --- | ---------------- | ------------ | -------- | --------------------------------------------------- |
-| 1   | `id`             | String       | Co       | ID document (trung voi userId)                      |
-| 2   | `loyaltyPoints`  | Number       | Co       | Diem tich luy hien tai                              |
-| 3   | `membershipTier` | Number       | Co       | Hang thanh vien: 0=Dong, 1=Bac, 2=Vang, 3=Kim Cuong |
-| 4   | `createdAt`      | Timestamp    | Co       | Thoi diem tao                                       |
-| 5   | `updatedAt`      | Timestamp    | Co       | Thoi diem cap nhat                                  |
+| 1   | `id`             | String       | Có       | ID document (trùng với userId)                      |
+| 2   | `loyaltyPoints`  | Number       | Có       | Điểm tích lũy hiện tại                              |
+| 3   | `membershipTier` | Number       | Có       | Hạng thành viên: 0=Đồng, 1=Bạc, 2=Vàng, 3=Kim Cương |
+| 4   | `createdAt`      | Timestamp    | Có       | Thời điểm tạo                                       |
+| 5   | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật                                 |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
@@ -687,27 +681,25 @@ Firestore Root
 
 ### 2.13. `driver_profiles`
 
-**Muc dich su dung:** Bang nhanh luu tru profile tai xe giao hang, chua thong tin phuong tien, trang thai hoat dong, va sub-collection notifications.
+**Mục đích sử dụng:** Bảng nhánh lưu trữ profile tài xế giao hàng, chứa thông tin phương tiện, trạng thái hoạt động, và sub-collection notifications.
 
-**Duong dan:** `/driver_profiles/{userId}`
+**Đường dẫn:** `/driver_profiles/{userId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong      | Kieu du lieu | Bat buoc | Mo ta                          |
+| STT | Tên trường      | Kiểu dữ liệu | Bắt buộc | Mô tả                          |
 | --- | --------------- | ------------ | -------- | ------------------------------ |
-| 1   | `id`            | String       | Co       | ID document (trung voi userId) |
-| 2   | `vehiclePlate`  | String       | Co       | Bien so xe                     |
-| 3   | `vehicleType`   | String       | Co       | Loai phuong tien               |
-| 4   | `driverLicense` | String       | Co       | Bang lai xe                    |
-| 5   | `isActive`      | Boolean      | Co       | Trang thai hoat dong           |
-| 6   | `rating`        | Number       | Co       | Diem danh gia trung binh       |
-| 7   | `totalTrips`    | Number       | Co       | Tong so chuyen giao thanh cong |
-| 8   | `createdAt`     | Timestamp    | Co       | Thoi diem tao                  |
-| 9   | `updatedAt`     | Timestamp    | Co       | Thoi diem cap nhat             |
+| 1   | `id`            | String       | Có       | ID document (trùng với userId) |
+| 2   | `vehiclePlate`  | String       | Có       | Biển số xe                     |
+| 3   | `vehicleType`   | String       | Có       | Loại phương tiện               |
+| 4   | `driverLicense` | String       | Có       | Bằng lái xe                    |
+| 5   | `isActive`      | Boolean      | Có       | Trạng thái hoạt động           |
+| 6   | `rating`        | Number       | Có       | Điểm đánh giá trung bình       |
+| 7   | `totalTrips`    | Number       | Có       | Tổng số chuyến giao thành công |
+| 8   | `createdAt`     | Timestamp    | Có       | Thời điểm tạo                  |
+| 9   | `updatedAt`     | Timestamp    | Có       | Thời điểm cập nhật             |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
@@ -727,30 +719,28 @@ Firestore Root
 
 ### 2.14. `merchant_profiles`
 
-**Muc dich su dung:** Bang nhanh luu tru profile quan ban/nguoi ban, chua thong tin kinh doanh va sub-collection notifications.
+**Mục đích sử dụng:** Bảng nhánh lưu trữ profile quán bán/người bán, chứa thông tin kinh doanh và sub-collection notifications.
 
-**Duong dan:** `/merchant_profiles/{userId}`
+**Đường dẫn:** `/merchant_profiles/{userId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong        | Kieu du lieu | Bat buoc | Mo ta                                        |
+| STT | Tên trường        | Kiểu dữ liệu | Bắt buộc | Mô tả                                        |
 | --- | ----------------- | ------------ | -------- | -------------------------------------------- |
-| 1   | `id`              | String       | Co       | ID document (trung voi userId)               |
-| 2   | `businessName`    | String       | Co       | Ten doanh nghiep/quan                        |
-| 3   | `businessLicense` | String       | Co       | Giay phep kinh doanh                         |
-| 4   | `taxCode`         | String       | Co       | Ma so thue                                   |
-| 5   | `storeIds`        | ArrayString  | Co       | Danh sach ID cac cua hang thuoc merchant nay |
-| 6   | `createdAt`       | Timestamp    | Co       | Thoi diem tao                                |
-| 7   | `updatedAt`       | Timestamp    | Co       | Thoi diem cap nhat                           |
+| 1   | `id`              | String       | Có       | ID document (trùng với userId)               |
+| 2   | `businessName`    | String       | Có       | Tên doanh nghiệp/quán                        |
+| 3   | `businessLicense` | String       | Có       | Giấy phép kinh doanh                        |
+| 4   | `taxCode`         | String       | Có       | Mã số thuế                                   |
+| 5   | `storeIds`        | ArrayString  | Có       | Danh sách ID các cửa hàng thuộc merchant này |
+| 6   | `createdAt`       | Timestamp    | Có       | Thời điểm tạo                                |
+| 7   | `updatedAt`       | Timestamp    | Có       | Thời điểm cập nhật                           |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "user_001",
-  "businessName": "Com tam Phuc Loc Tho",
+  "businessName": "Cơm tám Phúc Lộc Thọ",
   "businessLicense": "BL123456789",
   "taxCode": "TAX123456789",
   "storeIds": ["store_001"],
@@ -763,30 +753,28 @@ Firestore Root
 
 ### 2.15. `admin_profiles`
 
-**Muc dich su dung:** Bang nhanh luu tru profile quan tri vien, chua thong tin cap bac, phong ban, va quyen han.
+**Mục đích sử dụng:** Bảng nhánh lưu trữ profile quản trị viên, chứa thông tin cấp bậc, phòng ban, và quyền hạn.
 
-**Duong dan:** `/admin_profiles/{userId}`
+**Đường dẫn:** `/admin_profiles/{userId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong    | Kieu du lieu | Bat buoc | Mo ta                                        |
+| STT | Tên trường    | Kiểu dữ liệu | Bắt buộc | Mô tả                                        |
 | --- | ------------- | ------------ | -------- | -------------------------------------------- |
-| 1   | `id`          | String       | Co       | ID document (trung voi userId)               |
-| 2   | `adminLevel`  | Number       | Co       | Cap bac admin: 1=Admin thuong, 2=Super admin |
-| 3   | `department`  | String       | Co       | Bo phan lam viec (VD: "Bo phan van hanh")              |
-| 4   | `permissions` | ArrayString  | Co       | Danh sach quyen han                          |
-| 5   | `createdAt`   | Timestamp    | Co       | Thoi diem tao                                |
-| 6   | `updatedAt`   | Timestamp    | Co       | Thoi diem cap nhat                           |
+| 1   | `id`          | String       | Có       | ID document (trùng với userId)               |
+| 2   | `adminLevel`  | Number       | Có       | Cấp bậc admin: 1=Admin thường, 2=Super admin |
+| 3   | `department`  | String       | Có       | Bộ phận làm việc (VD: "Bộ phận vận hành")    |
+| 4   | `permissions` | ArrayString  | Có       | Danh sách quyền hạn                           |
+| 5   | `createdAt`   | Timestamp    | Có       | Thời điểm tạo                                |
+| 6   | `updatedAt`   | Timestamp    | Có       | Thời điểm cập nhật                           |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "user_002",
   "adminLevel": 1,
-  "department": "Bo phan van hanh",
+  "department": "Bộ phận vận hành",
   "permissions": ["manage_users", "manage_orders", "manage_stores", "view_reports"],
   "createdAt": "2026-03-01T00:00:00Z",
   "updatedAt": "2026-04-07T00:00:00Z"
@@ -797,65 +785,61 @@ Firestore Root
 
 ### 2.16. `system_vouchers`
 
-**Muc dich su dung:** Luu tru voucher he thong ma khach hang co the doi diem (phan biet voi `vouchers`). Chua thong tin diem can thiet, so luong con lai, va dieu khoan.
+**Mục đích sử dụng:** Lưu trữ voucher hệ thống mà khách hàng có thể đổi điểm (phân biệt với `vouchers`). Chứa thông tin điểm cần thiết, số lượng còn lại, và điều khoản.
 
-**Duong dan:** `/system_vouchers/{systemVoucherId}`
+**Đường dẫn:** `/system_vouchers/{systemVoucherId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong       | Kieu du lieu | Bat buoc | Mo ta                    |
+| STT | Tên trường       | Kiểu dữ liệu | Bắt buộc | Mô tả                    |
 | --- | ---------------- | ------------ | -------- | ------------------------ |
-| 1   | `id`             | String       | Co       | ID document tu Firestore |
-| 2   | `title`          | String       | Co       | Tieu de voucher          |
-| 3   | `subtitle`       | String       | Co       | Mo ta ngan gon           |
-| 4   | `pointsRequired` | Number       | Co       | So diem can de doi       |
-| 5   | `imageUrl`       | String       | Co       | Duong dan anh voucher    |
-| 6   | `remaining`      | Number       | Co       | So luong voucher con lai |
-| 7   | `terms`          | String       | Co       | Dieu khoan su dung       |
-| 8   | `minOrderValue`  | Number       | Co       | Don hang toi thieu (VND) |
-| 9   | `createdAt`      | Timestamp    | Co       | Thoi diem tao            |
-| 10  | `updatedAt`      | Timestamp    | Co       | Thoi diem cap nhat       |
+| 1   | `id`             | String       | Có       | ID document từ Firestore |
+| 2   | `title`          | String       | Có       | Tiêu đề voucher          |
+| 3   | `subtitle`       | String       | Có       | Mô tả ngắn gọn           |
+| 4   | `pointsRequired` | Number       | Có       | Số điểm cần để đổi       |
+| 5   | `imageUrl`       | String       | Có       | Đường dẫn ảnh voucher    |
+| 6   | `remaining`      | Number       | Có       | Số lượng voucher còn lại |
+| 7   | `terms`          | String       | Có       | Điều khoản sử dụng       |
+| 8   | `minOrderValue`  | Number       | Có       | Đơn hàng tối thiểu (VND) |
+| 9   | `createdAt`      | Timestamp    | Có       | Thời điểm tạo            |
+| 10  | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật       |
 
-
-**Ghi chu:** Hien tai trong code, collection nay chua duoc seed. Chi `vouchers` (root) duoc seed.neu nguoi dung muon su dung `system_vouchers`, can bo sung seed trong `DataSeeder`.
+**Ghi chú:** Hiện tại trong code, collection này chưa được seed. Chỉ `vouchers` (root) được seed. Nếu người dùng muốn sử dụng `system_vouchers`, cần bổ sung seed trong `DataSeeder`.
 
 ---
 
-## 3. Bang nhanh hoac Sub-collections
+## 3. Bảng nhánh hoặc Sub-collections
 
 ### 3.1. `customer_profiles/{userId}/addresses`
 
-**Muc dich su dung:** Luu tru danh sach dia chi giao hang cua khach hang.
+**Mục đích sử dụng:** Lưu trữ danh sách địa chỉ giao hàng của khách hàng.
 
-**Duong dan:** `/customer_profiles/{userId}/addresses/{addressId}`
+**Đường dẫn:** `/customer_profiles/{userId}/addresses/{addressId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong      | Kieu du lieu         | Bat buoc | Mo ta                                     |
+| STT | Tên trường      | Kiểu dữ liệu         | Bắt buộc | Mô tả                                     |
 | --- | --------------- | -------------------- | -------- | ----------------------------------------- |
-| 1   | `id`            | String               | Co       | ID document tu Firestore                  |
-| 2   | `name`          | String               | Co       | Nhan dia chi (VD: "Nha rieng", "Cong ty") |
-| 3   | `address`       | String               | Co       | Dia chi chi tiet day du                   |
-| 4   | `receiverName`  | String               | Co       | Ho ten nguoi nhan                         |
-| 5   | `receiverPhone` | String               | Co       | SDT nguoi nhan                            |
-| 6   | `lat`           | Number               | Co       | Vi do (latitude)                          |
-| 7   | `lng`           | Number               | Co       | Kinh do (longitude)                       |
-| 8   | `isDefault`     | Boolean              | Co       | Co phai dia chi mac dinh khong            |
-| 9   | `createdAt`     | Timestamp            | Co       | Thoi diem tao                             |
-| 10  | `updatedAt`     | Timestamp            | Co       | Thoi diem cap nhat                        |
-| 11  | `deletedAt`     | Timestamp (nullable) | Khong    | Thoi diem xoa (neu co)                    |
+| 1   | `id`            | String               | Có       | ID document từ Firestore                  |
+| 2   | `name`          | String               | Có       | Nhãn địa chỉ (VD: "Nhà riêng", "Công ty") |
+| 3   | `address`       | String               | Có       | Địa chỉ chi tiết đầy đủ                   |
+| 4   | `receiverName`  | String               | Có       | Họ tên người nhận                         |
+| 5   | `receiverPhone` | String               | Có       | SĐT người nhận                            |
+| 6   | `lat`           | Number               | Có       | Vĩ độ (latitude)                          |
+| 7   | `lng`           | Number               | Có       | Kinh độ (longitude)                       |
+| 8   | `isDefault`     | Boolean              | Có       | Có phải địa chỉ mặc định không            |
+| 9   | `createdAt`     | Timestamp            | Có       | Thời điểm tạo                             |
+| 10  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật                        |
+| 11  | `deletedAt`     | Timestamp (nullable) | Không    | Thời điểm xóa (nếu có)                   |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "addr_001",
-  "name": "Nha rieng",
-  "address": "Ky tuc xa UTC2, Quan 9, TP.HCM",
-  "receiverName": "Khoi",
+  "name": "Nhà riêng",
+  "address": "Ký túc xá UTC2, Quận 9, TP.HCM",
+  "receiverName": "Khôi",
   "receiverPhone": "0123456789",
   "lat": 10.8455,
   "lng": 106.7939,
@@ -866,36 +850,34 @@ Firestore Root
 }
 ```
 
-**Ghi chu:** Co 2 dia chi mau cho user_001: addr_001 (mac dinh) va addr_002 (Truong hoc).
+**Ghi chú:** Có 2 địa chỉ mẫu cho user_001: addr_001 (mặc định) và addr_002 (Trường học).
 
 ---
 
 ### 3.2. `customer_profiles/{userId}/payment_methods`
 
-**Muc dich su dung:** Luu tru cac phuong thuc thanh toan da lien ket cua khach hang.
+**Mục đích sử dụng:** Lưu trữ các phương thức thanh toán đã liên kết của khách hàng.
 
-**Duong dan:** `/customer_profiles/{userId}/payment_methods/{paymentMethodId}`
+**Đường dẫn:** `/customer_profiles/{userId}/payment_methods/{paymentMethodId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong    | Kieu du lieu      | Bat buoc | Mo ta                                                   |
+| STT | Tên trường    | Kiểu dữ liệu      | Bắt buộc | Mô tả                                                   |
 | --- | ------------- | ----------------- | -------- | ------------------------------------------------------- |
-| 1   | `id`          | String            | Co       | ID document tu Firestore                                |
-| 2   | `type`        | Number            | Co       | Loai: 1=Tien mat, 2=Vi dien tu, 3=The ngan hang         |
-| 3   | `isDefault`   | Boolean           | Co       | Co phai phuong thuc mac dinh khong                      |
-| 4   | `cardBrand`   | String (nullable) | Khong    | Thuong hieu the (neu type=3): "visa", "mastercard"      |
-| 5   | `last4Digits` | String (nullable) | Khong    | 4 chu so cuoi the (neu type=3)                          |
-| 6   | `walletBrand` | String (nullable) | Khong    | Thuong hieu vi (neu type=2): "momo", "zalopay", "vnpay" |
-| 7   | `isLinked`    | Boolean           | Co       | Da lien ket chua (neu type=2)                           |
-| 8   | `createdAt`   | Timestamp         | Co       | Thoi diem tao                                           |
-| 9   | `updatedAt`   | Timestamp         | Co       | Thoi diem cap nhat                                      |
+| 1   | `id`          | String            | Có       | ID document từ Firestore                                |
+| 2   | `type`        | Number            | Có       | Loại: 1=Tiền mặt, 2=Ví điện tử, 3=Thẻ ngân hàng       |
+| 3   | `isDefault`   | Boolean           | Có       | Có phải phương thức mặc định không                      |
+| 4   | `cardBrand`   | String (nullable) | Không    | Thương hiệu thẻ (nếu type=3): "visa", "mastercard"     |
+| 5   | `last4Digits` | String (nullable) | Không    | 4 chữ số cuối thẻ (nếu type=3)                          |
+| 6   | `walletBrand` | String (nullable) | Không    | Thương hiệu ví (nếu type=2): "momo", "zalopay", "vnpay" |
+| 7   | `isLinked`    | Boolean           | Có       | Đã liên kết chưa (nếu type=2)                           |
+| 8   | `createdAt`   | Timestamp         | Có       | Thời điểm tạo                                           |
+| 9   | `updatedAt`   | Timestamp         | Có       | Thời điểm cập nhật                                      |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
-// Vi dien tu
+// Ví điện tử
 {
   "id": "pm_001",
   "type": 2,
@@ -908,7 +890,7 @@ Firestore Root
   "updatedAt": "2026-04-07T00:00:00Z"
 }
 
-// The ngan hang
+// Thẻ ngân hàng
 {
   "id": "pm_002",
   "type": 3,
@@ -922,50 +904,48 @@ Firestore Root
 }
 ```
 
-**Ghi chu:** Co 2 phuong thuc mau: pm_001 (MoMo vi dien tu, mac dinh) va pm_002 (The Visa ****1234).
+**Ghi chú:** Có 2 phương thức mẫu: pm_001 (MoMo ví điện tử, mặc định) và pm_002 (Thẻ Visa ****1234).
 
 ---
 
 ### 3.3. `customer_profiles/{userId}/notifications`
 
-**Muc dich su dung:** Luu tru thong bao cua khach hang, bao gom thong bao he thong, khuyen mai, va cap nhat don hang.
+**Mục đích sử dụng:** Lưu trữ thông báo của khách hàng, bao gồm thông báo hệ thống, khuyến mãi, và cập nhật đơn hàng.
 
-**Duong dan:** `/customer_profiles/{userId}/notifications/{notificationId}`
+**Đường dẫn:** `/customer_profiles/{userId}/notifications/{notificationId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong    | Kieu du lieu | Bat buoc | Mo ta                                                |
+| STT | Tên trường    | Kiểu dữ liệu | Bắt buộc | Mô tả                                                |
 | --- | ------------- | ------------ | -------- | ---------------------------------------------------- |
-| 1   | `id`          | String       | Co       | ID document tu Firestore                             |
-| 2   | `type`        | Number       | Co       | Loai thong bao: 0=He thong, 1=Khuyen mai, 2=Don hang |
-| 3   | `title`       | String       | Co       | Tieu de thong bao                                    |
-| 4   | `body`        | String       | Co       | Noi dung thong bao                                   |
-| 5   | `referenceId` | String       | Co       | ID tham chieu (VD: orderId, voucherId)               |
-| 6   | `isRead`      | Boolean      | Co       | Da doc chua                                          |
-| 7   | `createdAt`   | Timestamp    | Co       | Thoi diem tao                                        |
+| 1   | `id`          | String       | Có       | ID document từ Firestore                             |
+| 2   | `type`        | Number       | Có       | Loại thông báo: 0=Hệ thống, 1=Khuyến mãi, 2=Đơn hàng |
+| 3   | `title`       | String       | Có       | Tiêu đề thông báo                                    |
+| 4   | `body`        | String       | Có       | Nội dung thông báo                                   |
+| 5   | `referenceId` | String       | Có       | ID tham chiếu (VD: orderId, voucherId)                |
+| 6   | `isRead`      | Boolean      | Có       | Đã đọc chưa                                          |
+| 7   | `createdAt`   | Timestamp    | Có       | Thời điểm tạo                                        |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
-// Thong bao don hang
+// Thông báo đơn hàng
 {
   "id": "notif_001",
   "type": 2,
-  "title": "Don hang da duoc giao thanh cong",
-  "body": "Don hang order_001 da duoc giao",
+  "title": "Đơn hàng đã được giao thành công",
+  "body": "Đơn hàng order_001 đã được giao",
   "referenceId": "order_001",
   "isRead": false,
   "createdAt": "2026-04-07T00:00:00Z"
 }
 
-// Thong bao khuyen mai
+// Thông báo khuyến mãi
 {
   "id": "notif_002",
   "type": 1,
-  "title": "Khuyen mai dac biet",
-  "body": "Giam 20% cho don hang dau tien",
+  "title": "Khuyến mãi đặc biệt",
+  "body": "Giảm 20% cho đơn hàng đầu tiên",
   "referenceId": "voucher_001",
   "isRead": true,
   "createdAt": "2026-04-06T00:00:00Z"
@@ -976,47 +956,45 @@ Firestore Root
 
 ### 3.4. `customer_profiles/{userId}/cart`
 
-**Muc dich su dung:** Luu tru gio hang tam thoi cua khach hang, dong bo real-time voi UI qua Firestore stream.
+**Mục đích sử dụng:** Lưu trữ giỏ hàng tạm thời của khách hàng, đồng bộ real-time với UI qua Firestore stream.
 
-**Duong dan:** `/customer_profiles/{userId}/cart/{cartItemId}`
+**Đường dẫn:** `/customer_profiles/{userId}/cart/{cartItemId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong  | Kieu du lieu      | Bat buoc | Mo ta                             |
+| STT | Tên trường  | Kiểu dữ liệu      | Bắt buộc | Mô tả                             |
 | --- | ----------- | ----------------- | -------- | --------------------------------- |
-| 1   | `id`        | String            | Co       | ID document tu Firestore          |
-| 2   | `storeId`   | String            | Co       | ID quan chua san pham             |
-| 3   | `foodId`    | String            | Co       | ID san pham (mon an)              |
-| 4   | `name`      | String            | Co       | Ten mon an                        |
-| 5   | `price`     | Number            | Co       | Don gia (da bao gom size/topping) |
-| 6   | `quantity`  | Number            | Co       | So luong                          |
-| 7   | `size`      | String (nullable) | Khong    | Kich thuoc da chon (VD: "M", "L") |
-| 8   | `sizePrice` | Number (nullable) | Khong    | Gia them cua size                 |
-| 9   | `toppings`  | ArrayObject       | Khong    | Danh sach topping da chon         |
-| 10  | `note`      | String (nullable) | Khong    | Ghi chu cho quan                  |
-| 11  | `imageUrl`  | String (nullable) | Khong    | URL anh mon an                    |
-| 12  | `createdAt` | Timestamp         | Co       | Thoi diem tao                     |
-| 13  | `updatedAt` | Timestamp         | Co       | Thoi diem cap nhat                |
+| 1   | `id`        | String            | Có       | ID document từ Firestore          |
+| 2   | `storeId`   | String            | Có       | ID quán chứa sản phẩm             |
+| 3   | `foodId`    | String            | Có       | ID sản phẩm (món ăn)              |
+| 4   | `name`      | String            | Có       | Tên món ăn                        |
+| 5   | `price`     | Number            | Có       | Đơn giá (đã bao gồm size/topping) |
+| 6   | `quantity`  | Number            | Có       | Số lượng                          |
+| 7   | `size`      | String (nullable) | Không    | Kích thước đã chọn (VD: "M", "L") |
+| 8   | `sizePrice` | Number (nullable) | Không    | Giá thêm của size                 |
+| 9   | `toppings`  | ArrayObject       | Không    | Danh sách topping đã chọn          |
+| 10  | `note`      | String (nullable) | Không    | Ghi chú cho quán                  |
+| 11  | `imageUrl`  | String (nullable) | Không    | URL ảnh món ăn                    |
+| 12  | `createdAt` | Timestamp         | Có       | Thời điểm tạo                     |
+| 13  | `updatedAt` | Timestamp         | Có       | Thời điểm cập nhật                |
 
-
-**Cau truc toppings:**
+**Cấu trúc toppings:**
 
 ```json
 "toppings": [
-  {"name": "Tran chau trang", "price": 10000.0},
-  {"name": "Thach trai cay", "price": 8000.0}
+  {"name": "Trân châu trắng", "price": 10000.0},
+  {"name": "Thạch trái cây", "price": 8000.0}
 ]
 ```
 
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "cart_item_001",
   "storeId": "store_001",
   "foodId": "prod_001",
-  "name": "Com tam suon bi cha",
+  "name": "Cơm tám sườn bì chả",
   "price": 45000.0,
   "quantity": 2,
   "imageUrl": "https://example.com/comtam.jpg",
@@ -1025,41 +1003,39 @@ Firestore Root
 }
 ```
 
-**Ghi chu:** Co 2 item mau: cart_item_001 (Com tam) va cart_item_002 (Tra sua trach tang). Gia tri `price` trong cart chua bao gom toppings - toppings duoc luu rieng trong mang `toppings`.
+**Ghi chú:** Có 2 item mẫu: cart_item_001 (Cơm tám) và cart_item_002 (Trà sữa trà chanh táo). Giá trị `price` trong cart chưa bao gồm toppings - toppings được lưu riêng trong mảng `toppings`.
 
 ---
 
 ### 3.5. `customer_profiles/{userId}/my_vouchers`
 
-**Muc dich su dung:** Luu tru voucher ma khach hang da doi hoac da nhan.
+**Mục đích sử dụng:** Lưu trữ voucher mà khách hàng đã đổi hoặc đã nhận.
 
-**Duong dan:** `/customer_profiles/{userId}/my_vouchers/{myVoucherId}`
+**Đường dẫn:** `/customer_profiles/{userId}/my_vouchers/{myVoucherId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong      | Kieu du lieu | Bat buoc | Mo ta                              |
+| STT | Tên trường      | Kiểu dữ liệu | Bắt buộc | Mô tả                              |
 | --- | --------------- | ------------ | -------- | ---------------------------------- |
-| 1   | `id`            | String       | Co       | ID document tu Firestore           |
-| 2   | `name`          | String       | Co       | Ten voucher                        |
-| 3   | `code`          | String       | Co       | Ma voucher                         |
-| 4   | `description`   | String       | Co       | Mo ta chi tiet                     |
-| 5   | `expiryDate`    | Timestamp    | Co       | Ngay het han                       |
-| 6   | `discountValue` | Number       | Co       | Gia tri giam (neu khong phan tram) |
-| 7   | `isPercentage`  | Boolean      | Co       | La phan tram giam khong            |
-| 8   | `minOrderValue` | Number       | Co       | Don hang toi thieu (VND)           |
-| 9   | `createdAt`     | Timestamp    | Co       | Thoi diem tao                      |
-| 10  | `updatedAt`     | Timestamp    | Co       | Thoi diem cap nhat                 |
+| 1   | `id`            | String       | Có       | ID document từ Firestore           |
+| 2   | `name`          | String       | Có       | Tên voucher                        |
+| 3   | `code`          | String       | Có       | Mã voucher                         |
+| 4   | `description`   | String       | Có       | Mô tả chi tiết                     |
+| 5   | `expiryDate`    | Timestamp    | Có       | Ngày hết hạn                       |
+| 6   | `discountValue` | Number       | Có       | Giá trị giảm (nếu không phần trăm) |
+| 7   | `isPercentage`  | Boolean      | Có       | Là phần trăm giảm không            |
+| 8   | `minOrderValue` | Number       | Có       | Đơn hàng tối thiểu (VND)           |
+| 9   | `createdAt`     | Timestamp    | Có       | Thời điểm tạo                      |
+| 10  | `updatedAt`     | Timestamp    | Có       | Thời điểm cập nhật                 |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "mv_001",
-  "name": "Giam 20K phi giao hang",
+  "name": "Giảm 20K phí giao hàng",
   "code": "FREESHIP20",
-  "description": "Ap dung cho don tu 100K",
+  "description": "Áp dụng cho đơn từ 100K",
   "expiryDate": "2026-04-30T23:59:59Z",
   "discountValue": 20000.0,
   "isPercentage": false,
@@ -1069,33 +1045,31 @@ Firestore Root
 }
 ```
 
-**Ghi chu:** Co 2 voucher mau: mv_001 (FREESHIP20 - giam 20K phi giao hang) va mv_002 (SAVE10 - giam 10%).
+**Ghi chú:** Có 2 voucher mẫu: mv_001 (FREESHIP20 - giảm 20K phí giao hàng) và mv_002 (SAVE10 - giảm 10%).
 
 ---
 
 ### 3.6. `driver_profiles/{userId}/notifications`
 
-**Muc dich su dung:** Luu tru thong bao dành riêng cho tai xe giao hang.
+**Mục đích sử dụng:** Lưu trữ thông báo dành riêng cho tài xế giao hàng.
 
-**Duong dan:** `/driver_profiles/{userId}/notifications/{notificationId}`
+**Đường dẫn:** `/driver_profiles/{userId}/notifications/{notificationId}`
 
-**Cac truong (Fields):** Tuong tu nhu `customer_profiles/{userId}/notifications`, nhung `type` có them gia tri 11 (Yeu cau nhan don) và 12 (Thong bao giao hang).
+**Các trường (Fields):** Tương tự như `customer_profiles/{userId}/notifications`, nhưng `type` có thêm giá trị 11 (Yêu cầu nhận đơn) và 12 (Thông báo giao hàng).
 
-
-| Gia tri type | Mo ta                |
+| Giá trị type | Mô tả                |
 | ------------ | -------------------- |
-| 11           | Yeu cau nhan don moi |
-| 12           | Thong bao giao hang  |
+| 11           | Yêu cầu nhận đơn mới |
+| 12           | Thông báo giao hàng  |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "dnotif_001",
   "type": 11,
-  "title": "Yeu cau nhan don moi",
-  "body": "Ban co don hang moi cho nhan: order_002",
+  "title": "Yêu cầu nhận đơn mới",
+  "body": "Bạn có đơn hàng mới cần nhận: order_002",
   "referenceId": "order_002",
   "isRead": false,
   "createdAt": "2026-04-07T00:00:00Z"
@@ -1106,26 +1080,24 @@ Firestore Root
 
 ### 3.7. `merchant_profiles/{userId}/notifications`
 
-**Muc dich su dung:** Luu tru thong bao dành riêng cho quan ban/nguoi kinh doanh.
+**Mục đích sử dụng:** Lưu trữ thông báo dành riêng cho quán bán/người kinh doanh.
 
-**Duong dan:** `/merchant_profiles/{userId}/notifications/{notificationId}`
+**Đường dẫn:** `/merchant_profiles/{userId}/notifications/{notificationId}`
 
-**Cac truong (Fields):** Tuong tu nhu notifications khach hang, nhung `type` có them gia tri 21 (Don hang moi).
+**Các trường (Fields):** Tương tự như notifications khách hàng, nhưng `type` có thêm giá trị 21 (Đơn hàng mới).
 
-
-| Gia tri type | Mo ta                      |
+| Giá trị type | Mô tả                      |
 | ------------ | -------------------------- |
-| 21           | Don hang moi tu khach hang |
+| 21           | Đơn hàng mới từ khách hàng |
 
-
-**Du lieu mau (Mock Data):**
+**Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "mnotif_001",
   "type": 21,
-  "title": "Don hang moi tu khach hang",
-  "body": "Ban co don hang moi: order_003",
+  "title": "Đơn hàng mới từ khách hàng",
+  "body": "Bạn có đơn hàng mới: order_003",
   "referenceId": "order_003",
   "isRead": false,
   "createdAt": "2026-04-07T00:00:00Z"
@@ -1136,53 +1108,46 @@ Firestore Root
 
 ### 3.8. `users/{userId}/search_history`
 
-**Muc dich su dung:** Luu tru lich su tim kiem cua khach hang, giup goi y tu khoa da tim.
+**Mục đích sử dụng:** Lưu trữ lịch sử tìm kiếm của khách hàng, giúp gợi ý từ khóa đã tìm.
 
-**Duong dan:** `/users/{userId}/search_history/{historyId}`
+**Đường dẫn:** `/users/{userId}/search_history/{historyId}`
 
-**Cac truong (Fields):**
+**Các trường (Fields):**
 
-
-| STT | Ten truong  | Kieu du lieu | Bat buoc | Mo ta                                  |
+| STT | Tên trường  | Kiểu dữ liệu | Bắt buộc | Mô tả                                  |
 | --- | ----------- | ------------ | -------- | -------------------------------------- |
-| 1   | `id`        | String       | Co       | ID document tu Firestore               |
-| 2   | `keyword`   | String       | Co       | Tu khoa tim kiem                       |
-| 3   | `createdAt` | Timestamp    | Co       | Thoi diem tim kiem (hoac cap nhat lai) |
+| 1   | `id`        | String       | Có       | ID document từ Firestore               |
+| 2   | `keyword`   | String       | Có       | Từ khóa tìm kiếm                      |
+| 3   | `createdAt` | Timestamp    | Có       | Thời điểm tìm kiếm (hoặc cập nhật lại) |
 
-
-**Ghi chu:** Trong code, duong dan su dung la `users/{userId}/search_history`, nhung trong `clearAllSeededData` cua `DataSeeder`, no nam trong danh sach `userSubCollections` cua bang nhanh `users` (khong phai root collection riêng). Day la mot diem can luu y - `search_history` nam trong `users` chu khong phai trong `customer_profiles`.
+**Ghi chú:** Trong code, đường dẫn sử dụng là `users/{userId}/search_history`, nhưng trong `clearAllSeededData` của `DataSeeder`, nó nằm trong danh sách `userSubCollections` của bảng nhánh `users` (không phải root collection riêng). Đây là một điểm cần lưu ý - `search_history` nằm trong `users` chứ không phải trong `customer_profiles`.
 
 ---
 
-## 4. Danh sach cac truong co ban
+## 4. Danh sách các trường cơ bản
 
 Dưới đây là bảng tổng hợp các kiểu dữ liệu được sử dụng xuyên suốt các collections:
 
-
-| Kieu Firestore | Tuong ung Dart                  | Mo ta                  |
+| Kiểu Firestore | Tương ứng Java/Dart              | Mô tả                  |
 | -------------- | ------------------------------- | ---------------------- |
-| `String`       | `String`                        | Chuoi van ban          |
-| `Number`       | `int` hoac `double`             | So nguyen hoac so thuc |
-| `Boolean`      | `bool`                          | Dung/Sai               |
-| `Timestamp`    | `DateTime`                      | Thoi diem (ngay gio)   |
-| `Array<T>`     | `List<T>`                       | Mang                   |
-| `Map`          | `Map<String, dynamic>`          | Doi tuong / Dictionary |
-| `null`         | `nullable` (String?, int?, ...) | Gia tri co the rong    |
+| `String`       | `String`                        | Chuỗi văn bản          |
+| `Number`       | `int` hoặc `double`             | Số nguyên hoặc số thực |
+| `Boolean`      | `boolean` / `bool`              | Đúng/Sai               |
+| `Timestamp`    | `Date` / `DateTime`             | Thời điểm (ngày giờ)   |
+| `Array<T>`     | `List<T>` / `ArrayList<T>`      | Mảng                   |
+| `Map`          | `Map<String, dynamic>` / `HashMap` | Đối tượng / Dictionary |
+| `null`         | `nullable` (String?, int?, ...) | Giá trị có thể rỗng    |
 
+### Quy ước đặt tên trường
 
-### Quy uoc dat ten truong
-
-- Ten truong Firestore su dung `camelCase` (VD: `createdAt`, `isDefault`, `loyaltyPoints`)
-- Ten icon su dung `snake_case` (VD: `restaurant`, `local_cafe`)
-- Ma voucher su dung `UPPERCASE` (VD: `FREESHIP20`, `SAVE10`)
+- Tên trường Firestore sử dụng `camelCase` (VD: `createdAt`, `isDefault`, `loyaltyPoints`)
+- Tên icon sử dụng `snake_case` (VD: `restaurant`, `local_cafe`)
+- Mã voucher sử dụng `UPPERCASE` (VD: `FREESHIP20`, `SAVE10`)
 
 ---
 
-## Lich su cap nhat
+## Lịch sử cập nhật
 
-
-| Ngay       | Mo ta                                                |
+| Ngày       | Mô tả                                                |
 | ---------- | ---------------------------------------------------- |
-| 2026-05-22 | Phien ban dau tien - tai lieu day du cac collections |
-
-
+| 2026-05-22 | Phiên bản đầu tiên - tài liệu đầy đủ các collections |

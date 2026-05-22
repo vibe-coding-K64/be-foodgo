@@ -1,35 +1,35 @@
-# Cau truc thu muc du an - Be FoodGo
+# Cấu trúc thư mục dự án - Be FoodGo
 
-Du an backend Spring Boot ket noi Firebase Firestore lam co so du lieu.
+Dự án backend Spring Boot kết nối Firebase Firestore làm cơ sở dữ liệu.
 
 ---
 
-## Cau truc tong the
+## Cấu trúc tổng thể
 
 ```
 be-foodgo/
 │
 ├── .mvn/                              # Maven wrapper
-├── .vscode/                           # Cau hinh VS Code
-├── docs/                              # Tai lieu du an
-│   ├── firebase_collections.md        # Cau truc Firestore
-│   └── project_structure.md           # Tai lieu nay
+├── .vscode/                           # Cấu hình VS Code
+├── docs/                              # Tài liệu dự án
+│   ├── firebase_collections.md        # Cấu trúc Firestore
+│   └── project_structure.md           # Tài liệu này
 ├── src/                               # Source code
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/example/be_foodgo/
 │   │   │       ├── BeFoodgoApplication.java   # Entry point
-│   │   │       ├── config/                   # Cau hinh
-│   │   │       ├── constant/                 # Enum & hang so
+│   │   │       ├── config/                   # Cấu hình
+│   │   │       ├── constant/                 # Enum & hằng số
 │   │   │       ├── controller/               # REST API
 │   │   │       ├── dto/                     # Data Transfer Object
-│   │   │       ├── exception/               # Xy ly loi tap trung
+│   │   │       ├── exception/               # Xử lý lỗi tập trung
 │   │   │       ├── model/                   # Firestore document
-│   │   │       ├── repository/              # Giao tiep Firestore
-│   │   │       ├── seeder/                  # Khoi tao du lieu mau
-│   │   │       └── service/                 # Logic nghiep vu
+│   │   │       ├── repository/              # Giao tiếp Firestore
+│   │   │       ├── seeder/                  # Khởi tạo dữ liệu mẫu
+│   │   │       └── service/                 # Logic nghiệp vụ
 │   │   └── resources/
-│   │       ├── application.properties        # Cau hinh Spring
+│   │       ├── application.properties        # Cấu hình Spring
 │   │       ├── firebase-service-account.json # Firebase credentials
 │   │       ├── static/                      # Static files
 │   │       └── templates/                   # Template files
@@ -39,58 +39,58 @@ be-foodgo/
 ├── pom.xml                             # Maven dependencies
 ├── mvnw / mvnw.cmd                     # Maven wrapper scripts
 ├── .gitignore                          # Git ignore
-└── README.md                           # Huong dan su dung
+└── README.md                           # Hướng dẫn sử dụng
 ```
 
 ---
 
-## Kien truc phan lop (Layered Architecture)
+## Kiến trúc phân lớp (Layered Architecture)
 
 ```
 Controller
-    │ goi
+    │ gọi
     ▼
 Service
-    │ goi
+    │ gọi
     ▼
 Repository
-    │ goi
+    │ gọi
     ▼
 Firebase Firestore
 ```
 
-### Chi tiet tung lop
+### Chi tiết từng lớp
 
-| Package         | Chuc nang                                                                                              |
+| Package         | Chức năng                                                                                              |
 | --------------- | ------------------------------------------------------------------------------------------------------ |
-| `config`        | Cau hinh he thong: Firebase SDK, Security, Swagger, CORS...                                            |
-| `constant`      | Enum (trang thai, role...) va hang so dung chung toan he thong                                          |
-| `controller`    | REST API endpoints. Nhan request tu client, tra response. Khong chua logic nghip vu.                    |
-| `dto`           | Data Transfer Object. Dong goi du lieu gui/nhan qua API (request/response).                              |
-| `exception`     | Global Exception Handler. Xy ly loi tap trung, tra ve message thong nhat cho client.                    |
-| `model`         | Entity/document mapping. Cac class dong nhu Firestore document (annotation @DocumentReference...).          |
-| `repository`    | Truy van Firestore. Dung Firebase Admin SDK (Firestore, CollectionReference...) de doc/ghi du lieu.     |
-| `seeder`        | Khoi tao du lieu mau. Chay 1 lan khi ung dung len, seed du lieu test vao Firestore neu chua co.           |
-| `service`       | Logic nghip vu. Xy ly cac tac vu nghiep vu phuc tap, goi repository de truy van du lieu.                |
+| `config`        | Cấu hình hệ thống: Firebase SDK, Security, Swagger, CORS...                                            |
+| `constant`      | Enum (trạng thái, role...) và hằng số dùng chung toàn hệ thống                                          |
+| `controller`    | REST API endpoints. Nhận request từ client, trả response. Không chứa logic nghiệp vụ.                    |
+| `dto`           | Data Transfer Object. Đóng gói dữ liệu gửi/nhận qua API (request/response).                              |
+| `exception`     | Global Exception Handler. Xử lý lỗi tập trung, trả về message thống nhất cho client.                    |
+| `model`         | Entity/document mapping. Các class đóng như Firestore document (annotation @DocumentReference...).          |
+| `repository`    | Truy vấn Firestore. Dùng Firebase Admin SDK (Firestore, CollectionReference...) để đọc/ghi dữ liệu.     |
+| `seeder`        | Khởi tạo dữ liệu mẫu. Chạy 1 lần khi ứng dụng lên, seed dữ liệu test vào Firestore nếu chưa có.           |
+| `service`       | Logic nghiệp vụ. Xử lý các tác vụ nghiệp vụ phức tạp, gọi repository để truy vấn dữ liệu.                |
 
-### Moi quan he giua cac lop
+### Mối quan hệ giữa các lớp
 
 ```
 Client (HTTP Request)
        │
        ▼
 ┌─────────────────┐
-│   Controller     │  Nhan request, goi service tuong ung
+│   Controller     │  Nhận request, gọi service tương ứng
 └────────┬────────┘
          │ call
          ▼
 ┌─────────────────┐
-│    Service      │  Logic nghip vu, goi repository
+│    Service      │  Logic nghiệp vụ, gọi repository
 └────────┬────────┘
          │ call
          ▼
 ┌─────────────────┐
-│  Repository     │  Truy van Firestore
+│  Repository     │  Truy vấn Firestore
 └────────┬────────┘
          │ CRUD
          ▼
@@ -104,9 +104,9 @@ Client (HTTP Request)
 
 ---
 
-## Quy tac dat ten
+## Quy tắc đặt tên
 
-| Loai              | Quy tac                | Vi du                          |
+| Loại              | Quy tắc                | Ví dụ                          |
 | ----------------- | ---------------------- | ------------------------------ |
 | Class Java        | PascalCase             | `UserController.java`          |
 | Interface         | PascalCase + suffix    | `UserService.java`              |
@@ -119,20 +119,20 @@ Client (HTTP Request)
 
 ---
 
-## Quy tac commit Git
+## Quy tắc commit Git
 
-| Prefix | Moi truong su dung                                    |
+| Prefix | Môi trường sử dụng                                    |
 | ------ | ----------------------------------------------------- |
-| `feat` | Them chuc nang moi                                     |
-| `fix`  | Sua loi                                               |
-| `docs` | Cap nhat tai lieu                                     |
-| `refactor` | Tái cau truc code, khong thay doi chuc nang          |
-| `chore` | Cap nhat phu thuoc, build script                      |
+| `feat` | Thêm chức năng mới                                     |
+| `fix`  | Sửa lỗi                                               |
+| `docs` | Cập nhật tài liệu                                     |
+| `refactor` | Tái cấu trúc code, không thay đổi chức năng          |
+| `chore` | Cập nhật phụ thuộc, build script                      |
 
 ---
 
-## Chu thich
+## Chú thích
 
-- File `.gitkeep` trong moi package dam bao Git tracking ca khi package chua co file nao.
-- File `firebase-service-account.json` chua credentials Firebase, **khong** duoc push len Git (da co trong `.gitignore`).
-- Khi tao class trong `model`, su dung `@DocumentReference` hoac tuong tu de map voi Firestore document.
+- File `.gitkeep` trong mỗi package đảm bảo Git tracking cả khi package chưa có file nào.
+- File `firebase-service-account.json` chứa credentials Firebase, **không** được push lên Git (đã có trong `.gitignore`).
+- Khi tạo class trong `model`, sử dụng `@DocumentReference` hoặc tương tự để map với Firestore document.
