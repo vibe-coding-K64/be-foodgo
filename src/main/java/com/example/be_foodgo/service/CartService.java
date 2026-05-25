@@ -1,0 +1,189 @@
+package com.example.be_foodgo.service;
+
+import com.example.be_foodgo.dto.CartRequest;
+import com.example.be_foodgo.exception.BusinessException;
+import com.example.be_foodgo.model.CartItem;
+import com.example.be_foodgo.repository.CartRepository;
+import com.example.be_foodgo.repository.CartRepository.FirestoreDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class CartService {
+
+    private static final Logger log = LoggerFactory.getLogger(CartService.class);
+
+    private final CartRepository cartRepository;
+
+    public CartService(CartRepository cartRepository) {
+        this.cartRepository = cartRepository;
+    }
+
+    public CartItem themMonVaoGio(CartRequest request) {
+        log.info("Bắt đầu xử lý thêm món vào giỏ - Người dùng: {}, Sản phẩm: {}, Số lượng: {}",
+                request.getUserId(), request.getFoodId(), request.getQuantity());
+
+        FirestoreDocument sanPhamDoc;
+        try {
+            sanPhamDoc = cartRepository.layThongTinSanPham(request.getFoodId());
+        } catch (Exception e) {
+            log.error("Lỗi khi truy vấn sản phẩm [{}]: {}", request.getFoodId(), e.getMessage());
+            throw BusinessException.loiHeThong("Không thể truy vấn thông tin sản phẩm.");
+        }
+
+        if (sanPhamDoc == null) {
+            log.warn("Sản phẩm [{}] không tồn tại trong hệ thống", request.getFoodId());
+            throw BusinessException.sanPhamKhongTimThay(request.getFoodId());
+        }
+
+        Boolean isOutOfStock = toBoolean(sanPhamDoc.get("isOutOfStock"));
+        if (Boolean.TRUE.equals(isOutOfStock)) {
+            log.warn("Sản phẩm [{}] đang hết hàng", request.getFoodId());
+            throw BusinessException.monAnHetHang(request.getFoodId());
+        }
+
+        kiemTraQuyTacMotCuaHang(request);
+
+        Double basePrice = toDouble(sanPhamDoc.get("basePrice"));
+        Double sizePrice = tinhGiaSize(request.getFoodId(), request.getSize(), sanPhamDoc);
+        Double toppingPrice = tinhTongGiaTopping(request.getToppings());
+
+        Double donGia = basePrice + sizePrice + toppingPrice;
+        Double tongGia = donGia * request.getQuantity();
+
+        log.info("Giá tính toán - Giá cơ sở: {}, Phụ phí size: {}, Phụ phí topping: {}, Đơn giá: {}, Tổng: {}",
+                basePrice, sizePrice, toppingPrice, donGia, tongGia);
+
+        List<CartItem.ToppingItem> toppingItems = new ArrayList<>();
+        if (request.getToppings() != null) {
+            for (CartRequest.ToppingOption t : request.getToppings()) {
+                toppingItems.add(CartItem.ToppingItem.builder()
+                        .name(t.getName())
+                        .price(t.getPrice())
+                        .build());
+            }
+        }
+
+        CartItem item = CartItem.builder()
+                .storeId(request.getStoreId())
+                .foodId(request.getFoodId())
+                .name((String) sanPhamDoc.get("name"))
+                .price(tongGia)
+                .quantity(request.getQuantity())
+                .size(request.getSize())
+                .sizePrice(sizePrice)
+                .toppings(toppingItems.isEmpty() ? null : toppingItems)
+                .note(request.getNote())
+                .imageUrl((String) sanPhamDoc.get("imageUrl"))
+                .build();
+
+        String cartItemId = cartRepository.themMonVaoGio(request.getUserId(), item);
+        item.setId(cartItemId);
+
+        log.info("Đã thêm món [{}] vào giỏ hàng thành công với cartItemId: {}", request.getFoodId(), cartItemId);
+        return item;
+    }
+
+    private void kiemTraQuyTacMotCuaHang(CartRequest request) {
+        try {
+            List<CartItem> gioHienTai = cartRepository.layTatCaMonTrongGio(request.getUserId());
+
+            if (gioHienTai.isEmpty()) {
+                log.info("Giỏ hàng của người dùng {} hiện đang rỗng, không cần kiểm tra", request.getUserId());
+                return;
+            }
+
+            String storeIdHienTai = gioHienTai.get(0).getStoreId();
+            if (!storeIdHienTai.equals(request.getStoreId())) {
+                log.warn("Quy tắc một cửa hàng bị vi phạm. Giỏ hiện tại thuộc [{}], món mới thuộc [{}]",
+                        storeIdHienTai, request.getStoreId());
+                throw BusinessException.cuaHangKhongKhop(storeIdHienTai, request.getStoreId());
+            }
+
+            log.info("Quy tắc một cửa hàng được xác nhận - Cửa hàng: {}", storeIdHienTai);
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Lỗi khi kiểm tra quy tắc một cửa hàng: {}", e.getMessage());
+            throw BusinessException.loiHeThong("Không thể kiểm tra giỏ hàng hiện tại.");
+        }
+    }
+
+    private Double tinhGiaSize(String foodId, String size, FirestoreDocument sanPhamDoc) {
+        if (size == null || size.isBlank()) {
+            log.info("Sản phẩm [{}] không chọn size, giá size = 0", foodId);
+            return 0.0;
+        }
+
+        Object optionGroupsObj = sanPhamDoc.get("optionGroups");
+        if (optionGroupsObj == null) {
+            return 0.0;
+        }
+
+        List<?> optionGroups;
+        try {
+            optionGroups = (List<?>) optionGroupsObj;
+        } catch (Exception e) {
+            log.warn("Không thể parse optionGroups của sản phẩm [{}]: {}", foodId, e.getMessage());
+            return 0.0;
+        }
+
+        for (Object group : optionGroups) {
+            if (!(group instanceof Map)) continue;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> groupMap = (Map<String, Object>) group;
+            String groupName = (String) groupMap.get("name");
+            if (groupName == null) continue;
+
+            if (groupName.equalsIgnoreCase("Kich thuoc") || groupName.equalsIgnoreCase("Size")) {
+                Object optionsObj = groupMap.get("options");
+                if (optionsObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> options = (List<Map<String, Object>>) optionsObj;
+                    for (Map<String, Object> option : options) {
+                        String optName = (String) option.get("name");
+                        if (optName != null && optName.equalsIgnoreCase(size)) {
+                            Double gia = toDouble(option.get("price"));
+                            log.info("Tìm thấy size [{}] với giá: {}", size, gia);
+                            return gia;
+                        }
+                    }
+                }
+            }
+        }
+
+        log.info("Size [{}] không tồn tại trong cấu hình sản phẩm [{}], giá = 0", size, foodId);
+        return 0.0;
+    }
+
+    private Double tinhTongGiaTopping(List<CartRequest.ToppingOption> toppings) {
+        if (toppings == null || toppings.isEmpty()) {
+            return 0.0;
+        }
+        Double tong = 0.0;
+        for (CartRequest.ToppingOption t : toppings) {
+            Double gia = t.getPrice() != null ? t.getPrice() : 0.0;
+            tong += gia;
+        }
+        log.info("Tổng giá {} topping: {}", toppings.size(), tong);
+        return tong;
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) return 0.0;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        return 0.0;
+    }
+
+    private Boolean toBoolean(Object value) {
+        if (value == null) return false;
+        if (value instanceof Boolean) return (Boolean) value;
+        return false;
+    }
+}
