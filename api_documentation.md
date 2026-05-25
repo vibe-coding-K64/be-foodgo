@@ -343,6 +343,222 @@ Content-Type: application/json
 
 ---
 
+## 3. Chi tiết API - Các API khác
+
+### Mục lục
+
+- [3.1. PUT /api/cart/{itemId}/quantity - Cập nhật số lượng món](#31-put-apicartitemIdquantity---cập-nhật-số-lượng-món)
+- [3.2. DELETE /api/cart/{itemId} - Xóa một món khỏi giỏ hàng](#32-delete-apicartitemId---xóa-một-món-khỏi-giỏ-hàng)
+- [3.3. DELETE /api/cart - Xóa toàn bộ giỏ hàng](#33-delete-apicart---xóa-toàn-bộ-giỏ-hàng)
+
+---
+
+### 3.1. PUT /api/cart/{itemId}/quantity - Cập nhật số lượng món
+
+**Mô tả**: Cập nhật số lượng của một món trong giỏ hàng của khách hàng.
+
+**Request Headers**:
+
+| Header | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Có | `application/json` |
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `itemId` | String | Có | ID của món trong giỏ hàng (cartItemId) |
+
+**Request Body** (JSON):
+
+```json
+{
+  "userId": "user_001",
+  "quantity": 3
+}
+```
+
+**Các trường bắt buộc**: `userId`, `quantity`
+**Validation**: `quantity` phải lớn hơn 0 (>= 1)
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Cập nhật số lượng món thành công.",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Response lỗi - Số lượng không hợp lệ** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Số lượng không hợp lệ.",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Response lỗi - Món không tồn tại** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Không tìm thấy món với ID [cart_item_xyz] trong giỏ hàng.",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter gọi PUT /api/cart/{itemId}/quantity
+   |
+2. Server kiểm tra quantity > 0
+   |
+3+-> quantity <= 0 -> Trả về 400 BAD_REQUEST (IllegalArgumentException)
+   |
+4. Server truy vấn document tại customer_profiles/{userId}/cart/{itemId}
+   |
+5+-> Document không tồn tại -> Trả về 404 CART_ITEM_NOT_FOUND
+   |
+6. Server cập nhật trường quantity và updatedAt trong Firestore
+   |
+7. Trả về 200 thành công
+```
+
+**Ví dụ Request**:
+
+```http
+PUT http://localhost:8080/api/cart/AbCdEfGhIjKlMnOpQrStUvWxYz123456/quantity
+Content-Type: application/json
+
+{
+  "userId": "user_001",
+  "quantity": 3
+}
+```
+
+---
+
+### 3.2. DELETE /api/cart/{itemId} - Xóa một món khỏi giỏ hàng
+
+**Mô tả**: Xóa một món ăn khỏi giỏ hàng của khách hàng. Phương thức này là **idempotent** - trả về thành công kể cả khi món không tồn tại trong giỏ hàng.
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `itemId` | String | Có | ID của món trong giỏ hàng (cartItemId) |
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID người dùng khách hàng |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Đã xóa món khỏi giỏ hàng thành công.",
+  "data": null,
+  "timestamp": "2026-05-25T10:05:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter gọi DELETE /api/cart/{itemId}?userId={userId}
+   |
+2. Server xóa document tại customer_profiles/{userId}/cart/{itemId}
+   |
+3. Trả về 200 thành công (idempotent - không kiểm tra tồn tại)
+```
+
+**Ví dụ Request**:
+
+```http
+DELETE http://localhost:8080/api/cart/AbCdEfGhIjKlMnOpQrStUvWxYz123456?userId=user_001
+```
+
+---
+
+### 3.3. DELETE /api/cart - Xóa toàn bộ giỏ hàng
+
+**Mô tả**: Xóa tất cả các món trong giỏ hàng của khách hàng. Sử dụng WriteBatch để tối ưu số lần gọi API lên Firebase.
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID người dùng khách hàng |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Đã xóa toàn bộ giỏ hàng thành công.",
+  "data": null,
+  "timestamp": "2026-05-25T10:10:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter gọi DELETE /api/cart?userId={userId}
+   |
+2. Server quét tất cả documents trong customer_profiles/{userId}/cart
+   |
+3. Server dùng WriteBatch để xóa tất cả documents trong một lần gọi
+   |
+4. Trả về 200 thành công
+```
+
+**Ví dụ Request**:
+
+```http
+DELETE http://localhost:8080/api/cart?userId=user_001
+```
+
+---
+
+## 4. Bảng mã lỗi mở rộng
+
+### 4.1. Lỗi nghiệp vụ (Business Error) - Các API Cart khác
+
+| HTTP Status | errorCode | Trường hợp | Lỗi trả về (message) |
+| --- | --- | --- | --- |
+| 400 | INVALID_ARGUMENT | Số lượng <= 0 | "Số lượng không hợp lệ." |
+| 404 | CART_ITEM_NOT_FOUND | Món không tồn tại trong giỏ hàng | "Không tìm thấy món với ID [xxx] trong giỏ hàng." |
+
+---
+
+## 5. Cấu trúc dữ liệu mở rộng
+
+### 5.1. CartUpdateQuantityRequest (Request Body)
+
+| Thuộc tính | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID người dùng khách hàng |
+| `quantity` | Integer | Có | Số lượng mới, phải lớn hơn 0 |
+
+---
+
 ## 6. Nội dung Swagger UI
 
 Sau khi chạy ứng dụng, truy cập Swagger UI tại:

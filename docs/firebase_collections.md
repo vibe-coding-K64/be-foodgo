@@ -1003,7 +1003,7 @@ Firestore Root
 }
 ```
 
-**Ghi chú:** Có 2 item mẫu: cart_item_001 (Cơm tám) và cart_item_002 (Trà sữa trà chanh táo). Giá trị `price` trong cart chưa bao gồm toppings - toppings được lưu riêng trong mảng `toppings`.
+**Ghi chú:** Có 2 item mẫu: cart_item_001 (Cơm tám) và cart_item_002 (Trà sữa trà chanh táo). Giá trị `price` trong cart đã bao gồm tổng giá = (basePrice + sizePrice + toppingPrice) * quantity. Toppings được lưu riêng trong mảng `toppings` để hiển thị chi tiết.
 
 ---
 
