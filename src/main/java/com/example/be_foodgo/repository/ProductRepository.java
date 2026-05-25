@@ -59,4 +59,17 @@ public class ProductRepository {
         ApiFuture<WriteResult> writeResult = firestore.collection(COLLECTION_NAME).document(id).delete();
         return writeResult.get().getUpdateTime().toString();
     }
+
+    public List<Product> layTatCaProducts() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Product> products = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Product product = doc.toObject(Product.class);
+            if (product != null) {
+                products.add(product);
+            }
+        }
+        return products;
+    }
 }
