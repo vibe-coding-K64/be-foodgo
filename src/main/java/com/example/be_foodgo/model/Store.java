@@ -17,4 +17,6 @@ public class Store {
     private boolean isAcceptingOrders;
     private Double lat;
     private Double lng;
+    private Double rating;
+    private Integer reviewCount;
 }

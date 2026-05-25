@@ -9,6 +9,7 @@ import com.google.cloud.firestore.WriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
@@ -45,5 +46,10 @@ public class StoreRepository {
             ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(store.getId()).set(store);
             return collectionsApiFuture.get().getUpdateTime().toString();
         }
+    }
+
+    public String updateFields(String id, Map<String, Object> fields) throws ExecutionException, InterruptedException {
+        ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(id).update(fields);
+        return collectionsApiFuture.get().getUpdateTime().toString();
     }
 }
