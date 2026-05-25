@@ -39,6 +39,7 @@ public class OpenApiConfig {
                 .tags(List.of(
                         new Tag().name("Xac thuc (Auth)").description("API xac thuc tai khoan, dang nhap, dang ky, va khoi phuc mat khau"),
                         new Tag().name("Ho so (Profile)").description("API quan ly ho so khach hang: cap nhat thong tin ca nhan va doi mat khau"),
+                        new Tag().name("Thanh toan (Payment)").description("API quan ly phuong thuc thanh toan cho phan he Khach hang: them, xem, dat mac dinh, xoa phuong thuc"),
                         new Tag().name("Cart").description("API quan ly gio hang cho phan he Khach hang")
                 ))
                 .servers(List.of(
