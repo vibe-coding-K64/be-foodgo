@@ -164,4 +164,34 @@ public class BusinessException extends RuntimeException {
                 "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái [Chờ xác nhận]."
         );
     }
+
+    public static BusinessException trangThaiDonHangKhongChoPhepDanhGia(String orderId, int status) {
+        String tenTrangThai;
+        if (status == 0) {
+            tenTrangThai = "Chờ xác nhận";
+        } else if (status == 1) {
+            tenTrangThai = "Đang chuẩn bị";
+        } else if (status == 2) {
+            tenTrangThai = "Đang giao";
+        } else if (status == 3) {
+            tenTrangThai = "Hoàn thành";
+        } else if (status == 4) {
+            tenTrangThai = "Đã hủy";
+        } else {
+            tenTrangThai = "Không xác định";
+        }
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_STATUS_CANNOT_REVIEW",
+                "Không thể đánh giá đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể đánh giá đơn hàng đang ở trạng thái [Hoàn thành] (status = 3)."
+        );
+    }
+
+    public static BusinessException donHangDaDuocDanhGia(String orderId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_ALREADY_REVIEWED",
+                "Đơn hàng [" + orderId + "] đã được đánh giá trước đó. Mỗi đơn hàng chỉ được phép đánh giá một lần."
+        );
+    }
 }

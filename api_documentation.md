@@ -1761,3 +1761,381 @@ Hoac tai noi dung OpenAPI JSON:
 http://localhost:8080/v3/api-docs
 ```
 
+---
+
+## 13. API Tao Danh Gia (Create Review)
+
+### Muc luc
+
+- [13.1. POST /api/reviews - Tao danh gia](#131-post-apireviews---tao-danh-gia)
+- [13.2. GET /api/reviews - Lay danh sach danh gia theo cua hang](#132-get-apireviews---lay-danh-sach-danh-gia-theo-cua-hang)
+
+---
+
+### 13.1. POST /api/reviews - Tao danh gia
+
+**Mo ta**: Tao mot danh gia moi cho don hang da nhan. Chi cho phep danh gia khi don hang o trang thai [Hoan thanh] (status = 3). Mot don hang chi duoc phep danh gia mot lan.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (chua co xac thuc JWT trong phien ban nay)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Kiem tra don hang**: Truy van document don hang tu collection `orders` theo `orderId`. Neu khong tim thay, tra ve loi 404 `ORDER_NOT_FOUND`.
+2. **Buoc 2 - Kiem tra quyen so huu**: Kiem tra `userId` cua don hang co khop voi `userId` truyen len khong. Neu khong, tra ve loi 403 `FORBIDDEN`.
+3. **Buoc 3 - Kiem tra trang thai**: Chi cho phep danh gia khi don hang o trang thai `status = 3` (Hoan thanh). Neu trang thai khac 3, tra ve loi 400 `ORDER_STATUS_CANNOT_REVIEW`.
+4. **Buoc 4 - Chong trung lap**: Kiem tra xem don hang da duoc danh gia chua (query collection `reviews` theo `orderId`). Neu da danh gia, tra ve loi 400 `ORDER_ALREADY_REVIEWED`.
+5. **Buoc 5 - Luu danh gia**: Tao document moi trong collection `reviews` voi du lieu tu request kem theo `createdAt`.
+6. **Buoc 6 - Cap nhat diem so cua hang**: Doc document cua hang tu collection `stores`, tinh toan lai `rating` trung binh va `reviewCount` (cong them 1), cap nhat vao document `stores`.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "orderId": "order_001",
+  "storeId": "store_001",
+  "userId": "user_001",
+  "userName": "Khoi",
+  "userAvatarUrl": "https://example.com/avatar/user001.jpg",
+  "starRating": 5,
+  "comment": "Do an rat ngon, giao hang nhanh, dong goi ky luong.",
+  "imageUrls": [
+    "https://example.com/review/rev001_1.jpg",
+    "https://example.com/review/rev001_2.jpg"
+  ]
+}
+```
+
+**Cac truong bat buoc**: `orderId`, `storeId`, `userId`, `userName`, `starRating`, `comment`
+**Cac truong tuy chon**: `userAvatarUrl`, `imageUrls`
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Tao danh gia thanh cong.",
+  "data": {
+    "id": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "orderId": "order_001",
+    "storeId": "store_001",
+    "userId": "user_001",
+    "userName": "Khoi",
+    "userAvatarUrl": "https://example.com/avatar/user001.jpg",
+    "starRating": 5,
+    "comment": "Do an rat ngon, giao hang nhanh, dong goi ky luong.",
+    "imageUrls": [
+      "https://example.com/review/rev001_1.jpg",
+      "https://example.com/review/rev001_2.jpg"
+    ],
+    "createdAt": "2026-05-25T11:00:00Z",
+    "updatedAt": "2026-05-25T11:00:00Z"
+  },
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 13.1.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | `ORDER_STATUS_CANNOT_REVIEW` | Don hang khong o trang thai cho phep danh gia | "Khong the danh gia don hang [xxx] vi don dang o trang thai [Y]. Chi co the danh gia don hang dang o trang thai [Hoan thanh] (status = 3)." |
+| 400 | `ORDER_ALREADY_REVIEWED` | Don hang da duoc danh gia roi | "Don hang [xxx] da duoc danh gia truoc do. Moi don hang chi duoc phep danh gia mot lan." |
+| 403 | `FORBIDDEN` | Nguoi dung khong phai chu don hang | "Ban khong co quyen danh gia don hang [xxx]. Chi chu nhan cua don hang moi duoc phep danh gia." |
+| 404 | `ORDER_NOT_FOUND` | Don hang khong ton tai trong he thong | "Khong tim thay don hang voi ID [xxx]." |
+| 500 | `SYSTEM_ERROR` | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 13.1.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong hoac sai dinh dang |
+
+**Vi du loi validation**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: starRating: So sao danh gia phai tu 1 den 5, comment: Noi dung binh luan khong duoc de trong",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+##### 13.1.3. Vi du cac response loi nghiep vu
+
+**HTTP 400 - Don hang khong o trang thai cho phep danh gia (ORDER_STATUS_CANNOT_REVIEW)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Khong the danh gia don hang [AbCdEfGhIjKlMnOpQrStUvWxYz123456] vi don dang o trang thai [Dang giao]. Chi co the danh gia don hang dang o trang thai [Hoan thanh] (status = 3).",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**HTTP 400 - Don hang da duoc danh gia roi (ORDER_ALREADY_REVIEWED)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Don hang [AbCdEfGhIjKlMnOpQrStUvWxYz123456] da duoc danh gia truoc do. Moi don hang chi duoc phep danh gia mot lan.",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**HTTP 403 - Khong co quyen danh gia don hang (FORBIDDEN)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "Ban khong co quyen danh gia don hang [AbCdEfGhIjKlMnOpQrStUvWxYz123456]. Chi chu nhan cua don hang moi duoc phep danh gia.",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**HTTP 404 - Don hang khong ton tai (ORDER_NOT_FOUND)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay don hang voi ID [order_xyz].",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+---
+
+#### Vi du
+
+##### 13.1.4. Tao danh gia thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/reviews
+Content-Type: application/json
+
+{
+  "orderId": "order_001",
+  "storeId": "store_001",
+  "userId": "user_001",
+  "userName": "Khoi",
+  "userAvatarUrl": "https://example.com/avatar/user001.jpg",
+  "starRating": 5,
+  "comment": "Do an rat ngon, giao hang nhanh, dong goi ky luong.",
+  "imageUrls": [
+    "https://example.com/review/rev001_1.jpg"
+  ]
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Tao danh gia thanh cong.",
+  "data": {
+    "id": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "orderId": "order_001",
+    "storeId": "store_001",
+    "userId": "user_001",
+    "userName": "Khoi",
+    "userAvatarUrl": "https://example.com/avatar/user001.jpg",
+    "starRating": 5,
+    "comment": "Do an rat ngon, giao hang nhanh, dong goi ky luong.",
+    "imageUrls": [
+      "https://example.com/review/rev001_1.jpg"
+    ],
+    "createdAt": "2026-05-25T11:00:00Z",
+    "updatedAt": "2026-05-25T11:00:00Z"
+  },
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+##### 13.1.5. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/reviews voi ReviewRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+4. Server truy van document don hang tu collection orders theo orderId
+   |
+5+-> Don hang khong ton tai -> Tra ve 404 ORDER_NOT_FOUND
+   |
+6. Server kiem tra userId cua don hang co khop voi userId truyen len
+   |
+7+-> Khong khop -> Tra ve 403 FORBIDDEN
+   |
+8. Server doc gia tri trang thai (status) cua don hang
+   |
+9+-> status != 3 (Hoan thanh) -> Tra ve 400 ORDER_STATUS_CANNOT_REVIEW
+   |
+10. Server kiem tra don hang da duoc danh gia chua
+    (query collection reviews theo orderId)
+    |
+11+-> Da danh gia -> Tra ve 400 ORDER_ALREADY_REVIEWED
+    |
+12. Server tao document danh gia moi trong collection reviews
+    |
+13. Server doc document cua hang tu stores, tinh toan lai rating
+    moi = (ratingCu * reviewCountCu + starRatingMoi) / (reviewCountCu + 1)
+    reviewCountMoi = reviewCountCu + 1
+    |
+14. Server cap nhat rating va reviewCount cua cua hang
+    |
+15. Tra ve 200 voi ReviewDTO da duoc tao
+```
+
+---
+
+### 13.2. GET /api/reviews - Lay danh sach danh gia theo cua hang
+
+**Mo ta**: Lay tat ca danh gia cua mot cua hang theo storeId.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (chua co xac thuc JWT trong phien ban nay)
+
+---
+
+#### Chi tiet API
+
+**Request Parameters**:
+
+| Parameter | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `storeId` | String | Co | ID cua hang can lay danh gia |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Lay danh sach danh gia thanh cong.",
+  "data": [
+    {
+      "id": "rev_001",
+      "orderId": "order_001",
+      "storeId": "store_001",
+      "userId": "user_001",
+      "userName": "Khoi",
+      "userAvatarUrl": "https://example.com/avatar/user001.jpg",
+      "starRating": 5,
+      "comment": "Do an rat ngon, giao hang nhanh.",
+      "imageUrls": [
+        "https://example.com/review/rev001_1.jpg"
+      ],
+      "createdAt": "2026-04-07T00:00:00Z",
+      "updatedAt": "2026-04-07T00:00:00Z"
+    },
+    {
+      "id": "rev_002",
+      "orderId": "order_002",
+      "storeId": "store_001",
+      "userId": "user_002",
+      "userName": "Minh",
+      "userAvatarUrl": "https://example.com/avatar/user002.jpg",
+      "starRating": 4,
+      "comment": "Do an ngon, nhung giao hang hoi tre.",
+      "imageUrls": null,
+      "createdAt": "2026-04-08T00:00:00Z",
+      "updatedAt": "2026-04-08T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**Luong xu ly**:
+
+```
+1. Flutter goi GET /api/reviews?storeId={storeId}
+   |
+2. Server truy van collection reviews voi dieu kien storeId
+   |
+3. Tra ve 200 voi danh sach ReviewDTO
+```
+
+---
+
+#### Cau truc du lieu
+
+##### 13.2.1. ReviewRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `orderId` | String | Co | ID don hang can danh gia |
+| `storeId` | String | Co | ID cua hang duoc danh gia |
+| `userId` | String | Co | ID nguoi dung khach hang |
+| `userName` | String | Co | Ten nguoi danh gia |
+| `userAvatarUrl` | String | Khong | URL anh dai dien nguoi danh gia |
+| `starRating` | Integer | Co | So sao danh gia (1-5) |
+| `comment` | String | Co | Noi dung binh luan danh gia |
+| `imageUrls` | List<String> | Khong | Danh sach URL hinh anh kem theo |
+
+##### 13.2.2. ReviewDTO (Response Data)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `id` | String | ID document trong Firestore (auto generated) |
+| `orderId` | String | ID don hang da danh gia |
+| `storeId` | String | ID cua hang duoc danh gia |
+| `userId` | String | ID nguoi danh gia |
+| `userName` | String | Ten nguoi danh gia |
+| `userAvatarUrl` | String | URL anh dai dien nguoi danh gia |
+| `starRating` | Integer | So sao danh gia (1-5) |
+| `comment` | String | Noi dung binh luan danh gia |
+| `imageUrls` | List<String> | Danh sach URL hinh anh kem theo |
+| `createdAt` | ISO 8601 Timestamp | Thoi diem tao danh gia |
+| `updatedAt` | ISO 8601 Timestamp | Thoi diem cap nhat gan nhat |
+
+---
+
+#### Noi dung Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
