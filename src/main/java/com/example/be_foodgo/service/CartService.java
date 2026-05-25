@@ -89,6 +89,61 @@ public class CartService {
         return item;
     }
 
+    public void capNhatSoLuongMon(String userId, String itemId, Integer quantity) {
+        log.info("Bắt đầu xử lý cập nhật số lượng - Người dùng: {}, Món: {}, Số lượng mới: {}",
+                userId, itemId, quantity);
+
+        if (quantity == null || quantity <= 0) {
+            log.warn("Số lượng không hợp lệ: {}", quantity);
+            throw new IllegalArgumentException("Số lượng không hợp lệ.");
+        }
+
+        try {
+            CartItem item = cartRepository.layMotMonTrongGio(userId, itemId);
+            if (item == null) {
+                log.warn("Món với itemId [{}] không tồn tại trong giỏ hàng của người dùng {}", itemId, userId);
+                throw BusinessException.cartItemKhongTimThay(itemId);
+            }
+
+            cartRepository.capNhatSoLuongMon(userId, itemId, quantity);
+            log.info("Cập nhật số lượng món [{}] thành {} thành công.", itemId, quantity);
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật số lượng món [{}]: {}", itemId, e.getMessage());
+            throw BusinessException.loiHeThong("Không thể cập nhật số lượng món.");
+        }
+    }
+
+    public void xoaMotMon(String userId, String itemId) {
+        log.info("Bắt đầu xóa món [{}] khỏi giỏ hàng - Người dùng: {}", itemId, userId);
+
+        try {
+            cartRepository.xoaMotMonTrongGio(userId, itemId);
+            log.info("Đã xóa món [{}] khỏi giỏ hàng của người dùng {}", itemId, userId);
+
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa món [{}]: {}", itemId, e.getMessage());
+            throw BusinessException.loiHeThong("Không thể xóa món khỏi giỏ hàng.");
+        }
+    }
+
+    public void xoaToanBoGioHang(String userId) {
+        log.info("Bắt đầu xóa toàn bộ giỏ hàng - Người dùng: {}", userId);
+
+        try {
+            cartRepository.xoaTatCaMonTrongGio(userId);
+            log.info("Đã xóa toàn bộ giỏ hàng của người dùng {}", userId);
+
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa toàn bộ giỏ hàng: {}", e.getMessage());
+            throw BusinessException.loiHeThong("Không thể xóa giỏ hàng.");
+        }
+    }
+
     private void kiemTraQuyTacMotCuaHang(CartRequest request) {
         try {
             List<CartItem> gioHienTai = cartRepository.layTatCaMonTrongGio(request.getUserId());

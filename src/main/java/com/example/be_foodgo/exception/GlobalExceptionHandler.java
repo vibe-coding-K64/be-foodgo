@@ -25,6 +25,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> xuLyIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Illegal argument exception - Thông báo: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.thatError(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> xuLyValidationException(MethodArgumentNotValidException ex) {
         String thongBao = ex.getBindingResult().getFieldErrors().stream()

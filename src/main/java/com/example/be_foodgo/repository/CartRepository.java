@@ -161,6 +161,77 @@ public class CartRepository {
         log.info("Đã xóa {} món khỏi giỏ hàng của người dùng {}", snapshot.size(), userId);
     }
 
+    public CartItem layMotMonTrongGio(String userId, String itemId)
+            throws ExecutionException, InterruptedException {
+        log.info("Truy vấn một món trong giỏ hàng - userId: {}, itemId: {}", userId, itemId);
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(itemId);
+
+        ApiFuture<DocumentSnapshot> future = docRef.get();
+        DocumentSnapshot doc = future.get();
+
+        if (!doc.exists()) {
+            log.warn("Không tìm thấy món với itemId [{}] trong giỏ hàng của người dùng {}", itemId, userId);
+            return null;
+        }
+
+        CartItem item = CartItem.builder()
+                .id(doc.getId())
+                .storeId(doc.getString("storeId"))
+                .foodId(doc.getString("foodId"))
+                .name(doc.getString("name"))
+                .price(doc.getDouble("price"))
+                .quantity(doc.getLong("quantity") != null ? doc.getLong("quantity").intValue() : 1)
+                .size(doc.getString("size"))
+                .sizePrice(doc.getDouble("sizePrice"))
+                .note(doc.getString("note"))
+                .imageUrl(doc.getString("imageUrl"))
+                .toppings(toToppingItemList(doc.get("toppings")))
+                .createdAt(toInstant(doc.get("createdAt")))
+                .updatedAt(toInstant(doc.get("updatedAt")))
+                .build();
+
+        log.info("Tìm thấy món [{}] trong giỏ hàng của người dùng {}", itemId, userId);
+        return item;
+    }
+
+    public void capNhatSoLuongMon(String userId, String itemId, Integer quantity) {
+        log.info("Cập nhật số lượng món {} trong giỏ hàng người dùng {} - số lượng mới: {}",
+                itemId, userId, quantity);
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(itemId);
+
+        try {
+            docRef.update(
+                    "quantity", quantity,
+                    "updatedAt", FieldValue.serverTimestamp()
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Lỗi khi cập nhật số lượng món [{}]: {}", itemId, e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("Đã cập nhật số lượng món [{}] thành {} trong giỏ hàng người dùng {}", itemId, quantity, userId);
+    }
+
+    public void xoaMotMonTrongGio(String userId, String itemId) {
+        log.info("Xóa món {} khỏi giỏ hàng người dùng {}", itemId, userId);
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(itemId);
+
+        docRef.delete();
+        log.info("Đã xóa món [{}] khỏi giỏ hàng người dùng {}", itemId, userId);
+    }
+
     public FirestoreDocument layThongTinSanPham(String foodId) throws ExecutionException, InterruptedException {
         log.info("Truy vấn thông tin sản phẩm: {}", foodId);
         DocumentReference productRef = firestore.collection("products").document(foodId);

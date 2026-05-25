@@ -47,6 +47,14 @@ public class BusinessException extends RuntimeException {
         );
     }
 
+    public static BusinessException cartItemKhongTimThay(String itemId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "CART_ITEM_NOT_FOUND",
+                "Không tìm thấy món với ID [" + itemId + "] trong giỏ hàng."
+        );
+    }
+
     public static BusinessException loiHeThong(String message) {
         return new BusinessException(
                 HttpStatus.INTERNAL_SERVER_ERROR,
