@@ -62,4 +62,12 @@ public class BusinessException extends RuntimeException {
                 "Lỗi hệ thống: " + message
         );
     }
+
+    public static BusinessException diaChiKhongTimThay(String addressId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "ADDRESS_NOT_FOUND",
+                "Không tìm thấy địa chỉ với ID [" + addressId + "]."
+        );
+    }
 }

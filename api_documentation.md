@@ -572,3 +572,565 @@ Hoặc tại nội dung OpenAPI JSON:
 ```
 http://localhost:8080/v3/api-docs
 ```
+
+---
+
+## 7. API Quan Ly Dia Chi Giao Hang
+
+### Mục lục
+
+- [7.1. POST /api/addresses - Them dia chi moi](#71-post-apiaddresses---them-dia-chi-moi)
+- [7.2. GET /api/addresses - Lay danh sach dia chi](#72-get-apiaddresses---lay-danh-sach-dia-chi)
+- [7.3. GET /api/addresses/{id} - Lay thong tin mot dia chi](#73-get-apiaddressesid---lay-thong-tin-mot-dia-chi)
+- [7.4. PUT /api/addresses/{id} - Cap nhat dia chi](#74-put-apiaddressesid---cap-nhat-dia-chi)
+- [7.5. PUT /api/addresses/{id}/default - Dat dia chi lam mac dinh](#75-put-apiaddressesiddefault---dat-dia-chi-lam-mac-dinh)
+- [7.6. DELETE /api/addresses/{id} - Xoa dia chi](#76-delete-apiaddressesid---xoa-dia-chi)
+
+---
+
+### 7.1. POST /api/addresses - Them dia chi moi
+
+**Mô tả**: Them mot dia chi giao hang moi cho khach hang. Dia chi duoc luu vao sub-collection `customer_profiles/{userId}/addresses`.
+
+**Request Headers**:
+
+| Header | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Có | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "userId": "user_001",
+  "name": "Nha rieng",
+  "address": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+  "receiverName": "Khoi",
+  "receiverPhone": "0123456789",
+  "lat": 10.8455,
+  "lng": 106.7939,
+  "isDefault": true
+}
+```
+
+**Các trường bắt buộc**: `userId`, `name`, `address`, `receiverName`, `receiverPhone`, `lat`, `lng`
+**Các trường tùy chọn**: `isDefault` (mặc định: `false`)
+
+**Các quy tắc nghiệp vụ**:
+
+1. Neu `isDefault = true`, he thong se tu dong goi `xoaTatCaDiaChiMacDinh` de bo flag mac dinh cua cac dia chi cu.
+2. Neu `isDefault` khong duoc truyen hoac la `false`, dia chi moi se khong phai la mac dinh.
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da them dia chi thanh cong.",
+  "data": {
+    "id": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "name": "Nha rieng",
+    "address": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "receiverName": "Khoi",
+    "receiverPhone": "0123456789",
+    "lat": 10.8455,
+    "lng": 106.7939,
+    "isDefault": true,
+    "createdAt": "2026-05-25T10:00:00Z",
+    "updatedAt": "2026-05-25T10:00:00Z",
+    "deletedAt": null
+  },
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi POST /api/addresses voi AddressRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Neu isDefault = true, goi addressRepository.xoaTatCaDiaChiMacDinh(userId, "")
+   |
+5. Server tao Address object va luu vao Firestore
+   |
+6. Tra ve 200 voi Address da duoc tao
+```
+
+**Ví dụ Request**:
+
+```http
+POST http://localhost:8080/api/addresses
+Content-Type: application/json
+
+{
+  "userId": "user_001",
+  "name": "Truong hoc",
+  "address": "Truong Dai hoc, Quan 7, TP.HCM",
+  "receiverName": "Khoi",
+  "receiverPhone": "0123456789",
+  "lat": 10.7291,
+  "lng": 106.6989,
+  "isDefault": false
+}
+```
+
+---
+
+### 7.2. GET /api/addresses - Lay danh sach dia chi
+
+**Mô tả**: Lay tat ca dia chi giao hang cua khach hang tu sub-collection `customer_profiles/{userId}/addresses`.
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID nguoi dung khach hang |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da lay danh sach dia chi thanh cong.",
+  "data": [
+    {
+      "id": "addr_001",
+      "name": "Nha rieng",
+      "address": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+      "receiverName": "Khoi",
+      "receiverPhone": "0123456789",
+      "lat": 10.8455,
+      "lng": 106.7939,
+      "isDefault": true,
+      "createdAt": "2026-04-07T00:00:00Z",
+      "updatedAt": "2026-05-25T10:00:00Z",
+      "deletedAt": null
+    },
+    {
+      "id": "addr_002",
+      "name": "Truong hoc",
+      "address": "Truong Dai hoc, Quan 7, TP.HCM",
+      "receiverName": "Khoi",
+      "receiverPhone": "0123456789",
+      "lat": 10.7291,
+      "lng": 106.6989,
+      "isDefault": false,
+      "createdAt": "2026-04-07T00:00:00Z",
+      "updatedAt": "2026-04-07T00:00:00Z",
+      "deletedAt": null
+    }
+  ],
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi GET /api/addresses?userId={userId}
+   |
+2. Server truy van tat ca documents trong customer_profiles/{userId}/addresses
+   |
+3. Tra ve 200 voi danh sach Address
+```
+
+**Ví dụ Request**:
+
+```http
+GET http://localhost:8080/api/addresses?userId=user_001
+```
+
+---
+
+### 7.3. GET /api/addresses/{id} - Lay thong tin mot dia chi
+
+**Mô tả**: Lay thong tin chi tiet cua mot dia chi giao hang cu the.
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `id` | String | Có | ID dia chi can lay |
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID nguoi dung khach hang |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da lay thong tin dia chi thanh cong.",
+  "data": {
+    "id": "addr_001",
+    "name": "Nha rieng",
+    "address": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "receiverName": "Khoi",
+    "receiverPhone": "0123456789",
+    "lat": 10.8455,
+    "lng": 106.7939,
+    "isDefault": true,
+    "createdAt": "2026-04-07T00:00:00Z",
+    "updatedAt": "2026-05-25T10:00:00Z",
+    "deletedAt": null
+  },
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Response lỗi - Dia chi khong ton tai** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay dia chi voi ID [addr_xyz].",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi GET /api/addresses/{id}?userId={userId}
+   |
+2. Server truy van document tai customer_profiles/{userId}/addresses/{id}
+   |
+3+-> Document khong ton tai -> Tra ve 404 ADDRESS_NOT_FOUND
+   |
+4. Tra ve 200 voi Address
+```
+
+**Ví dụ Request**:
+
+```http
+GET http://localhost:8080/api/addresses/addr_001?userId=user_001
+```
+
+---
+
+### 7.4. PUT /api/addresses/{id} - Cap nhat dia chi
+
+**Mô tả**: Cap nhat thong tin dia chi giao hang cua khach hang.
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `id` | String | Có | ID dia chi can cap nhat |
+
+**Request Body** (JSON):
+
+```json
+{
+  "userId": "user_001",
+  "name": "Nha me",
+  "address": "Dia chi moi, Quan 9, TP.HCM",
+  "receiverName": "Khoi",
+  "receiverPhone": "0987654321",
+  "lat": 10.8500,
+  "lng": 106.8000,
+  "isDefault": true
+}
+```
+
+**Các trường bắt buộc**: `userId`, `name`, `address`, `receiverName`, `receiverPhone`, `lat`, `lng`
+**Các trường tùy chọn**: `isDefault`
+
+**Các quy tắc nghiệp vụ**:
+
+1. Neu dia chi hien tai chua phai mac dinh va `isDefault = true`, he thong se goi `xoaTatCaDiaChiMacDinh` truoc khi cap nhat.
+2. Neu dia chi hien tai da la mac dinh va `isDefault = false`, chi cap nhat thong tin, giu nguyen mac dinh.
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da cap nhat dia chi thanh cong.",
+  "data": {
+    "id": "addr_001",
+    "name": "Nha me",
+    "address": "Dia chi moi, Quan 9, TP.HCM",
+    "receiverName": "Khoi",
+    "receiverPhone": "0987654321",
+    "lat": 10.8500,
+    "lng": 106.8000,
+    "isDefault": true,
+    "createdAt": "2026-04-07T00:00:00Z",
+    "updatedAt": "2026-05-25T10:30:00Z",
+    "deletedAt": null
+  },
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+**Response lỗi - Dia chi khong ton tai** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay dia chi voi ID [addr_xyz].",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi PUT /api/addresses/{id} voi AddressRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Server truy van dia chi hien tai tai customer_profiles/{userId}/addresses/{id}
+   |
+5+-> Dia chi khong ton tai -> Tra ve 404 ADDRESS_NOT_FOUND
+   |
+6. Neu chuyen tu khong mac dinh sang mac dinh (isDefault: false -> true),
+   goi addressRepository.xoaTatCaDiaChiMacDinh(userId, addressId)
+   |
+7. Server cap nhat document trong Firestore
+   |
+8. Tra ve 200 voi Address da duoc cap nhat
+```
+
+**Ví dụ Request**:
+
+```http
+PUT http://localhost:8080/api/addresses/addr_001
+Content-Type: application/json
+
+{
+  "userId": "user_001",
+  "name": "Nha me",
+  "address": "Dia chi moi, Quan 9, TP.HCM",
+  "receiverName": "Khoi",
+  "receiverPhone": "0987654321",
+  "lat": 10.8500,
+  "lng": 106.8000,
+  "isDefault": true
+}
+```
+
+---
+
+### 7.5. PUT /api/addresses/{id}/default - Dat dia chi lam mac dinh
+
+**Mô tả**: Dat mot dia chi giao hang lam dia chi mac dinh cho khach hang. He thong se quet tat ca dia chi cua nguoi dung, bo flag `isDefault` cua cac dia chi cu, sau do dat `isDefault = true` cho dia chi duoc yeu cau.
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `id` | String | Có | ID dia chi can dat lam mac dinh |
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID nguoi dung khach hang |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da dat dia chi lam mac dinh thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-25T10:35:00Z"
+}
+```
+
+**Response lỗi - Dia chi khong ton tai** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay dia chi voi ID [addr_xyz].",
+  "data": null,
+  "timestamp": "2026-05-25T10:35:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi PUT /api/addresses/{id}/default?userId={userId}
+   |
+2. Server truy van dia chi tai customer_profiles/{userId}/addresses/{id}
+   |
+3+-> Dia chi khong ton tai -> Tra ve 404 ADDRESS_NOT_FOUND
+   |
+4. Neu dia chi da la mac dinh -> Tra ve 200 ngay (khong can thay doi)
+   |
+5. Server quet tat ca dia chi cua nguoi dung, goi xoaTatCaDiaChiMacDinh(userId, addressId)
+   de bo flag isDefault cua cac dia chi cu
+   |
+6. Server dat isDefault = true cho dia chi duoc yeu cau
+   |
+7. Tra ve 200 thanh cong
+```
+
+**Ví dụ Request**:
+
+```http
+PUT http://localhost:8080/api/addresses/addr_002/default?userId=user_001
+```
+
+---
+
+### 7.6. DELETE /api/addresses/{id} - Xoa dia chi
+
+**Mô tả**: Xoa mot dia chi giao hang cua khach hang. Phuong thuc nay la **idempotent** - tra ve thanh cong ke ca khi dia chi khong ton tai.
+
+**Path Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `id` | String | Có | ID dia chi can xoa |
+
+**Request Parameters**:
+
+| Parameter | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID nguoi dung khach hang |
+
+**Response thành công** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Da xoa dia chi thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-25T10:40:00Z"
+}
+```
+
+**Luồng xử lý**:
+
+```
+1. Flutter goi DELETE /api/addresses/{id}?userId={userId}
+   |
+2. Server kiem tra dia chi co ton tai khong
+   |
+3+-> Dia chi khong ton tai -> Tra ve 200 (idempotent)
+   |
+4. Server xoa document tai customer_profiles/{userId}/addresses/{id}
+   |
+5. Tra ve 200 thanh cong
+```
+
+**Ví dụ Request**:
+
+```http
+DELETE http://localhost:8080/api/addresses/addr_001?userId=user_001
+```
+
+---
+
+## 8. Cau Truc Du Lieu - Dia Chi
+
+### 8.1. AddressRequest (Request Body)
+
+| Thuộc tính | Kiểu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `userId` | String | Có | ID nguoi dung khach hang |
+| `name` | String | Có | Nhan dia chi (VD: "Nha rieng", "Cong ty") |
+| `address` | String | Có | Dia chi chi tiet day du |
+| `receiverName` | String | Có | Ho ten nguoi nhan hang |
+| `receiverPhone` | String | Có | So dien thoai nguoi nhan (bat dau bang 0, 10-11 chu so) |
+| `lat` | Double | Có | Toa do vi do (latitude) |
+| `lng` | Double | Có | Toa do kin do (longitude) |
+| `isDefault` | Boolean | Không | Co phai dia chi mac dinh khong (mặc định: false) |
+
+### 8.2. Address (Response Data)
+
+| Thuộc tính | Kiểu | Mô tả |
+| --- | --- | --- |
+| `id` | String | ID document trong Firestore (auto generated) |
+| `name` | String | Nhan dia chi |
+| `address` | String | Dia chi chi tiet day du |
+| `receiverName` | String | Ho ten nguoi nhan hang |
+| `receiverPhone` | String | So dien thoai nguoi nhan |
+| `lat` | Double | Toa do vi do |
+| `lng` | Double | Toa do kin do |
+| `isDefault` | Boolean | Co phai dia chi mac dinh khong |
+| `createdAt` | ISO 8601 Timestamp | Thoi diem tao |
+| `updatedAt` | ISO 8601 Timestamp | Thoi diem cap nhat gan nhat |
+| `deletedAt` | ISO 8601 Timestamp (nullable) | Thoi diem xoa (neu co) |
+
+---
+
+## 9. Bang Ma Loi - Dia Chi
+
+### 9.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 404 | ADDRESS_NOT_FOUND | Dia chi khong ton tai | "Khong tim thay dia chi voi ID [xxx]." |
+| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Loi he thong: Khong the ..." |
+
+### 9.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mô tả |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong hoac sai dinh dang |
+
+**Ví dụ loi validation - So dien thoai sai dinh dang**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: receiverPhone: So dien thoai khong dung dinh dang (bat dau bang 0, 10-11 chu so)",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+**Ví dụ loi validation - Thieu truong bat buoc**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: name: Ten dia chi (nhan) khong duoc de trong",
+  "data": null,
+  "timestamp": "2026-05-25T10:00:00Z"
+}
+```
+
+---
+
+## 10. Thu Vien Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
