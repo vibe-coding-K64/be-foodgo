@@ -1499,3 +1499,265 @@ Content-Type: application/json
    |
 17. Tra ve 200 voi CheckoutResponse
 ```
+
+---
+
+## 12. API Huy Don Hang (Cancel Order)
+
+### Muc luc
+
+- [12.1. POST /api/orders/{id}/cancel - Huy don hang](#121-post-apiordersidcancel---huy-don-hang)
+
+---
+
+### 12.1. POST /api/orders/{id}/cancel - Huy don hang
+
+**Mo ta**: Cho phep khach hang huy don hang cua minh. Chi co the huy khi don hang o trang thai [Cho xac nhan] (0). Don hang o trang thai [Dang chuan bi], [Dang giao], [Hoan thanh], hoac [Da huy] khong the huy duoc.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (chua co xac thuc JWT trong phien ban nay)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Tim don hang**: Truy van document don hang tu collection `orders` theo `id`. Neu khong tim thay, tra ve loi 404 `ORDER_NOT_FOUND`.
+2. **Buoc 2 - Kiem tra quyen so huu**: Kiem tra `userId` cua don hang co khop voi `userId` truyen len khong. Neu khong, tra ve loi 403 `FORBIDDEN`.
+3. **Buoc 3 - Kiem tra trang thai**: Chi cho phep huy khi don hang o trang thai 0 (Cho xac nhan). Neu `status != 0`, tra ve loi 400 `ORDER_STATUS_CANNOT_CANCEL`.
+4. **Buoc 4 - Cap nhat trang thai**: Neu hop le, cap nhat `status = 4` (Da huy) va `updatedAt` thoi diem hien tai.
+
+---
+
+#### Cac gia tri trang thai don hang
+
+| Gia tri | Ten           | Mo ta                         | Co the huy? |
+| --- | ------------- | ------------------------------ | ----------- |
+| 0   | Cho xac nhan  | Don hang cho quan xac nhan     | Co         |
+| 1   | Dang chuan bi | Quan dang chuan bi mon         | Khong      |
+| 2   | Dang giao     | Tai xe dang giao hang          | Khong      |
+| 3   | Hoan thanh    | Da giao thanh cong             | Khong      |
+| 4   | Da huy        | Don hang da bi huy             | Khong      |
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header         | Kieu   | Bat buoc | Mo ta              |
+| --- | ------ | -------- | ------------------- |
+| `Content-Type` | String | Co       | `application/json`  |
+
+**Path Parameters**:
+
+| Parameter | Kieu   | Bat buoc | Mo ta                        |
+| --- | ------ | -------- | ----------------------------- |
+| `id`      | String | Co       | ID don hang can huy           |
+
+**Request Parameters**:
+
+| Parameter | Kieu   | Bat buoc | Mo ta                                         |
+| --- | ------ | -------- | ---------------------------------------------- |
+| `userId`  | String | Co       | ID nguoi dung khach hang (xac thuc quyen so huu) |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Huy don hang thanh cong.",
+  "data": {
+    "id": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "userId": "user_001",
+    "storeId": "store_001",
+    "storeName": "Com tam Phuc Loc Tho",
+    "code": "QRSTUV",
+    "items": [
+      {
+        "foodId": "prod_001",
+        "name": "Com tam suon bi cha",
+        "price": 45000.0,
+        "quantity": 2,
+        "options": [
+          { "name": "Tran chau", "price": 5000.0 }
+        ]
+      }
+    ],
+    "totalAmount": 90000.0,
+    "deliveryFee": 15000.0,
+    "discountAmount": 0.0,
+    "finalAmount": 105000.0,
+    "paymentMethod": "cash",
+    "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "status": "Da huy",
+    "createdAt": "2026-05-25T10:30:00Z",
+    "updatedAt": "2026-05-25T11:00:00Z"
+  },
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 12.1.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode                  | Truong hop                                    | Loi tra ve (message)                                                                                                                               |
+| --- | --- | --- | --- |
+| 400 | `ORDER_STATUS_CANNOT_CANCEL` | Don hang khong o trang thai cho phep huy       | "Khong the huy don hang [xxx] vi don dang o trang thai [Dang chuan bi]. Chi co the huy don hang dang o trang thai [Cho xac nhan]." |
+| 403 | `FORBIDDEN`                  | Nguoi dung khong phai chu don hang             | "Ban khong co quyen huy don hang [xxx]. Chi chu nhan cua don hang moi duoc phep huy."                                                             |
+| 404 | `ORDER_NOT_FOUND`            | Don hang khong ton tai trong he thong          | "Khong tim thay don hang voi ID [xxx]."                                                                                                            |
+| 500 | `SYSTEM_ERROR`              | Loi he thong khi truy van Firestore            | "Da xay ra loi khong mong muon. Vui long thu lai sau."                                                                                            |
+
+##### 12.1.2. Vi du cac response loi nghiep vu
+
+**HTTP 400 - Don hang khong the huy (ORDER_STATUS_CANNOT_CANCEL)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Khong the huy don hang [AbCdEfGhIjKlMnOpQrStUvWxYz123456] vi don dang o trang thai [Dang chuan bi]. Chi co the huy don hang dang o trang thai [Cho xac nhan].",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**HTTP 403 - Khong co quyen huy don hang (FORBIDDEN)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "Ban khong co quyen huy don hang [AbCdEfGhIjKlMnOpQrStUvWxYz123456]. Chi chu nhan cua don hang moi duoc phep huy.",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+**HTTP 404 - Don hang khong ton tai (ORDER_NOT_FOUND)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay don hang voi ID [order_xyz].",
+  "data": null,
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+---
+
+#### Vi du
+
+##### 12.1.3. Huy don hang thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/orders/AbCdEfGhIjKlMnOpQrStUvWxYz123456/cancel?userId=user_001
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Huy don hang thanh cong.",
+  "data": {
+    "id": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "userId": "user_001",
+    "storeId": "store_001",
+    "storeName": "Com tam Phuc Loc Tho",
+    "code": "QRSTUV",
+    "items": [
+      {
+        "foodId": "prod_001",
+        "name": "Com tam suon bi cha",
+        "price": 45000.0,
+        "quantity": 2,
+        "options": [
+          { "name": "Tran chau", "price": 5000.0 }
+        ]
+      }
+    ],
+    "totalAmount": 90000.0,
+    "deliveryFee": 15000.0,
+    "discountAmount": 0.0,
+    "finalAmount": 105000.0,
+    "paymentMethod": "cash",
+    "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "status": "Da huy",
+    "createdAt": "2026-05-25T10:30:00Z",
+    "updatedAt": "2026-05-25T11:00:00Z"
+  },
+  "timestamp": "2026-05-25T11:00:00Z"
+}
+```
+
+##### 12.1.4. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/orders/{id}/cancel?userId={userId}
+   |
+2. Server truy van document don hang tu collection orders theo id
+   |
+3+-> Don hang khong ton tai -> Tra ve 404 ORDER_NOT_FOUND
+   |
+4. Server kiem tra userId cua don hang co khop voi userId truyen len
+   |
+5+-> Khong khop -> Tra ve 403 FORBIDDEN
+   |
+6. Server doc gia tri trang thai (status) cua don hang
+   |
+7+-> status != 0 (Dang chuan bi / Dang giao / Hoan thanh / Da huy)
+   |   -> Tra ve 400 ORDER_STATUS_CANNOT_CANCEL
+   |
+8. Server cap nhat trang thai don hang:
+   |   + status = 4 (Da huy)
+   |   + updatedAt = thoi diem hien tai
+   |
+9. Tra ve 200 voi OrderDTO da duoc cap nhat
+```
+
+##### 12.1.5. Cau truc du lieu tra ve (OrderDTO)
+
+| Thuoc tinh         | Kieu        | Mo ta                                      |
+| --- | --- | --- |
+| `id`                | String      | ID don hang                                |
+| `userId`            | String      | ID nguoi dat hang                         |
+| `storeId`           | String      | ID cua hang                               |
+| `storeName`        | String      | Ten cua hang                              |
+| `code`              | String      | Ma don hang (6 ky tu cuoi cua ID)         |
+| `items`             | ArrayObject | Danh sach mon an trong don                 |
+| `totalAmount`       | Double      | Tong tien hang (VND)                     |
+| `deliveryFee`       | Double      | Phi giao hang (VND)                       |
+| `discountAmount`    | Double      | So tien giam gia (VND)                    |
+| `finalAmount`       | Double      | Tong thanh toan (VND)                     |
+| `paymentMethod`     | String      | Phuong thuc thanh toan                   |
+| `deliveryAddress`    | String      | Dia chi giao hang                         |
+| `status`            | String      | Trang thai don hang (text)                |
+| `createdAt`         | Timestamp   | Thoi diem tao don                         |
+| `updatedAt`         | Timestamp   | Thoi diem cap nhat gan nhat               |
+
+---
+
+#### Noi dung Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
+

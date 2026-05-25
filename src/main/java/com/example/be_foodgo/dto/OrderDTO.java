@@ -5,6 +5,7 @@ import java.util.List;
 
 public class OrderDTO {
     private String id;
+    private String userId;
     private String storeId;
     private String code;
     
@@ -25,11 +26,14 @@ public class OrderDTO {
     
     private String status;
     private Date createdAt;
+    private Date updatedAt;
 
     public OrderDTO() {}
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public String getStoreId() { return storeId; }
     public void setStoreId(String storeId) { this.storeId = storeId; }
     public String getCode() { return code; }
@@ -60,4 +64,6 @@ public class OrderDTO {
     public void setStatus(String status) { this.status = status; }
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public Date getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
 }
