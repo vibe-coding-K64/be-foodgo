@@ -4,6 +4,7 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
@@ -37,11 +38,13 @@ public class OpenApiConfig {
                                         .description("Nhap token JWT nhan duoc sau khi dang nhap/dang ky thanh cong. VD: Bearer eyJhbGciOiJIUzI1NiJ9...")))
                 .tags(List.of(
                         new Tag().name("Xac thuc (Auth)").description("API xac thuc tai khoan, dang nhap, dang ky, va khoi phuc mat khau"),
+                        new Tag().name("Ho so (Profile)").description("API quan ly ho so khach hang: cap nhat thong tin ca nhan va doi mat khau"),
                         new Tag().name("Cart").description("API quan ly gio hang cho phan he Khach hang")
                 ))
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Moi truong phat trien"),
                         new Server().url("https://api.foodgo.com").description("Moi truong san xuat")
-                ));
+                ))
+                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME));
     }
 }
