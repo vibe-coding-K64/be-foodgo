@@ -2457,3 +2457,1103 @@ Hoac tai noi dung OpenAPI JSON:
 ```
 http://localhost:8080/v3/api-docs
 ```
+
+|```
+---
+## 15. API Xac Thuc (Authentication & Security)
+
+### Muc luc
+
+- [15.1. POST /api/auth/register - Dang ky tai khoan khach hang](#151-post-apiauthregister---dang-ky-tai-khoan-khach-hang)
+- [15.2. POST /api/auth/login - Dang nhap](#152-post-apiauthlogin---dang-nhap)
+- [15.3. POST /api/auth/send-otp - Gui ma OTP](#153-post-apiauthsend-otp---gui-ma-otp)
+- [15.4. POST /api/auth/verify-otp - Xac thuc ma OTP](#154-post-apiauthverify-otp---xac-thuc-ma-otp)
+- [15.5. POST /api/auth/reset-password - Dat lai mat khau](#155-post-apiauthreset-password---dat-lai-mat-khau)
+- [15.6. POST /api/auth/register-merchant - Dang ky tai khoan nguoi ban](#156-post-apiauthregister-merchant---dang-ky-tai-khoan-nguoi-ban)
+- [15.7. GET /api/auth/check-merchant - Kiem tra quyen nguoi ban](#157-get-apiauthcheck-merchant---kiem-tra-quyen-nguoi-ban)
+
+---
+
+### 15.1. POST /api/auth/register - Dang ky tai khoan khach hang
+
+**Mo ta**: Tao tai khoan khach hang moi trong he thong. Tai khoan se co roles mac dinh la [1] (Khach hang). Mat khau duoc ma hoa bang BCrypt truoc khi luu vao Firestore.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Kiem tra trung lap email**: Truy van collection `users` de kiem tra xem email da ton tai chua. Neu da ton tai, tra ve loi 400.
+2. **Buoc 2 - Kiem tra trung lap so dien thoai**: Truy van collection `users` de kiem tra xem so dien thoai da duoc su dung chua. Neu da ton tai, tra ve loi 400.
+3. **Buoc 3 - Sinh ID**: Sinh userId moi theo dinh dang `user_XXX` (VD: user_001, user_002...).
+4. **Buoc 4 - Ma hoa mat khau**: Su dung BCrypt (PasswordEncoder) de ma hoa mat khau nguoi dung.
+5. **Buoc 5 - Tao document**: Tao document moi trong collection `users` voi cac truong: id, email, password (da ma hoa), fullName, phoneNumber, photoUrl (null), roles ([1]), createdAt.
+6. **Buoc 6 - Tao JWT**: Su dung JwtTokenProvider de tao JWT token chua userId. Tra ve token cung thong tin nguoi dung.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "email": "nguoidung@gmail.com",
+  "password": "password123",
+  "fullName": "Nguyen Van A",
+  "phoneNumber": "0123456789"
+}
+```
+
+**Cac truong bat buoc**: `email`, `password`, `fullName`, `phoneNumber`
+
+**Validation**:
+
+| Truong | Quy tac |
+| --- | --- |
+| `email` | Dinh dang email hop le, khong trung voi email da dang ky |
+| `password` | It nhat 6 ky tu |
+| `fullName` | Khong duoc de trong |
+| `phoneNumber` | Bat dau bang 0, 10-11 chu so |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dang ky tai khoan thanh cong.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMyIsImlhdCI6MTc1MDAwMDAwMH0...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "user": {
+      "id": "user_003",
+      "email": "nguoidung@gmail.com",
+      "fullName": "Nguyen Van A",
+      "phoneNumber": "0123456789",
+      "photoUrl": null,
+      "roles": [1]
+    }
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.1.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | EMAIL_EXISTS | Email da ton tai | "Email da ton tai trong he thong. Vui long su dung email khac." |
+| 400 | PHONE_EXISTS | So dien thoai da duoc su dung | "So dien thoai da duoc su dung. Vui long su dung so dien thoai khac." |
+| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 15.1.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong hoac sai dinh dang |
+
+**Vi du loi validation**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: email: Email khong dung dinh dang, password: Mat khau phai co it nhat 6 ky tu, phoneNumber: So dien thoai khong dung dinh dang (bat dau bang 0, 10-11 chu so)",
+  "data": null,
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Vi du
+
+##### 15.1.3. Dang ky tai khoan thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "nguoidung@gmail.com",
+  "password": "password123",
+  "fullName": "Nguyen Van A",
+  "phoneNumber": "0123456789"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dang ky tai khoan thanh cong.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMyIsImlhdCI6MTc1MDAwMDAwMH0...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "user": {
+      "id": "user_003",
+      "email": "nguoidung@gmail.com",
+      "fullName": "Nguyen Van A",
+      "phoneNumber": "0123456789",
+      "photoUrl": null,
+      "roles": [1]
+    }
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.1.4. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/auth/register voi RegisterRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+4. Server truy van collection users theo email
+   |
+5+-> Email da ton tai -> Tra ve 400 "Email da ton tai trong he thong..."
+   |
+6. Server truy van collection users theo phoneNumber
+   |
+7+-> So dien thoai da ton tai -> Tra ve 400 "So dien thoai da duoc su dung..."
+   |
+8. Server sinh userId moi (user_XXX)
+   |
+9. Server ma hoa mat khau bang BCrypt
+   |
+10. Server tao document moi trong collection users
+   |
+11. Server tao JWT token chua userId (hieu luc 24 gio)
+   |
+12. Tra ve 200 voi AuthResponse (token + user info)
+```
+
+---
+
+### 15.2. POST /api/auth/login - Dang nhap
+
+**mo ta**: Dang nhap bang email va mat khau. Neu thanh cong, tra ve JWT token chua userId de su dung cho cac API can xac thuc.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Tim tai khoan**: Truy van collection `users` theo email. Neu khong tim thay, tra ve loi 400.
+2. **Buoc 2 - Kiem tra mat khau**: Su dung BCrypt PasswordEncoder de so sanh mat khau nguoi dung cung cap voi password da luu trong Firestore. Neu khong khop, tra ve loi 400.
+3. **Buoc 3 - Tao JWT**: Neu mat khau dung, tao JWT token chua userId. Tra ve token cung thong tin nguoi dung.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "email": "nguoidung@gmail.com",
+  "password": "password123"
+}
+```
+
+**Cac truong bat buoc**: `email`, `password`
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dang nhap thanh cong.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsImlhdCI6MTc1MDAwMDAwMH0...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "user": {
+      "id": "user_001",
+      "email": "khachhang@gmail.com",
+      "fullName": "Khoi",
+      "phoneNumber": "0123456789",
+      "photoUrl": "https://example.com/avatar/user001.jpg",
+      "roles": [1, 2, 3]
+    }
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.2.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | INVALID_CREDENTIALS | Email khong ton tai | "Email hoac mat khau khong dung." |
+| 400 | INVALID_CREDENTIALS | Mat khau khong dung | "Email hoac mat khau khong dung." |
+| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 15.2.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong hoac sai dinh dang |
+
+---
+
+#### Vi du
+
+##### 15.2.3. Dang nhap thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "khachhang@gmail.com",
+  "password": "password123"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dang nhap thanh cong.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsImlhdCI6MTc1MDAwMDAwMH0...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "user": {
+      "id": "user_001",
+      "email": "khachhang@gmail.com",
+      "fullName": "Khoi",
+      "phoneNumber": "0123456789",
+      "photoUrl": "https://example.com/avatar/user001.jpg",
+      "roles": [1, 2, 3]
+    }
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.2.4. Dang nhap that bai - mat khau sai
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "khachhang@gmail.com",
+  "password": "saimatkhau"
+}
+```
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Email hoac mat khau khong dung.",
+  "data": null,
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.2.5. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/auth/login voi LoginRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+4. Server truy van collection users theo email
+   |
+5+-> Khong tim thay email -> Tra ve 400 "Email hoac mat khau khong dung."
+   |
+6. Server so sanh mat khau bang BCrypt
+   |
+7+-> Mat khau khong dung -> Tra ve 400 "Email hoac mat khau khong dung."
+   |
+8. Server tao JWT token chua userId (hieu luc 24 gio)
+   |
+9. Tra ve 200 voi AuthResponse (token + user info)
+```
+
+---
+
+### 15.3. POST /api/auth/send-otp - Gui ma OTP
+
+**mo ta**: Gui ma OTP 6 chu so den email hoac so dien thoai de khoi phuc mat khau. Ma OTP co hieu luc 5 phut (300 giay). Trong moi truong dev/demo, ma OTP se in ra console.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Kiem tra tai khoan ton tai**: Kiem tra xem email hoac so dien thoai co ton tai trong collection `users` hay khong. Neu khong ton tai, tra ve loi 400.
+2. **Buoc 2 - Sinh ma OTP**: Tao ma OTP 6 chu so ngau nhien (000000 - 999999).
+3. **Buoc 3 - Luu OTP**: Luu ma OTP vao bo nho tam (ConcurrentHashMap) voi key la email/so dien thoai, value la OtpEntry(otp, userId, expiresAtMs). TTL = 300 giay.
+4. **Buoc 4 - In ra console**: Trong moi truong dev, in ma OTP ra console de thuan tien test.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "emailOrPhone": "nguoidung@gmail.com"
+}
+```
+
+**Cac truong bat buoc**: `emailOrPhone`
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Ma OTP da duoc gui. Vui long kiem tra email/so dien thoai.",
+  "data": {
+    "emailOrPhone": "nguoidung@gmail.com",
+    "message": "Ma OTP da duoc gui. Vui long kiem tra email/so dien thoai.",
+    "otpCode": "847291",
+    "expiresInSeconds": 300
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.3.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | USER_NOT_FOUND | Email/so dien thoai khong ton tai | "Khong tim thay tai khoan voi email hoac so dien thoai nay." |
+
+##### 15.3.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | emailOrPhone bi trong |
+
+---
+
+#### Vi du
+
+##### 15.3.3. Gui OTP thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/send-otp
+Content-Type: application/json
+
+{
+  "emailOrPhone": "nguoidung@gmail.com"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Ma OTP da duoc gui. Vui long kiem tra email/so dien thoai.",
+  "data": {
+    "emailOrPhone": "nguoidung@gmail.com",
+    "message": "Ma OTP da duoc gui. Vui long kiem tra email/so dien thoai.",
+    "otpCode": "847291",
+    "expiresInSeconds": 300
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.3.4. Gui OTP - Tai khoan khong ton tai
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/send-otp
+Content-Type: application/json
+
+{
+  "emailOrPhone": "khongtontai@gmail.com"
+}
+```
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Khong tim thay tai khoan voi email hoac so dien thoai nay.",
+  "data": null,
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.3.5. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/auth/send-otp voi OtpSendRequest
+   |
+2. Server kiem tra du lieu dau vao (emailOrPhone khong trong)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Server kiem tra email hoac so dien thoai co ton tai trong users khong
+   |
+5+-> Khong ton tai -> Tra ve 400 "Khong tim thay tai khoan..."
+   |
+6. Server sinh ma OTP 6 chu so ngau nhien
+   |
+7. Server luu OTP vao bo nho tam voi TTL 300 giay
+   |
+8. Server in ma OTP ra console (dev mode)
+   |
+9. Tra ve 200 voi OtpSendResponse
+```
+
+##### 15.3.6. Luu y ve OTP trong moi truong Production
+
+Trong moi truong production, can tich hop voi cac dich vu OTP thuc te nhu:
+- SMS Gateway: Twilio, VNPT, Viettel...
+- Email Service: SendGrid, AWS SES, Firebase Cloud Messaging...
+
+Ma OTP trong `otpCode` chi duoc tra ve trong moi truong dev/demo.
+
+---
+
+### 15.4. POST /api/auth/verify-otp - Xac thuc ma OTP
+
+**mo ta**: Xac thuc ma OTP nhan duoc. Neu dung, tra ve token tam thoi (hieu luc 5 phut) de su dung cho reset-password.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Tim OTP**: Doc OTP tu bo nho tam theo email/so dien thoai. Neu khong co, tra ve loi 400.
+2. **Buoc 2 - Kiem tra han su dung**: So sanh thoi gian hien tai voi expiresAtMs. Neu da het han, xoa OTP khoi bo nho va tra ve loi 400.
+3. **Buoc 3 - Kiem tra ma OTP**: So sanh ma OTP nguoi dung cung cap voi ma da luu. Neu khong khop, tra ve loi 400.
+4. **Buoc 4 - Tao token tam thoi**: Tao JWT token tam thoi chua userId voi claim `type = "TEMP_TOKEN"` va hieu luc 5 phut. Xoa OTP khoi bo nho.
+5. **Buoc 5 - Tra ve**: Tra ve token tam thoi de nguoi dung su dung cho reset-password.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "emailOrPhone": "nguoidung@gmail.com",
+  "otpCode": "847291"
+}
+```
+
+**Cac truong bat buoc**: `emailOrPhone`, `otpCode`
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Xac thuc OTP thanh cong.",
+  "data": {
+    "tempToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsInR5cGUiOiJUTVBfVE9LRU4ifQ...",
+    "tokenType": "Bearer",
+    "expiresIn": 300000,
+    "expiresAt": "2026-05-26T14:05:00Z"
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.4.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | OTP_INVALID | Khong co ma OTP nao duoc gui | "Ma OTP khong hop le hoac da het han. Vui long gui lai ma OTP." |
+| 400 | OTP_EXPIRED | Ma OTP da het han | "Ma OTP da het han. Vui long gui lai ma OTP." |
+| 400 | OTP_MISMATCH | Ma OTP khong dung | "Ma OTP khong dung. Vui long thu lai." |
+
+##### 15.4.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong |
+
+---
+
+#### Vi du
+
+##### 15.4.3. Xac thuc OTP thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "emailOrPhone": "nguoidung@gmail.com",
+  "otpCode": "847291"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Xac thuc OTP thanh cong.",
+  "data": {
+    "tempToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsInR5cGUiOiJUTVBfVE9LRU4ifQ...",
+    "tokenType": "Bearer",
+    "expiresIn": 300000,
+    "expiresAt": "2026-05-26T14:05:00Z"
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.4.4. Xac thuc OTP - Ma khong dung
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "emailOrPhone": "nguoidung@gmail.com",
+  "otpCode": "000000"
+}
+```
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Ma OTP khong dung. Vui long thu lai.",
+  "data": null,
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+##### 15.4.5. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/auth/verify-otp voi OtpVerifyRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Server doc OTP tu bo nho tam theo emailOrPhone
+   |
+5+-> Khong co OTP (da xoa hoac chua gui) -> Tra ve 400 "Ma OTP khong hop le..."
+   |
+6. Server kiem tra han su dung cua OTP
+   |
+7+-> OTP da het han -> Xoa OTP, tra ve 400 "Ma OTP da het han..."
+   |
+8. Server so sanh ma OTP
+   |
+9+-> Ma khong khop -> Tra ve 400 "Ma OTP khong dung..."
+   |
+10. Server tao JWT token tam thoi (hieu luc 5 phut)
+   |
+11. Server xoa OTP khoi bo nho tam
+   |
+12. Tra ve 200 voi OtpVerifyResponse (tempToken)
+```
+
+---
+
+### 15.5. POST /api/auth/reset-password - Dat lai mat khau
+
+**mo ta**: Dat lai mat khau moi sau khi xac thuc OTP thanh cong. Token tam thoi co hieu luc 5 phut sau khi xac thuc OTP.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Xac thuc token tam thoi**: Su dung JwtTokenProvider de xac thuc token tam thoi. Neu khong hop le hoac da het han, tra ve loi 400.
+2. **Buoc 2 - Trich xuat userId**: Lay userId tu token tam thoi. Neu khong trich xuat duoc, tra ve loi 400.
+3. **Buoc 3 - Kiem tra tai khoan ton tai**: Truy van collection `users` theo userId. Neu khong ton tai, tra ve loi 400.
+4. **Buoc 4 - Cap nhat mat khau**: Ma hoa mat khau moi bang BCrypt va cap nhat vao document `users/{userId}`.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "tempToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsInR5cGUiOiJUTVBfVE9LRU4ifQ...",
+  "newPassword": "newpassword123"
+}
+```
+
+**Cac truong bat buoc**: `tempToken`, `newPassword`
+
+**Validation**: `newPassword` phai it nhat 6 ky tu
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat lai mat khau thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T14:05:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.5.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | TOKEN_INVALID | Token tam thoi khong hop le | "Token khong hop le hoac da het han. Vui long gui lai ma OTP." |
+| 400 | TOKEN_EXPIRED | Token tam thoi da het han | "Token khong hop le hoac da het han. Vui long gui lai ma OTP." |
+| 400 | USER_NOT_FOUND | Tai khoan khong ton tai | "Tai khoan khong ton tai." |
+| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 15.5.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | newPassword it hon 6 ky tu |
+
+---
+
+#### Vi du
+
+##### 15.5.3. Dat lai mat khau thanh cong
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "tempToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsInR5cGUiOiJUTVBfVE9LRU4ifQ...",
+  "newPassword": "newpassword123"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat lai mat khau thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T14:05:00Z"
+}
+```
+
+##### 15.5.4. Dat lai mat khau - Token da het han
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "tempToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSIsInR5cGUiOiJUTVBfVE9LRU4ifQ...",
+  "newPassword": "newpassword123"
+}
+```
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Token khong hop le hoac da het han. Vui long gui lai ma OTP.",
+  "data": null,
+  "timestamp": "2026-05-26T14:05:00Z"
+}
+```
+
+##### 15.5.5. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/auth/reset-password voi ResetPasswordRequest
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Server xac thuc token tam thoi bang JwtTokenProvider
+   |
+5+-> Token khong hop le -> Tra ve 400 "Token khong hop le..."
+   |
+6. Server trich xuat userId tu token
+   |
+7+-> Khong trich xuat duoc -> Tra ve 400 "Token khong hop le..."
+   |
+8. Server tim tai khoan trong collection users theo userId
+   |
+9+-> Tai khoan khong ton tai -> Tra ve 400 "Tai khoan khong ton tai."
+   |
+10. Server ma hoa mat khau moi bang BCrypt
+   |
+11. Server cap nhat password va updatedAt vao document users/{userId}
+   |
+12. Tra ve 200 thanh cong
+```
+
+---
+
+### 15.6. POST /api/auth/register-merchant - Dang ky tai khoan nguoi ban
+
+**mo ta**: Tao tai khoan nguoi ban moi trong he thong. Tai khoan se co roles mac dinh la [3] (Nguoi ban).
+
+**Phan he**: Nguoi ban
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "email": "nguiban@gmail.com",
+  "password": "password123",
+  "fullName": "Cua hang An Giang",
+  "phoneNumber": "0987654321"
+}
+```
+
+**Cac truong bat buoc**: `email`, `password`, `fullName`, `phoneNumber`
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dang ky tai khoan nguoi ban thanh cong.",
+  "data": {
+    "uid": "user_004",
+    "message": "Dang ky tai khoan nguoi ban thanh cong"
+  },
+  "timestamp": "2026-05-26T14:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 15.6.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | EMAIL_EXISTS | Email da ton tai | "Email da ton tai trong he thong. Vui long su dung email khac." |
+| 400 | PHONE_EXISTS | So dien thoai da duoc su dung | "So dien thoai da duoc su dung. Vui long su dung so dien thoai khac." |
+| 500 | SYSTEM_ERROR | Loi he thong | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+---
+
+### 15.7. GET /api/auth/check-merchant - Kiem tra quyen nguoi ban
+
+**mo ta**: Kiem tra xem tai khoan co quyen nguoi ban (role = 3) hay khong.
+
+**Phan he**: Nguoi ban
+
+**Muc do truy cap**: Cong khai (khong can xac thuc)
+
+---
+
+#### Chi tiet API
+
+**Request Parameters**:
+
+| Parameter | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `uid` | String | Co | ID tai khoan nguoi dung |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "isMerchant": true,
+  "storeId": "store_001"
+}
+```
+
+---
+
+## 16. Cau Truc Du Lieu - Xac Thuc
+
+### 16.1. RegisterRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `email` | String | Co | Dia chi email (dinh dang hop le) |
+| `password` | String | Co | Mat khau (it nhat 6 ky tu) |
+| `fullName` | String | Co | Ho va ten day du |
+| `phoneNumber` | String | Co | So dien thoai (bat dau bang 0, 10-11 chu so) |
+
+### 16.2. LoginRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `email` | String | Co | Dia chi email |
+| `password` | String | Co | Mat khau dang nhap |
+
+### 16.3. OtpSendRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `emailOrPhone` | String | Co | Email hoac so dien thoai can khoi phuc mat khau |
+
+### 16.4. OtpVerifyRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `emailOrPhone` | String | Co | Email hoac so dien thoai da nhan ma OTP |
+| `otpCode` | String | Co | Ma OTP 6 chu so |
+
+### 16.5. ResetPasswordRequest (Request Body)
+
+| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `tempToken` | String | Co | Token tam thoi nhan duoc sau khi xac thuc OTP |
+| `newPassword` | String | Co | Mat khau moi (it nhat 6 ky tu) |
+
+### 16.6. AuthResponse (Response Data)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `token` | String | Token JWT truy cap |
+| `tokenType` | String | Loai token (luon la "Bearer") |
+| `expiresIn` | Long | Thoi gian het han cua token (miliseconds) |
+| `user` | UserResponse | Thong tin nguoi dung |
+
+### 16.7. UserResponse (Response Data)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `id` | String | ID tai khoan nguoi dung |
+| `email` | String | Dia chi email |
+| `fullName` | String | Ho va ten day du |
+| `phoneNumber` | String | So dien thoai di dong |
+| `photoUrl` | String | URL anh dai dien (co the null) |
+| `roles` | List<Integer> | Danh sach quyen: 1=Khach hang, 2=Tai xe, 3=Nguoi ban, 4=Admin |
+
+### 16.8. OtpSendResponse (Response Data)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `emailOrPhone` | String | Email hoac so dien thoai nhan ma OTP |
+| `message` | String | Thong bao ket qua |
+| `otpCode` | String | Ma OTP (chi hien thi trong dev/demo) |
+| `expiresInSeconds` | Integer | Thoi gian het han cua OTP (giay) |
+
+### 16.9. OtpVerifyResponse (Response Data)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `tempToken` | String | Token tam thoi de dat lai mat khau |
+| `tokenType` | String | Loai token (luon la "Bearer") |
+| `expiresIn` | Long | Thoi gian het han (miliseconds) |
+| `expiresAt` | String | Thoi gian het han (ISO 8601) |
+
+---
+
+## 17. Cau Hinh Spring Security & JWT
+
+### 17.1. Cau hinh SecurityConfig
+
+- Tat CSRF (AbstractHttpConfigurer::disable)
+- SessionCreationPolicy = STATELESS (khong su dung session)
+- Cho phep truy cap cong khai: `/api/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**`
+- Tat ca cac endpoint con lai yeu cau xac thuc (authenticated)
+- JwtAuthenticationFilter chay truoc UsernamePasswordAuthenticationFilter
+
+### 17.2. Cau hinh JWT (application.properties)
+
+```properties
+jwt.secret=FoodGoJwtSecretKey2026Nam3Ki2VeryLongAndSecure256BitSecretKeyForSigningTokens
+jwt.expiration=86400000
+jwt.bearer-prefix=Bearer
+```
+
+| Thuoc tinh | Mo ta |
+| --- | --- |
+| `jwt.secret` | Chuoi bi mat (secret) ky va xac thuc JWT (phai dai 256 bit) |
+| `jwt.expiration` | Thoi gian hieu luc access token (miliseconds, mac dinh 24 gio) |
+| `jwt.bearer-prefix` | Tien to Bearer token trong header Authorization |
+
+### 17.3. Cac gia tri roles
+
+| Gia tri | Ten | Mo ta |
+| --- | --- | --- |
+| 1 | Khach hang | Tai khoan khach hang thong thuong |
+| 2 | Tai xe | Tai xe giao hang |
+| 3 | Nguoi ban | Chu cua hang/quan an |
+| 4 | Admin | Quan tri vien he thong |
+
+### 17.4. Thu tu goi API (Auth Flow)
+
+```
+DANG KY:
+POST /api/auth/register -> Tao user (BCrypt) + JWT -> Login ngay
+
+DANG NHAP:
+POST /api/auth/login -> BCrypt verify -> JWT -> Su dung JWT cho cac API tiep theo
+
+QUEN MAT KHAU:
+1. POST /api/auth/send-otp -> Gui OTP (in console trong dev)
+2. POST /api/auth/verify-otp -> Xac thuc OTP -> Tra ve tempToken (5 phut)
+3. POST /api/auth/reset-password -> Dat lai mat khau (BCrypt)
+
+SU DUNG TOKEN:
+- Header: Authorization: Bearer <jwt_token>
+- JwtAuthenticationFilter xac thuc token -> Lay userId -> Dat vao SecurityContext
+```
+
+---
+
+## 18. Noi dung Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
+
+**Huong dan su dung Bearer Token tren Swagger UI**:
+
+1. Mo Swagger UI
+2. Chon endpoint muon test (VD: POST /api/auth/register)
+3. Nhap du lieu request
+4. Click "Execute"
+5. Lay token tu response
+6. Click nut "Authorize" (o goc phai man hinh)
+7. Nhap "Bearer <token>" vao o BearerAuth
+8. Click "Authorize" de xac nhan
+9. Cac API can xac thuc bay gio se su dung token nay
+
+```
+VD: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+```
