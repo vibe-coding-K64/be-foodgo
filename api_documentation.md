@@ -3557,3 +3557,472 @@ http://localhost:8080/v3/api-docs
 ```
 VD: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
 ```
+
+---
+
+## 19. API Quan Ly Ho So (Profile)
+
+### Muc luc
+
+- [19.1. PUT /api/customers/profile - Cap nhat thong tin ho so](#191-put-apicustomersprofile---cap-nhat-thong-tin-ho-so)
+- [19.2. PUT /api/customers/password - Doi mat khau chu dong](#192-put-apicustomerspassword---doi-mat-khau-chu-dong)
+
+---
+
+### 19.1. PUT /api/customers/profile - Cap nhat thong tin ho so
+
+**Mo ta**: Cap nhat ho va ten va anh dai dien cua tai khoan dang nhap. Khong cho phep thay doi email hoac so dien thoai tai day.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Yeu cau xac thuc JWT (Bearer Token)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Xac thuc nguoi dung**: Trich xuat userId tu JWT token trong header Authorization. Neu token khong hop le hoac khong co, tra ve loi 401.
+2. **Buoc 2 - Tim tai khoan**: Truy van document trong collection `users` theo userId. Neu khong ton tai, tra ve loi 404.
+3. **Buoc 3 - Cap nhat thong tin**: Chi cap nhat cac truong `fullName` va `photoUrl` (neu co gia tri). Dong thoi cap nhat `updatedAt` voi thoi diem hien tai.
+4. **Buoc 4 - Tra ve ket qua**: Tra ve thong tin tai khoan da duoc cap nhat.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+|| Header           | Kieu   | Bat buoc | Mo ta                    |
+|| --- | ------ | -------- | ------------------------- |
+|| `Content-Type`    | String | Co       | `application/json`         |
+|| `Authorization`   | String | Co       | `Bearer <jwt_token>`       |
+
+**Request Body** (JSON):
+
+```json
+{
+  "fullName": "Nguyen Van A",
+  "avatarUrl": "https://example.com/avatar/user001.jpg"
+}
+```
+
+**Cac truong bat buoc**: Khong co (tat ca deu tuy chon)
+**Cac truong tuy chon**: `fullName`, `avatarUrl`
+
+**Validation**:
+
+|| Truong | Quy tac |
+|| --- | --- |
+|| `fullName` | Khong duoc vuot qua 100 ky tu |
+|| `avatarUrl` | URL hop le (neu duoc truyen) |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Cap nhat ho so thanh cong.",
+  "data": {
+    "id": "user_001",
+    "email": "khachhang@gmail.com",
+    "fullName": "Nguyen Van A",
+    "phoneNumber": "0123456789",
+    "photoUrl": "https://example.com/avatar/user001.jpg",
+    "roles": [1, 2, 3]
+  },
+  "timestamp": "2026-05-26T15:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 19.1.1. Loi nghiep vu (Business Error)
+
+|| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+|| --- | --- | --- | --- |
+|| 404 | USER_NOT_FOUND | Tai khoan khong ton tai | "Khong tim thay tai khoan voi ID: [xxx]." |
+|| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 19.1.2. Loi xac thuc (Authentication Error)
+
+|| HTTP Status | Truong hop | Mo ta |
+|| --- | --- | --- |
+|| 401 | Token khong hop le hoac khong co | "Chua xac thuc. Vui long dang nhap de tiep tuc." |
+
+##### 19.1.3. Loi xac thuc dau vao (Validation Error)
+
+|| HTTP Status | Truong hop | Mo ta |
+|| --- | --- | --- |
+|| 400 | Du lieu khong hop le | Cac truong vuot qua gioi han cho phep |
+
+---
+
+#### Vi du
+
+##### 19.1.4. Cap nhat ho so thanh cong
+
+**Request**:
+
+```http
+PUT http://localhost:8080/api/customers/profile
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+
+{
+  "fullName": "Nguyen Van A",
+  "avatarUrl": "https://example.com/avatar/user001.jpg"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Cap nhat ho so thanh cong.",
+  "data": {
+    "id": "user_001",
+    "email": "khachhang@gmail.com",
+    "fullName": "Nguyen Van A",
+    "phoneNumber": "0123456789",
+    "photoUrl": "https://example.com/avatar/user001.jpg",
+    "roles": [1, 2, 3]
+  },
+  "timestamp": "2026-05-26T15:00:00Z"
+}
+```
+
+##### 19.1.5. Cap nhat chi ho ten
+
+**Request**:
+
+```http
+PUT http://localhost:8080/api/customers/profile
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+
+{
+  "fullName": "Tran Thi B"
+}
+```
+
+##### 19.1.6. Cap nhat chi anh dai dien
+
+**Request**:
+
+```http
+PUT http://localhost:8080/api/customers/profile
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+
+{
+  "avatarUrl": "https://example.com/avatar/new-avatar.jpg"
+}
+```
+
+##### 19.1.7. Loi 401 - Chua xac thuc
+
+**Response** (HTTP 401):
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "message": "Chua xac thuc. Vui long dang nhap de tiep tuc.",
+  "data": null,
+  "timestamp": "2026-05-26T15:00:00Z"
+}
+```
+
+##### 19.1.8. Loi 404 - Tai khoan khong ton tai
+
+**Response** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay tai khoan voi ID: user_xyz.",
+  "data": null,
+  "timestamp": "2026-05-26T15:00:00Z"
+}
+```
+
+##### 19.1.9. Thu tu goi API (Flow)
+
+```
+1. Flutter goi PUT /api/customers/profile voi Authorization header
+   |
+2. Server trich xuat JWT token tu header Authorization
+   |
+3+-> Token khong hop le hoac khong co -> Tra ve 401 "Chua xac thuc..."
+   |
+4. Server trich xuat userId tu JWT token
+   |
+5. Server truy van document trong collection users theo userId
+   |
+6+-> Tai khoan khong ton tai -> Tra ve 404 USER_NOT_FOUND
+   |
+7. Server kiem tra du lieu dau vao (validation)
+   |
+8+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+9. Server cap nhat fullName va photoUrl (neu co) trong Firestore
+   |
+10. Server cap nhat updatedAt voi thoi diem hien tai
+   |
+11. Tra ve 200 voi UserResponse da duoc cap nhat
+```
+
+##### 19.1.10. Cau truc du lieu tra ve (UserResponse)
+
+|| Thuoc tinh | Kieu | Mo ta |
+|| --- | --- | --- |
+|| `id` | String | ID tai khoan nguoi dung |
+|| `email` | String | Dia chi email |
+|| `fullName` | String | Ho va ten day du |
+|| `phoneNumber` | String | So dien thoai di dong |
+|| `photoUrl` | String | URL anh dai dien (co the null) |
+|| `roles` | List<Integer> | Danh sach quyen: 1=Khach hang, 2=Tai xe, 3=Nguoi ban, 4=Admin |
+
+---
+
+### 19.2. PUT /api/customers/password - Doi mat khau chu dong
+
+**Mo ta**: Doi mat khau cu sang mat khau moi. Yeu cau nhap dung mat khau cu de xac nhan truoc khi dat mat khau moi.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Yeu cau xac thuc JWT (Bearer Token)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Xac thuc nguoi dung**: Trich xuat userId tu JWT token trong header Authorization. Neu token khong hop le hoac khong co, tra ve loi 401.
+2. **Buoc 2 - Tim tai khoan**: Truy van document trong collection `users` theo userId. Neu khong ton tai, tra ve loi 404.
+3. **Buoc 3 - Xac thuc mat khau cu**: Su dung PasswordEncoder.matches() de so sanh mat khau cu nguoi dung cung cap voi password da luu trong Firestore. Neu khong khop, tra ve loi 400.
+4. **Buoc 4 - Ma hoa va luu mat khau moi**: Su dung BCrypt (PasswordEncoder) de ma hoa mat khau moi, sau do luu de vao document `users/{userId}` cung voi updatedAt.
+
+---
+
+#### Chi tiet API
+
+**Request Headers**:
+
+|| Header           | Kieu   | Bat buoc | Mo ta                    |
+|| --- | ------ | -------- | ------------------------- |
+|| `Content-Type`    | String | Co       | `application/json`         |
+|| `Authorization`   | String | Co       | `Bearer <jwt_token>`       |
+
+**Request Body** (JSON):
+
+```json
+{
+  "oldPassword": "matkhaucu123",
+  "newPassword": "matkhaumoi123"
+}
+```
+
+**Cac truong bat buoc**: `oldPassword`, `newPassword`
+
+**Validation**:
+
+|| Truong | Quy tac |
+|| --- | --- |
+|| `oldPassword` | Khong duoc de trong |
+|| `newPassword` | Khong duoc de trong, it nhat 6 ky tu |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Doi mat khau thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T15:05:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 19.2.1. Loi nghiep vu (Business Error)
+
+|| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+|| --- | --- | --- | --- |
+|| 400 | PASSWORD_MISMATCH | Mat khau cu khong dung | "Mat khau cu khong dung." |
+|| 404 | USER_NOT_FOUND | Tai khoan khong ton tai | "Khong tim thay tai khoan voi ID: [xxx]." |
+|| 500 | SYSTEM_ERROR | Loi he thong khi truy van Firestore | "Da xay ra loi khong mong muon. Vui long thu lai sau." |
+
+##### 19.2.2. Loi xac thuc (Authentication Error)
+
+|| HTTP Status | Truong hop | Mo ta |
+|| --- | --- | --- |
+|| 401 | Token khong hop le hoac khong co | "Chua xac thuc. Vui long dang nhap de tiep tuc." |
+
+##### 19.2.3. Loi xac thuc dau vao (Validation Error)
+
+|| HTTP Status | Truong hop | Mo ta |
+|| --- | --- | --- |
+|| 400 | Du lieu khong hop le | `newPassword` it hon 6 ky tu hoac `oldPassword` trong |
+
+---
+
+#### Vi du
+
+##### 19.2.4. Doi mat khau thanh cong
+
+**Request**:
+
+```http
+PUT http://localhost:8080/api/customers/password
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+
+{
+  "oldPassword": "matkhaucu123",
+  "newPassword": "matkhaumoi123"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Doi mat khau thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T15:05:00Z"
+}
+```
+
+##### 19.2.5. Loi 400 - Mat khau cu khong dung
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Mat khau cu khong dung.",
+  "data": null,
+  "timestamp": "2026-05-26T15:05:00Z"
+}
+```
+
+##### 19.2.6. Loi 400 - Mat khau moi qua ngan
+
+**Request**:
+
+```http
+PUT http://localhost:8080/api/customers/password
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+
+{
+  "oldPassword": "matkhaucu123",
+  "newPassword": "abc"
+}
+```
+
+**Response** (HTTP 400):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: newPassword: Mat khau moi phai co it nhat 6 ky tu",
+  "data": null,
+  "timestamp": "2026-05-26T15:05:00Z"
+}
+```
+
+##### 19.2.7. Loi 401 - Chua xac thuc
+
+**Response** (HTTP 401):
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "message": "Chua xac thuc. Vui long dang nhap de tiep tuc.",
+  "data": null,
+  "timestamp": "2026-05-26T15:05:00Z"
+}
+```
+
+##### 19.2.8. Thu tu goi API (Flow)
+
+```
+1. Flutter goi PUT /api/customers/password voi Authorization header
+   |
+2. Server trich xuat JWT token tu header Authorization
+   |
+3+-> Token khong hop le hoac khong co -> Tra ve 401 "Chua xac thuc..."
+   |
+4. Server trich xuat userId tu JWT token
+   |
+5. Server truy van document trong collection users theo userId
+   |
+6+-> Tai khoan khong ton tai -> Tra ve 404 USER_NOT_FOUND
+   |
+7. Server kiem tra du lieu dau vao (validation)
+   |
+8+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+9. Server so sanh mat khau cu bang PasswordEncoder.matches()
+   |
+10+-> Mat khau cu khong dung -> Tra ve 400 PASSWORD_MISMATCH
+   |
+11. Server ma hoa mat khau moi bang BCrypt
+   |
+12. Server cap nhat password va updatedAt vao document users/{userId}
+   |
+13. Tra ve 200 thanh cong
+```
+
+##### 19.2.9. Cau truc du lieu (ChangePasswordRequest)
+
+|| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `oldPassword` | String | Co | Mat khau cu hien tai |
+|| `newPassword` | String | Co | Mat khau moi (it nhat 6 ky tu) |
+
+---
+
+#### Noi dung Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
+
+**Huong dan su dung Bearer Token tren Swagger UI cho API Ho so**:
+
+1. Mo Swagger UI
+2. Chon endpoint muon test (VD: PUT /api/customers/profile)
+3. Nhap du lieu request
+4. Click nut "Authorize" (o goc phai man hinh)
+5. Nhap "Bearer <token>" vao o BearerAuth
+6. Click "Authorize" de xac nhan
+7. Cac API Ho so bay gio se su dung token nay
+8. Click "Execute" de test endpoint
+
+```
+VD: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+```
