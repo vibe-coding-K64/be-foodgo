@@ -2139,3 +2139,321 @@ Hoac tai noi dung OpenAPI JSON:
 ```
 http://localhost:8080/v3/api-docs
 ```
+
+
+## 14. API Tim Kiem Mon An Va Quan An (Search)
+
+### Muc luc
+
+- [14.1. GET /api/search - Tim kiem mon an va quan an](#141-get-apisearch---tim-kiem-mon-an-va-quan-an)
+
+---
+
+### 14.1. GET /api/search - Tim kiem mon an va quan an
+
+**Mo ta**: Tim kiem mon an hoac quan an theo tu khoa, loc theo khoang cach toi da 10km tu vi tri nguoi dung, luu lich su tim kiem va sap xep ket qua.
+
+**Phan he**: Khach hang
+
+**Muc do truy cap**: Cong khai (chua co xac thuc JWT trong phien ban nay)
+
+---
+
+#### Cac quy tac nghiep vu (Business Rules)
+
+1. **Buoc 1 - Luu lich su**: Neu `userId` khong null va `query` khong rong, tao document luu `keyword` va `createdAt` vao sub-collection `users/{userId}/search_history`.
+2. **Buoc 2 - Tinh khoang cach va loc quan**: Lay toan bo danh sach `stores` tu Firestore. Su dung cong thuc Haversine de tinh khoang cach duong chim bay tu `(userLat, userLng)` den `(lat, lng)` cua tung quan. Chi giu lai cac quan an co khoang cach <= 10.0 km. Luu gia tri `distance` vao Map tam trong bo nho.
+3. **Buoc 3 - Loc mon an**: Tu danh sach cac quan an thoa man khoang cach o Buoc 2, lay danh sach cac `products` thuoc ve cac quan nay. Chuyen ten mon an va `query` thanh chu thuong (lowercase) bo dau de so sanh tuong doi (contains). Loc ra nhung mon an co ten chua tu khoa `query` HOAC thuoc ve cua hang co ten chua `query`.
+4. **Buoc 4 - Mapping va sap xep**:
+   - Map danh sach san pham da loc sang `SearchResultResponse`, gan them thuoc tinh `distance` da tinh o Buoc 2 tuong ung voi `storeId`.
+   - Ap dung logic sap xep theo tham so `sortBy` truyen vao.
+
+---
+
+#### Chi tiet API
+
+**Request Parameters**:
+
+| Parameter | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `query` | String | Co | Tu khoa tim kiem (ten mon an hoac ten quan an) |
+| `userLat` | Double | Co | Vi do cua dia chi giao hang (VD: 10.8500) |
+| `userLng` | Double | Co | Kinh do cua dia chi giao hang (VD: 106.7900) |
+| `sortBy` | String | Khong | Chieu sap xep: `priceAsc` (gia tang dan), `priceDesc` (gia giam dan), `ratingDesc` (danh gia giam dan) |
+| `userId` | String | Khong | ID nguoi dung de luu lich su tim kiem |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Tim thay 5 ket qua phu hop.",
+  "data": [
+    {
+      "productId": "prod_001",
+      "productName": "Com tam suon bi cha",
+      "storeId": "store_001",
+      "storeName": "Com tam Phuc Loc Tho",
+      "price": 45000.0,
+      "rating": 4.8,
+      "reviewCount": 500,
+      "distance": 2.5,
+      "imageUrl": "https://images.unsplash.com/photo-xxx"
+    },
+    {
+      "productId": "prod_002",
+      "productName": "Com tam ga xoi mo",
+      "storeId": "store_001",
+      "storeName": "Com tam Phuc Loc Tho",
+      "price": 50000.0,
+      "rating": 4.8,
+      "reviewCount": 500,
+      "distance": 2.5,
+      "imageUrl": "https://images.unsplash.com/photo-yyy"
+    }
+  ],
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+---
+
+#### Bang ma loi tra ve
+
+##### 14.1.1. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Tu khoa rong hoac null | Tu khoa tim kiem khong duoc de trong |
+| 400 | Toa do khong hop le | Toa do nguoi dung (userLat, userLng) khong hop le |
+
+**Vi du loi validation - Tu khoa rong**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Tu khoa tim kiem khong duoc de trong.",
+  "data": null,
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+**Vi du loi validation - Toa do khong hop le**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Toa do nguoi dung (userLat, userLng) khong hop le.",
+  "data": null,
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+##### 14.1.2. Loi he thong
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 500 | Loi he thong | Loi he thong khi truy van Firestore |
+
+---
+
+#### Vi du
+
+##### 14.1.3. Tim kiem thanh cong
+
+**Request**:
+
+```http
+GET http://localhost:8080/api/search?query=com+tam&userLat=10.8500&userLng=106.7900&sortBy=ratingDesc&userId=user_001
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Tim thay 3 ket qua phu hop.",
+  "data": [
+    {
+      "productId": "prod_001",
+      "productName": "Com tam suon bi cha",
+      "storeId": "store_001",
+      "storeName": "Com tam Phuc Loc Tho",
+      "price": 45000.0,
+      "rating": 4.8,
+      "reviewCount": 500,
+      "distance": 2.5,
+      "imageUrl": "https://images.unsplash.com/photo-xxx"
+    },
+    {
+      "productId": "prod_005",
+      "productName": "Com tam rang",
+      "storeId": "store_001",
+      "storeName": "Com tam Phuc Loc Tho",
+      "price": 40000.0,
+      "rating": 4.8,
+      "reviewCount": 500,
+      "distance": 2.5,
+      "imageUrl": "https://images.unsplash.com/photo-yyy"
+    },
+    {
+      "productId": "prod_010",
+      "productName": "Com rang dui ga",
+      "storeId": "store_003",
+      "storeName": "Com tam My Ga",
+      "price": 55000.0,
+      "rating": 4.2,
+      "reviewCount": 120,
+      "distance": 5.8,
+      "imageUrl": "https://images.unsplash.com/photo-zzz"
+    }
+  ],
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+##### 14.1.4. Tim kiem khong co ket qua
+
+**Request**:
+
+```http
+GET http://localhost:8080/api/search?query=sushi&userLat=10.8500&userLng=106.7900
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Khong tim thay mon an hoac quan an nao phu hop.",
+  "data": [],
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+##### 14.1.5. Tim kiem theo gia tang dan
+
+**Request**:
+
+```http
+GET http://localhost:8080/api/search?query=tra+suong&userLat=10.8500&userLng=106.7900&sortBy=priceAsc
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Tim thay 4 ket qua phu hop.",
+  "data": [
+    {
+      "productId": "prod_007",
+      "productName": "Tra sua tran chau",
+      "storeId": "store_002",
+      "storeName": "Tra sua Tocotoco",
+      "price": 20000.0,
+      "rating": 4.5,
+      "reviewCount": 300,
+      "distance": 1.2,
+      "imageUrl": "https://images.unsplash.com/photo-aaa"
+    },
+    {
+      "productId": "prod_008",
+      "productName": "Tra sua kem cheese",
+      "storeId": "store_002",
+      "storeName": "Tra sua Tocotoco",
+      "price": 35000.0,
+      "rating": 4.5,
+      "reviewCount": 300,
+      "distance": 1.2,
+      "imageUrl": "https://images.unsplash.com/photo-bbb"
+    }
+  ],
+  "timestamp": "2026-05-26T12:00:00Z"
+}
+```
+
+##### 14.1.6. Thu tu goi API (Flow)
+
+```
+1. Flutter goi GET /api/search?query={query}&userLat={lat}&userLng={lng}&sortBy={sortBy}&userId={userId}
+   |
+2. Server kiem tra du lieu dau vao (query khong rong, toa do khong null)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST
+   |
+4. Neu userId khong null va query khong rong:
+   |   Tao document trong users/{userId}/search_history voi keyword va createdAt
+   |
+5. Server lay toan bo stores tu Firestore
+   |
+6. Server tinh khoang cach Haversine cho tung quan
+   |   Chi giu lai quan co khoang cach <= 10km
+   |
+7. Server lay toan bo products tu Firestore
+   |
+8. Server loc products:
+   |   + Chi giu lai products thuoc quan trong pham vi 10km
+   |   + Chuyen query va ten mon thanh chu thuong bo dau
+   |   + Loc products co ten chua query HOAC cua hang co ten chua query
+   |
+9. Server map products sang SearchResultResponse
+   |   + Gan distance tuong ung voi storeId
+   |
+10+-> Co sortBy -> Sap xep ket qua (priceAsc / priceDesc / ratingDesc)
+   |
+11. Tra ve 200 voi danh sach SearchResultResponse
+```
+
+##### 14.1.7. Cau truc du lieu tra ve (SearchResultResponse)
+
+| Thuoc tinh | Kieu | Mo ta |
+| --- | --- | --- |
+| `productId` | String | ID cua san pham (mon an) |
+| `productName` | String | Ten mon an |
+| `storeId` | String | ID cua cua hang |
+| `storeName` | String | Ten cua hang |
+| `price` | Double | Gia co so cua mon an (VND) |
+| `rating` | Double | Diem danh gia trung binh cua cua hang (0.0 - 5.0) |
+| `reviewCount` | Integer | Tong so danh gia cua cua hang |
+| `distance` | Double | Khoang cach tu vi tri nguoi dung den cua hang (km) |
+| `imageUrl` | String | URL hinh anh mon an |
+
+##### 14.1.8. Cong thuc Haversine
+
+Cong thuc Haversine duoc su dung de tinh khoang cach duong chim bay giua hai diem tren mat dat:
+
+```
+a = sin^2(dLat/2) + cos(lat1) * cos(lat2) * sin^2(dLng/2)
+c = 2 * atan2(sqrt(a), sqrt(1-a))
+khoangCach = R * c
+
+Trong do:
+- R = 6371.0 km (ban kinh trai dat)
+- lat1, lng1: Toa do nguoi dung
+- lat2, lng2: Toa do cua hang
+- dLat = lat2 - lat1 (radian)
+- dLng = lng2 - lng1 (radian)
+```
+
+---
+
+#### Noi dung Swagger UI
+
+Sau khi chay ung dung, truy cap Swagger UI tai:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Hoac tai noi dung OpenAPI JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
