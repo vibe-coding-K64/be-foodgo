@@ -194,4 +194,12 @@ public class BusinessException extends RuntimeException {
                 "Đơn hàng [" + orderId + "] đã được đánh giá trước đó. Mỗi đơn hàng chỉ được phép đánh giá một lần."
         );
     }
+
+    public static BusinessException phuongThucThanhToanKhongTimThay(String paymentMethodId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "PAYMENT_METHOD_NOT_FOUND",
+                "Không tìm thấy phương thức thanh toán với ID [" + paymentMethodId + "]."
+        );
+    }
 }
