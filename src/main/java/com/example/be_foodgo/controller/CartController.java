@@ -73,6 +73,117 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.thatSuccess(item, "Đã thêm món vào giỏ hàng thành công."));
     }
 
+    @PutMapping("/{itemId}/quantity")
+    @Operation(
+            summary = "Cập nhật số lượng món trong giỏ hàng",
+            description = "Cập nhật số lượng của một món trong giỏ hàng của khách hàng. " +
+                    "Số lượng phải lớn hơn 0. Nếu món không tồn tại trong giỏ hàng, trả về lỗi 404."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Cập nhật số lượng món thành công",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Yêu cầu không hợp lệ - Số lượng <= 0",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Món không tồn tại trong giỏ hàng",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Lỗi hệ thống",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<Void>> capNhatSoLuongMon(
+            @PathVariable
+            @Parameter(description = "ID của món trong giỏ hàng (cartItemId)")
+            String itemId,
+            @Valid
+            @RequestBody
+            @Parameter(description = "Thông tin cập nhật số lượng")
+            com.example.be_foodgo.dto.CartUpdateQuantityRequest request
+    ) {
+        log.info("Nhận yêu cầu cập nhật số lượng - itemId: {}, userId: {}, số lượng mới: {}",
+                itemId, request.getUserId(), request.getQuantity());
+
+        cartService.capNhatSoLuongMon(request.getUserId(), itemId, request.getQuantity());
+
+        log.info("Cập nhật số lượng món [{}] thành {} thành công.", itemId, request.getQuantity());
+        return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Cập nhật số lượng món thành công."));
+    }
+
+    @DeleteMapping("/{itemId}")
+    @Operation(
+            summary = "Xóa một món khỏi giỏ hàng",
+            description = "Xóa một món ăn khỏi giỏ hàng của khách hàng. " +
+                    "Phương thức này là idempotent - trả về thành công kể cả khi món không tồn tại trong giỏ hàng."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Xóa món khỏi giỏ hàng thành công",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Lỗi hệ thống",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<Void>> xoaMotMon(
+            @PathVariable
+            @Parameter(description = "ID của món trong giỏ hàng (cartItemId)")
+            String itemId,
+            @RequestParam
+            @Parameter(description = "ID người dùng khách hàng")
+            String userId
+    ) {
+        log.info("Nhận yêu cầu xóa món - itemId: {}, userId: {}", itemId, userId);
+
+        cartService.xoaMotMon(userId, itemId);
+
+        log.info("Xóa món [{}] khỏi giỏ hàng thành công.", itemId);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Đã xóa món khỏi giỏ hàng thành công."));
+    }
+
+    @DeleteMapping
+    @Operation(
+            summary = "Xóa toàn bộ giỏ hàng",
+            description = "Xóa tất cả các món trong giỏ hàng của khách hàng. " +
+                    "Sử dụng WriteBatch để tối ưu số lần gọi API lên Firebase."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Xóa toàn bộ giỏ hàng thành công",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Lỗi hệ thống",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<Void>> xoaToanBoGioHang(
+            @RequestParam
+            @Parameter(description = "ID người dùng khách hàng")
+            String userId
+    ) {
+        log.info("Nhận yêu cầu xóa toàn bộ giỏ hàng - userId: {}", userId);
+
+        cartService.xoaToanBoGioHang(userId);
+
+        log.info("Xóa toàn bộ giỏ hàng của người dùng [{}] thành công.", userId);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Đã xóa toàn bộ giỏ hàng thành công."));
+    }
+
     @Schema(name = "CartItemSchema", description = "Schema cho CartItem trong phản hồi thành công")
     public static class CartItemSchema extends CartItem {
     }
