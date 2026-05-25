@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
@@ -54,6 +55,11 @@ public class OrderRepository {
 
     public String update(String id, Order order) throws ExecutionException, InterruptedException {
         ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(id).set(order);
+        return collectionsApiFuture.get().getUpdateTime().toString();
+    }
+
+    public String updateFields(String id, Map<String, Object> fields) throws ExecutionException, InterruptedException {
+        ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(id).update(fields);
         return collectionsApiFuture.get().getUpdateTime().toString();
     }
 

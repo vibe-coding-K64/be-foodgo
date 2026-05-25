@@ -126,4 +126,42 @@ public class BusinessException extends RuntimeException {
                 "Không tìm thấy voucher với ID [" + voucherId + "]."
         );
     }
+
+    public static BusinessException donHangKhongTimThay(String orderId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "ORDER_NOT_FOUND",
+                "Không tìm thấy đơn hàng với ID [" + orderId + "]."
+        );
+    }
+
+    public static BusinessException khongPhaiChuDonHang(String orderId) {
+        return new BusinessException(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                "Bạn không có quyền hủy đơn hàng [" + orderId + "]. Chỉ chủ nhân của đơn hàng mới được phép hủy."
+        );
+    }
+
+    public static BusinessException trangThaiKhongTheHuy(String orderId, int status) {
+        String tenTrangThai;
+        if (status == 0) {
+            tenTrangThai = "Chờ xác nhận";
+        } else if (status == 1) {
+            tenTrangThai = "Đang chuẩn bị";
+        } else if (status == 2) {
+            tenTrangThai = "Đang giao";
+        } else if (status == 3) {
+            tenTrangThai = "Hoàn thành";
+        } else if (status == 4) {
+            tenTrangThai = "Đã hủy";
+        } else {
+            tenTrangThai = "Không xác định";
+        }
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_STATUS_CANNOT_CANCEL",
+                "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái [Chờ xác nhận]."
+        );
+    }
 }
