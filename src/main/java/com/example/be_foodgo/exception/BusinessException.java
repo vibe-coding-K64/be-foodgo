@@ -70,4 +70,60 @@ public class BusinessException extends RuntimeException {
                 "Không tìm thấy địa chỉ với ID [" + addressId + "]."
         );
     }
+
+    public static BusinessException gioHangRong() {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "CART_EMPTY",
+                "Giỏ hàng hiện tại đang rỗng, vui lòng thêm món trước khi đặt hàng."
+        );
+    }
+
+    public static BusinessException khoangCachVuotGioiHan(double khoangCach, double gioiHanKm) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "DISTANCE_EXCEEDED",
+                String.format("Khoảng cách từ cửa hàng đến địa chỉ giao hàng là %.1f km, vượt quá giới hạn %.1f km. Vui lòng chọn địa chỉ gần hơn.", khoangCach, gioiHanKm)
+        );
+    }
+
+    public static BusinessException monAnHetHangTrongGio(String foodId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ITEM_OUT_OF_STOCK",
+                "Món ăn với ID [" + foodId + "] trong giỏ hàng đã hết hàng, vui lòng xóa khỏi giỏ hàng hoặc chọn món khác."
+        );
+    }
+
+    public static BusinessException voucherDaHetHan(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_EXPIRED",
+                "Voucher với ID [" + voucherId + "] đã hết hạn."
+        );
+    }
+
+    public static BusinessException voucherDaHetSoLuong(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_EXHAUSTED",
+                "Voucher với ID [" + voucherId + "] đã hết số lượng sử dụng."
+        );
+    }
+
+    public static BusinessException voucherKhongDatDonToiThieu(String voucherId, double minOrderValue) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_MIN_ORDER_NOT_MET",
+                String.format("Đơn hàng phải có giá trị tối thiểu %.0f VND để sử dụng voucher [%s].", minOrderValue, voucherId)
+        );
+    }
+
+    public static BusinessException voucherKhongTimThay(String voucherId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "VOUCHER_NOT_FOUND",
+                "Không tìm thấy voucher với ID [" + voucherId + "]."
+        );
+    }
 }
