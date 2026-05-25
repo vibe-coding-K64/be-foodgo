@@ -69,7 +69,7 @@ public class VoucherService {
         if (dto.getCode() != null) entity.setCode(dto.getCode());
         entity.setType(dto.getType());
         entity.setValue(dto.getValue());
-        entity.setMinOrder(dto.getMinOrder());
+        entity.setMinOrderValue(dto.getMinOrderValue());
         entity.setLimitCount(dto.getLimitCount());
         entity.setUsedCount(dto.getUsedCount());
         if (dto.getExpiryDate() != null) entity.setExpiryDate(dto.getExpiryDate());

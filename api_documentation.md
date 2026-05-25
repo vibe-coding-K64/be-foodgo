@@ -1134,3 +1134,368 @@ Hoac tai noi dung OpenAPI JSON:
 ```
 http://localhost:8080/v3/api-docs
 ```
+
+---
+
+## 11. API Dat Hang (Checkout)
+
+### Muc luc
+
+- [11.1. POST /api/orders/checkout - Dat hang (Checkout)](#111-post-apiorderscheckout---dat-hang-checkout)
+
+---
+
+### 11.1. POST /api/orders/checkout - Dat hang (Checkout)
+
+**Mo ta**: Thuc hien dat hang cho khach hang. Tao don hang moi, xoa gio hang, va cap nhat voucher (neu co) trong mot giao dich atomically.
+
+**Request Headers**:
+
+| Header | Kieu | Bat buoc | Mo ta |
+| --- | --- | --- | --- |
+| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "userId": "user_001",
+  "addressId": "addr_001",
+  "paymentMethod": "momo",
+  "voucherId": "sys_voucher_001",
+  "note": "Giao gap"
+}
+```
+
+**Cac truong bat buoc**: `userId`, `addressId`, `paymentMethod`
+**Cac truong tuy chon**: `voucherId`, `note`
+
+**Gia tri paymentMethod**:
+
+| Gia tri | Mo ta |
+| --- | --- |
+| `cash` | Tien mat |
+| `momo` | Vi MoMo |
+| `zalo` | ZaloPay |
+| `card` | The ngan hang |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat hang thanh cong, vui long cho cua hang xac nhan.",
+  "data": {
+    "orderId": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "orderCode": "QRSTUV",
+    "storeId": "store_001",
+    "storeName": "Com tam Phuc Loc Tho",
+    "userId": "user_001",
+    "items": [
+      {
+        "foodId": "prod_001",
+        "name": "Com tam suon bi cha",
+        "price": 45000.0,
+        "quantity": 2,
+        "imageUrl": "https://example.com/comtam.jpg",
+        "options": [
+          { "name": "Tran chau", "price": 5000.0 }
+        ]
+      }
+    ],
+    "totalAmount": 90000.0,
+    "deliveryFee": 15000.0,
+    "discountAmount": 20000.0,
+    "finalAmount": 85000.0,
+    "paymentMethod": "momo",
+    "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "status": 0,
+    "createdAt": "2026-05-25T10:30:00Z",
+    "note": "Giao gap"
+  },
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+---
+
+**Cac quy tac nghiep vu (Business Rules)**:
+
+1. **Buoc 1 - Kiem tra gio hang**: Truy van sub-collection `cart` cua `customer_profiles/{userId}`. Neu gio hang rong, tra ve loi 400 `CART_EMPTY`.
+2. **Buoc 2 - Kiem tra khoang cach**: Lay document dia chi tu `addressId`, lay document cua hang tu `storeId` trong gio hang. Su dung cong thuc Haversine de tinh khoang cach giua toa do cua hang va khach hang. Neu khoang cach > 10km, tra ve loi 400 `DISTANCE_EXCEEDED`.
+3. **Buoc 3 - Tinh tien server-side**: Truy van collection `products` de kiem tra `isOutOfStock`. Neu bat ky mon nao bi het hang, tra ve loi 400 `ITEM_OUT_OF_STOCK`. Tinh tong tien don hang dua tren `price` trong gio hang + phi ship co ban (15000 VND).
+4. **Buoc 4 - Xu ly Voucher**: Neu co `voucherId`, kiem tra:
+   - `isActive = true` (con hoat dong)
+   - `remaining = limitCount - usedCount > 0` (con so luong)
+   - `expiryDate` chua het han
+   - `minOrder <= tongTienHang` (dat don toi thieu)
+   - Tinh so tien giam: type=1 (phan tram), type=2 (tien mat)
+5. **Buoc 5 - Transaction bang WriteBatch**:
+   - Tao document moi trong collection `orders` voi `status = 0`
+   - Xoa toan bo documents trong sub-collection `cart` cua user
+   - Giam `usedCount` cua voucher di 1 (neu co voucher)
+   - Neu loi xay ra, khong co thay doi nao duoc luu (atomic)
+
+**Luu y quan trong**:
+- Tong tien duoc tinh toan **hoan toan tu phia server**. Client khong gui danh sach mon an hay gia tien.
+- Gio hang se bi xoa sau khi dat hang thanh cong.
+- Don hang moi tao co `status = 0` (Cho xac nhan).
+
+---
+
+### Cac quy tac tinh tien
+
+```
+tongTienHang = SUM(item.price trong gio hang)
+phiShip = 15000 VND (co dinh)
+soTienGiam = 0 (neu khong co voucher)
+  hoac = tongTienHang * (voucher.value / 100) (neu voucher.type == 1)
+  hoac = voucher.value (neu voucher.type == 2, khong vuot qua tongTienHang)
+tongThanhToan = tongTienHang + phiShip - soTienGiam
+```
+
+**Vi du**: 2 mon (45000 + 25000) + phi ship 15000 - giam 20000 = **65000 VND**
+
+---
+
+### Bang ma loi tra ve
+
+#### 11.1.1. Loi nghiep vu (Business Error)
+
+| HTTP Status | errorCode | Truong hop | Loi tra ve (message) |
+| --- | --- | --- | --- |
+| 400 | `CART_EMPTY` | Gio hang rong | "Gio hang hien tai dang rong, vui long them mon truoc khi dat hang." |
+| 400 | `DISTANCE_EXCEEDED` | Khoang cach vuot 10km | "Khoang cach tu cua hang den dia chi giao hang la X.X km, vuot qua gioi han 10.0 km. Vui long chon dia chi gan hon." |
+| 400 | `ITEM_OUT_OF_STOCK` | Mon an trong gio hang het hang | "Mon an voi ID [xxx] trong gio hang da het hang, vui long xoa khoi gio hang hoac chon mon khac." |
+| 400 | `VOUCHER_EXPIRED` | Voucher da het han | "Voucher voi ID [xxx] da het han." |
+| 400 | `VOUCHER_EXHAUSTED` | Voucher da het so luong | "Voucher voi ID [xxx] da het so luong su dung." |
+| 400 | `VOUCHER_MIN_ORDER_NOT_MET` | Khong dat don toi thieu | "Don hang phai co gia tri toi thieu X VND de su dung voucher [xxx]." |
+| 404 | `VOUCHER_NOT_FOUND` | Voucher khong ton tai | "Khong tim thay voucher voi ID [xxx]." |
+| 404 | `ADDRESS_NOT_FOUND` | Dia chi khong ton tai | "Khong tim thay dia chi voi ID [xxx]." |
+| 500 | `SYSTEM_ERROR` | Loi he thong | "Loi he thong: Khong the tao don hang. Vui long thu lai sau." |
+
+#### 11.1.2. Loi xac thuc dau vao (Validation Error)
+
+| HTTP Status | Truong hop | Mo ta |
+| --- | --- | --- |
+| 400 | Du lieu khong hop le | Cac truong bat buoc bi trong hoac sai dinh dang |
+
+**Vi du loi validation**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Du lieu khong hop le: userId: userId khong duoc de trong, paymentMethod: paymentMethod phai la mot trong cac gia tri: cash, momo, zalo, card",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+#### 11.1.3. Vi du cac response loi nghiep vu
+
+**HTTP 400 - Gio hang rong (CART_EMPTY)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Gio hang hien tai dang rong, vui long them mon truoc khi dat hang.",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+**HTTP 400 - Khoang cach vuot gioi han (DISTANCE_EXCEEDED)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Khoang cach tu cua hang den dia chi giao hang la 12.5 km, vuot qua gioi han 10.0 km. Vui long chon dia chi gan hon.",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+**HTTP 400 - Mon an het hang (ITEM_OUT_OF_STOCK)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Mon an voi ID [prod_999] trong gio hang da het hang, vui long xoa khoi gio hang hoac chon mon khac.",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+**HTTP 400 - Voucher khong dat don toi thieu (VOUCHER_MIN_ORDER_NOT_MET)**:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Don hang phai co gia tri toi thieu 100000 VND de su dung voucher [sys_voucher_001].",
+  "data": null,
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+---
+
+### Vi du
+
+#### 11.1.4. Dat hang thanh cong voi voucher
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/orders/checkout
+Content-Type: application/json
+
+{
+  "userId": "user_001",
+  "addressId": "addr_001",
+  "paymentMethod": "momo",
+  "voucherId": "sys_voucher_001",
+  "note": "Giao gap"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat hang thanh cong, vui long cho cua hang xac nhan.",
+  "data": {
+    "orderId": "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "orderCode": "QRSTUV",
+    "storeId": "store_001",
+    "storeName": "Com tam Phuc Loc Tho",
+    "userId": "user_001",
+    "items": [
+      {
+        "foodId": "prod_001",
+        "name": "Com tam suon bi cha",
+        "price": 45000.0,
+        "quantity": 2,
+        "imageUrl": "https://example.com/comtam.jpg",
+        "options": [
+          { "name": "Tran chau", "price": 5000.0 }
+        ]
+      }
+    ],
+    "totalAmount": 90000.0,
+    "deliveryFee": 15000.0,
+    "discountAmount": 20000.0,
+    "finalAmount": 85000.0,
+    "paymentMethod": "momo",
+    "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "status": 0,
+    "createdAt": "2026-05-25T10:30:00Z",
+    "note": "Giao gap"
+  },
+  "timestamp": "2026-05-25T10:30:00Z"
+}
+```
+
+#### 11.1.5. Dat hang khong co voucher
+
+**Request**:
+
+```http
+POST http://localhost:8080/api/orders/checkout
+Content-Type: application/json
+
+{
+  "userId": "user_001",
+  "addressId": "addr_001",
+  "paymentMethod": "cash"
+}
+```
+
+**Response** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat hang thanh cong, vui long cho cua hang xac nhan.",
+  "data": {
+    "orderId": "WxYzAbCdEfGhIjKlMnOpQrStUv123",
+    "orderCode": "RSTUVX",
+    "storeId": "store_001",
+    "storeName": "Com tam Phuc Loc Tho",
+    "userId": "user_001",
+    "items": [
+      {
+        "foodId": "prod_001",
+        "name": "Com tam suon bi cha",
+        "price": 45000.0,
+        "quantity": 2,
+        "imageUrl": "https://example.com/comtam.jpg",
+        "options": null
+      }
+    ],
+    "totalAmount": 90000.0,
+    "deliveryFee": 15000.0,
+    "discountAmount": 0.0,
+    "finalAmount": 105000.0,
+    "paymentMethod": "cash",
+    "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
+    "status": 0,
+    "createdAt": "2026-05-25T10:35:00Z",
+    "note": null
+  },
+  "timestamp": "2026-05-25T10:35:00Z"
+}
+```
+
+---
+
+### 11.1.6. Thu tu goi API (Flow)
+
+```
+1. Flutter goi POST /api/orders/checkout
+   |
+2. Server kiem tra du lieu dau vao (validation)
+   |
+3+-> Du lieu khong hop le -> Tra ve 400 BAD_REQUEST (Validation)
+   |
+4. Server truy van gio hang (customer_profiles/{userId}/cart)
+   |
+5+-> Gio hang rong -> Tra ve 400 CART_EMPTY
+   |
+6. Server truy van dia chi (customer_profiles/{userId}/addresses/{addressId})
+   |
+7+-> Dia chi khong ton tai -> Tra ve 404 ADDRESS_NOT_FOUND
+   |
+8. Server truy van cua hang (stores/{storeId})
+   |
+9. Server tinh khoang cach Haversine giua cua hang va dia chi giao
+   |
+10+-> Khoang cach > 10km -> Tra ve 400 DISTANCE_EXCEEDED
+   |
+11. Server kiem tra ton kho moi san pham trong gio hang (products/{foodId})
+   |
+12+-> Bat ky san pham nao bi het hang -> Tra ve 400 ITEM_OUT_OF_STOCK
+   |
+13. Server tinh tong tien hang + phi ship (15000 VND)
+   |
+14+-> Co voucherId -> Kiem tra voucher hop le (han, so luong, minOrder)
+   |   |
+   |   +-> Voucher khong hop le -> Tra ve loi 400/404 tuong ung
+   |
+15. Server tao don hang atomically bang WriteBatch:
+   |   + Tao document orders
+   |   + Xoa gio hang
+   |   + Giam usedCount voucher (neu co)
+   |
+16+-> Loi WriteBatch -> Rollback toan bo, tra ve 500 SYSTEM_ERROR
+   |
+17. Tra ve 200 voi CheckoutResponse
+```

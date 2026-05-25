@@ -311,9 +311,11 @@ Firestore Root
 | 9   | `deliveryTime`          | String            | Có       | Thời gian giao ước tính (VD: "20-30 phút")                   |
 | 10  | `deliveryFee`           | Number            | Có       | Phí giao hàng (VND)                                          |
 | 11  | `categoryIds`           | ArrayString       | Không    | Danh sách ID danh mục hệ thống mà quán này thuộc            |
-| 12  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
-| 13  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
-| 14  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
+| 12  | `lat`                  | Number            | Không    | Vĩ độ (latitude) của tọa độ quán (VD: 10.8500)              |
+| 13  | `lng`                  | Number            | Không    | Kinh độ (longitude) của tọa độ quán (VD: 106.7900)          |
+| 14  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
+| 15  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
+| 16  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -329,6 +331,8 @@ Firestore Root
   "isOpen": true,
   "deliveryTime": "20-30 phút",
   "deliveryFee": 15000.0,
+  "lat": 10.8500,
+  "lng": 106.7900,
   "categoryIds": ["cate_001", "cate_004"],
   "restaurant_categories": {
     "rest_cate_001": {
