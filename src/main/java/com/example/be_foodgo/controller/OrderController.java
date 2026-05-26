@@ -40,9 +40,10 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<String> createOrder(@RequestBody OrderDTO orderDTO) throws Exception {
-        String id = orderService.createOrder(orderDTO);
-        return ResponseEntity.ok(id);
+    public ResponseEntity<ApiResponse<OrderDTO>> createOrder(@RequestBody OrderDTO orderDTO) throws Exception {
+        String orderId = orderService.createOrder(orderDTO);
+        OrderDTO createdOrder = orderService.getOrderById(orderId);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(createdOrder, "Tạo đơn hàng thành công."));
     }
 
     @PatchMapping("/{id}/status")
