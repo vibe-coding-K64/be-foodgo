@@ -85,6 +85,19 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/featured")
+    public ResponseEntity<Map<String, Object>> getFeaturedProducts(
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) String categoryId) {
+        try {
+            Map<String, Object> response = productService.getFeaturedProducts(limit, categoryId);
+            return ResponseEntity.ok(response);
+        } catch (ExecutionException | InterruptedException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createResponse(false, e.getMessage(), null));
+        }
+    }
+
     private Map<String, Object> createResponse(boolean success, String message, Object data) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", success);

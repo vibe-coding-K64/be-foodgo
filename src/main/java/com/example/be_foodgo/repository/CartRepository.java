@@ -132,8 +132,13 @@ public class CartRepository {
             batch.update(newDoc, "toppings", toppingMaps);
         }
 
-        batch.commit();
-        log.info("Đã lưu món [{}] vào giỏ hàng với ID: {}", item.getFoodId(), cartItemId);
+        try {
+            batch.commit().get();
+            log.info("Đã lưu món [{}] vào giỏ hàng với ID: {}", item.getFoodId(), cartItemId);
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Lỗi khi commit giỏ hàng vào Firestore: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        }
         return cartItemId;
     }
 

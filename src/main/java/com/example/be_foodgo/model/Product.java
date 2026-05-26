@@ -16,6 +16,8 @@ public class Product {
     private boolean isOutOfStock;
     private boolean isFeatured;
     private List<ProductOptionGroup> optionGroups;
+    private com.google.cloud.Timestamp createdAt;
+    private com.google.cloud.Timestamp updatedAt;
 
     @Data
     public static class ProductOptionGroup {

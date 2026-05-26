@@ -72,4 +72,32 @@ public class ProductRepository {
         }
         return products;
     }
+
+    public List<Product> findFeatured(String categoryId) throws ExecutionException, InterruptedException {
+        Query query = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("isFeatured", true)
+                .whereEqualTo("isOutOfStock", false);
+        if (categoryId != null && !categoryId.isEmpty()) {
+            query = query.whereEqualTo("categoryId", categoryId);
+        }
+        ApiFuture<QuerySnapshot> future = query.get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Product> products = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Product product = doc.toObject(Product.class);
+            if (product != null) {
+                product.setId(doc.getId());
+                products.add(product);
+            }
+        }
+        products.sort((a, b) -> {
+            com.google.cloud.Timestamp ta = a.getCreatedAt();
+            com.google.cloud.Timestamp tb = b.getCreatedAt();
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return 1;
+            if (tb == null) return -1;
+            return tb.compareTo(ta);
+        });
+        return products;
+    }
 }
