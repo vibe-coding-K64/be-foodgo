@@ -39,6 +39,7 @@ public class CartRepository {
         for (DocumentSnapshot doc : snapshot.getDocuments()) {
             CartItem item = CartItem.builder()
                     .id(doc.getId())
+                    .userId(userId)
                     .storeId(doc.getString("storeId"))
                     .foodId(doc.getString("foodId"))
                     .name(doc.getString("name"))
@@ -239,6 +240,18 @@ public class CartRepository {
         DocumentSnapshot doc = future.get();
         if (!doc.exists()) {
             log.warn("Sản phẩm [{}] không tồn tại", foodId);
+            return null;
+        }
+        return new FirestoreDocument(doc.getData());
+    }
+
+    public FirestoreDocument layThongTinCuaHang(String storeId) throws ExecutionException, InterruptedException {
+        log.info("Truy vấn thông tin cửa hàng: {}", storeId);
+        DocumentReference storeRef = firestore.collection("stores").document(storeId);
+        ApiFuture<DocumentSnapshot> future = storeRef.get();
+        DocumentSnapshot doc = future.get();
+        if (!doc.exists()) {
+            log.warn("Cửa hàng [{}] không tồn tại", storeId);
             return null;
         }
         return new FirestoreDocument(doc.getData());
