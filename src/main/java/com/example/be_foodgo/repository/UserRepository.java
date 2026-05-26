@@ -9,6 +9,7 @@ import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.stereotype.Repository;
 
+import com.google.cloud.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -129,8 +130,8 @@ public class UserRepository {
                 .phoneNumber((String) data.get("phoneNumber"))
                 .photoUrl((String) data.get("photoUrl"))
                 .roles(roles)
-                .createdAt((String) data.get("createdAt"))
-                .updatedAt((String) data.get("updatedAt"))
+                .createdAt(objectToString(data.get("createdAt")))
+                .updatedAt(objectToString(data.get("updatedAt")))
                 .build();
     }
 
@@ -146,5 +147,18 @@ public class UserRepository {
         map.put("createdAt", user.getCreatedAt());
         map.put("updatedAt", user.getUpdatedAt());
         return map;
+    }
+
+    private String objectToString(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+        if (obj instanceof String) {
+            return (String) obj;
+        }
+        if (obj instanceof Timestamp) {
+            return ((Timestamp) obj).toString();
+        }
+        return obj.toString();
     }
 }
