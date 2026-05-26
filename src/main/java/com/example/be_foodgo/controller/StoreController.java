@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/stores")
-@CrossOrigin(origins = "*") // Hỗ trợ gọi từ frontend
+@CrossOrigin(origins = "*")
 public class StoreController {
 
     @Autowired
@@ -54,6 +54,36 @@ public class StoreController {
             return ResponseEntity.ok(storeService.createMerchantStore(uid, storeDTO));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi tạo quán: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<Map<String, Object>> getNearbyStores(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5000") double radius,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) String categoryId) {
+        try {
+            Map<String, Object> response = storeService.getNearbyStores(lat, lng, radius, limit, categoryId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<Map<String, Object>> getPopularStores(
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(defaultValue = "0") double minRating) {
+        try {
+            Map<String, Object> response = storeService.getPopularStores(limit, categoryId, minRating);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "error", e.getMessage()));
         }
     }
 }

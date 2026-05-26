@@ -70,4 +70,19 @@ public class StoreRepository {
         }
         return stores;
     }
+
+    public List<Store> findOpenStores() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("isOpen", true).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Store> stores = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Store store = doc.toObject(Store.class);
+            if (store != null) {
+                store.setId(doc.getId());
+                stores.add(store);
+            }
+        }
+        return stores;
+    }
 }
