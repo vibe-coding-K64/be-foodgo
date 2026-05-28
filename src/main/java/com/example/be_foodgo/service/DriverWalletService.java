@@ -3,7 +3,6 @@ package com.example.be_foodgo.service;
 import com.example.be_foodgo.dto.driver.DriverTransactionDTO;
 import com.example.be_foodgo.dto.driver.DriverWalletDTO;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.exception.InsufficientBalanceException;
 import com.example.be_foodgo.repository.DriverRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
@@ -144,11 +143,6 @@ public class DriverWalletService {
             log.error("Loi khi rut tien: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof InsufficientBalanceException) {
-                double currentBalance = 0.0;
-                throw BusinessException.soDuKhongDu(currentBalance, amount);
-            }
             log.error("Loi khi rut tien: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }

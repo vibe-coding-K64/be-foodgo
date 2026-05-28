@@ -218,4 +218,66 @@ public class BusinessException extends RuntimeException {
                 String.format("So du hien tai %.0f VND khong du de rut %.0f VND.", soDu, soTienRut)
         );
     }
+
+    public static BusinessException hoSoTaiXeChuaTonTai(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "DRIVER_PROFILE_NOT_FOUND",
+                "Không tìm thấy hồ sơ tài xế với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, int status, String hanhDong) {
+        String tenTrangThai;
+        if (status == 0) {
+            tenTrangThai = "Chờ xác nhận";
+        } else if (status == 1) {
+            tenTrangThai = "Đang chuẩn bị";
+        } else if (status == 2) {
+            tenTrangThai = "Đang giao";
+        } else if (status == 3) {
+            tenTrangThai = "Hoàn thành";
+        } else if (status == 4) {
+            tenTrangThai = "Đã hủy";
+        } else {
+            tenTrangThai = "Không xác định";
+        }
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_STATUS_INVALID",
+                "Không thể " + hanhDong + " đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]."
+        );
+    }
+
+    public static BusinessException donHangDaCoTaiXe(String orderId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_ALREADY_ASSIGNED",
+                "Đơn hàng [" + orderId + "] đã được assign cho tài xế khác."
+        );
+    }
+
+    public static BusinessException taiXeKhongTimThay(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "DRIVER_NOT_FOUND",
+                "Không tìm thấy tài xế với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException viKhongTonTai(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "WALLET_NOT_FOUND",
+                "Không tìm thấy ví tài xế với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException vuotGioiHanRutTien(String message) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "WITHDRAWAL_LIMIT_EXCEEDED",
+                message
+        );
+    }
 }
