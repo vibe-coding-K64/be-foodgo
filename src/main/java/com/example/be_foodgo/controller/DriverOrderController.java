@@ -2,6 +2,7 @@ package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.driver.DriverOrderDTO;
 import com.example.be_foodgo.dto.driver.DriverOrderStatusUpdateRequest;
+import com.example.be_foodgo.dto.driver.DriverRespondRequest;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.service.DriverOrderService;
@@ -138,6 +139,54 @@ public class DriverOrderController extends BaseDriverController {
             return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Tu choi don hang thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi tu choi don hang: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
+    @PostMapping("/{id}/respond")
+    @Operation(
+            summary = "Tra loi yeu cau nhan don",
+            description = "Tai xe tra loi (accept/decline) yeu cau nhan don tu he thong. Chi ap dung khi co thong bao push yeu cau nhan don."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Tra loi thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Yeu cau khong hop le hoac da het han"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Chua xac thuc"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Tai xe khong nam trong danh sach yeu cau")
+    })
+    public ResponseEntity<?> respondToOrder(
+            HttpServletRequest httpRequest,
+            @Parameter(description = "ID don hang", required = true)
+            @PathVariable("id") String orderId,
+            @Valid @RequestBody DriverRespondRequest request) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            if ("accept".equals(request.getAction())) {
+                DriverOrderDTO order = driverOrderService.respondAcceptOrder(orderId, holder.userId);
+                return ResponseEntity.ok(ApiResponse.thatSuccess(order, "Nhan don hang thanh cong."));
+            } else {
+                driverOrderService.respondDeclineOrder(orderId, holder.userId);
+                return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Tu choi don hang thanh cong."));
+            }
+        } catch (BusinessException e) {
+            log.warn("Loi business khi tra loi don: {}", e.getMessage());
+            return ResponseEntity.status(e.getStatus().value()).body(
+                    ApiResponse.thatError(e.getStatus().value(), e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi tra loi don hang: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(
                     ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
         }

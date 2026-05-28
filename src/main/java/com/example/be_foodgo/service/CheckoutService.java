@@ -449,6 +449,9 @@ public class CheckoutService {
         orderData.put("finalAmount", tongThanhToan);
         orderData.put("paymentMethod", request.getPaymentMethod());
         orderData.put("deliveryAddress", diaChi.getAddress());
+        orderData.put("addressId", diaChi.getId());
+        orderData.put("deliveryLat", diaChi.getLat() != null ? diaChi.getLat() : 0.0);
+        orderData.put("deliveryLng", diaChi.getLng() != null ? diaChi.getLng() : 0.0);
         orderData.put("receiverName", diaChi.getReceiverName() != null ? diaChi.getReceiverName() : "");
         orderData.put("receiverPhone", diaChi.getReceiverPhone() != null ? diaChi.getReceiverPhone() : "");
         orderData.put("status", 0);

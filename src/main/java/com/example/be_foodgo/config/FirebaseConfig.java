@@ -5,6 +5,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.messaging.FirebaseMessaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -47,5 +48,12 @@ public class FirebaseConfig {
         Firestore db = FirestoreClient.getFirestore();
         log.info("Firestore bean da duoc tao thanh cong.");
         return db;
+    }
+
+    @Bean
+    public FirebaseMessaging firebaseMessaging() {
+        FirebaseMessaging instance = FirebaseMessaging.getInstance(FirebaseApp.getInstance());
+        log.info("FirebaseMessaging bean da duoc tao thanh cong.");
+        return instance;
     }
 }
