@@ -131,6 +131,67 @@ Client (HTTP Request)
 
 ---
 
+## GITHUB (BẮT BUỘC)
+
+### Repository
+
+- Mỗi nhóm tạo **01 repository** trên GitHub
+- Repository phải:
+  - **Public** (hoặc Private nhưng add giảng viên)
+  - Có file `README.md` mô tả:
+    - Tên đề tài
+    - Thành viên nhóm
+    - Mô tả chức năng hệ thống
+    - Hướng dẫn chạy project
+    - Link Swagger UI
+
+### Quy định chia nhánh
+
+#### 1. `main`
+
+- Chứa code ổn định, production-ready
+- Chỉ merge từ `develop`
+- **Không commit trực tiếp**
+
+#### 2. `dev`
+
+- Nhánh phát triển chính
+- Merge từ các `feature/*` hoặc `defect/*`
+- Dùng để test tích hợp trước khi lên `main`
+
+#### 3. `feature/xxx`
+
+- Phát triển tính năng mới
+- Ví dụ: `feature/authentication`
+- Sau khi hoàn thành, tạo **Pull Request** vào `develop`
+
+#### 4. `defect/xxx`
+
+- Sửa lỗi
+- Ví dụ: `defect/login-bug`
+
+### Quy trình làm việc chuẩn
+
+1. Tạo branch từ `develop`
+2. Code + commit
+3. Push lên GitHub
+4. Tạo **Pull Request (PR)**
+5. Thành viên khác review
+6. Merge vào `develop`
+7. Khi hoàn chỉnh, merge `develop` → `main`
+
+> **Lưu ý:** Không được commit trực tiếp vào `main`
+
+### Quy chuẩn commit message
+
+Áp dụng format: `<type>: <short description>`
+
+Ví dụ:
+- `feat: implement JWT authentication`
+- `fix: resolve token validation bug`
+
+---
+
 ## Chú thích
 
 - File `.gitkeep` trong mỗi package đảm bảo Git tracking cả khi package chưa có file nào.
