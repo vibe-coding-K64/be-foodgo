@@ -422,7 +422,7 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Kich thuoc", "options", List.of(
+                                Map.of("name", "Kich thuoc", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "Vua", "price", 0.0),
                                         Map.of("name", "Lon", "price", 10000.0)
                                 ))
@@ -461,11 +461,11 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Kich thuoc", "options", List.of(
+                                Map.of("name", "Kich thuoc", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "M", "price", 0.0),
                                         Map.of("name", "L", "price", 5000.0)
                                 )),
-                                Map.of("name", "Topping", "options", List.of(
+                                Map.of("name", "Topping", "isSingleSelect", false, "options", List.of(
                                         Map.of("name", "Tran chau", "price", 5000.0),
                                         Map.of("name", "Thach", "price", 3000.0),
                                         Map.of("name", "Pudding", "price", 6000.0)
@@ -505,7 +505,7 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Phan an", "options", List.of(
+                                Map.of("name", "Phan an", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "1 phan", "price", 0.0),
                                         Map.of("name", "2 phan", "price", 20000.0)
                                 ))

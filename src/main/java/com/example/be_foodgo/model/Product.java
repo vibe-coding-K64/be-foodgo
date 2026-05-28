@@ -22,7 +22,8 @@ public class Product {
     @Data
     public static class ProductOptionGroup {
         private String name;
-        private boolean isRequired;
+        private Boolean isSingleSelect;
+        private Boolean isRequired;
         private int maxChoices;
         private List<ProductOption> options;
     }

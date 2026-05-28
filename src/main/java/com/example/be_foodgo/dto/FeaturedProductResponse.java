@@ -44,6 +44,8 @@ public class FeaturedProductResponse {
     @AllArgsConstructor
     public static class OptionGroupDTO {
         private String name;
+        private Boolean isSingleSelect;
+        private Boolean isRequired;
         private List<OptionDTO> options;
     }
 
