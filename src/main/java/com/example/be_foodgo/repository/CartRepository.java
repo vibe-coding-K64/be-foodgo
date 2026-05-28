@@ -226,6 +226,30 @@ public class CartRepository {
         log.info("Đã cập nhật số lượng món [{}] thành {} trong giỏ hàng người dùng {}", itemId, quantity, userId);
     }
 
+    public void capNhatSoLuongVaGia(String userId, String itemId, Integer quantity, Double price) {
+        log.info("Cập nhật số lượng và giá món {} trong giỏ hàng người dùng {} - số lượng mới: {}, giá mới: {}",
+                itemId, userId, quantity, price);
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(itemId);
+
+        try {
+            docRef.update(
+                    "quantity", quantity,
+                    "price", price,
+                    "updatedAt", FieldValue.serverTimestamp()
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Lỗi khi cập nhật số lượng và giá món [{}]: {}", itemId, e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("Đã cập nhật số lượng và giá món [{}] thành ({}, {}) trong giỏ hàng người dùng {}",
+                itemId, quantity, price, userId);
+    }
+
     public void xoaMotMonTrongGio(String userId, String itemId) {
         log.info("Xóa món {} khỏi giỏ hàng người dùng {}", itemId, userId);
         DocumentReference docRef = firestore

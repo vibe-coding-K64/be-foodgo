@@ -37,5 +37,23 @@ public class CartItem {
 
         private String name;
         private Double price;
+
+        public boolean equalsByName(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ToppingItem that = (ToppingItem) o;
+            return that.name != null && that.name.equals(this.name);
+        }
+    }
+
+    public boolean coCungTopping(List<ToppingItem> other) {
+        boolean thisEmpty = this.toppings == null || this.toppings.isEmpty();
+        boolean otherEmpty = other == null || other.isEmpty();
+        if (thisEmpty && otherEmpty) return true;
+        if (thisEmpty || otherEmpty) return false;
+        if (this.toppings.size() != other.size()) return false;
+        List<String> thisNames = this.toppings.stream().map(ToppingItem::getName).sorted().toList();
+        List<String> otherNames = other.stream().map(ToppingItem::getName).sorted().toList();
+        return thisNames.equals(otherNames);
     }
 }
