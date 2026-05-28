@@ -1,8 +1,6 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.CartRequest;
-import com.example.be_foodgo.dto.CartResponse;
-import com.example.be_foodgo.dto.CartResponse.CartItemResponse;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.model.CartItem;
 import com.example.be_foodgo.repository.CartRepository;
@@ -89,74 +87,6 @@ public class CartService {
 
         log.info("Đã thêm món [{}] vào giỏ hàng thành công với cartItemId: {}", request.getFoodId(), cartItemId);
         return item;
-    }
-
-    public CartResponse layGioHang(String userId) {
-        log.info("Bắt đầu lấy giỏ hàng - Người dùng: {}", userId);
-
-        List<CartItem> items;
-        try {
-            items = cartRepository.layTatCaMonTrongGio(userId);
-        } catch (Exception e) {
-            log.error("Lỗi khi truy vấn giỏ hàng của người dùng [{}]: {}", userId, e.getMessage());
-            throw BusinessException.loiHeThong("Không thể lấy thông tin giỏ hàng.");
-        }
-
-        if (items.isEmpty()) {
-            log.info("Giỏ hàng của người dùng [{}] đang trống.", userId);
-            return CartResponse.builder()
-                    .items(List.of())
-                    .storeId(null)
-                    .storeName(null)
-                    .storeImageUrl(null)
-                    .build();
-        }
-
-        String storeId = items.get(0).getStoreId();
-        String resolvedStoreName = null;
-        String resolvedStoreImageUrl = null;
-
-        try {
-            FirestoreDocument storeDoc = cartRepository.layThongTinCuaHang(storeId);
-            if (storeDoc != null) {
-                resolvedStoreName = (String) storeDoc.get("name");
-                resolvedStoreImageUrl = (String) storeDoc.get("avtUrl");
-            }
-        } catch (Exception e) {
-            log.warn("Không thể lấy thông tin cửa hàng [{}]: {}", storeId, e.getMessage());
-        }
-
-        final String storeName = resolvedStoreName;
-        final String storeImageUrl = resolvedStoreImageUrl;
-
-        List<CartItemResponse> itemResponses = items.stream()
-                .map(item -> CartItemResponse.builder()
-                        .id(item.getId())
-                        .userId(userId)
-                        .storeId(item.getStoreId())
-                        .storeName(storeName)
-                        .storeImageUrl(storeImageUrl)
-                        .foodId(item.getFoodId())
-                        .name(item.getName())
-                        .price(item.getPrice())
-                        .quantity(item.getQuantity())
-                        .size(item.getSize())
-                        .sizePrice(item.getSizePrice())
-                        .toppings(item.getToppings())
-                        .note(item.getNote())
-                        .imageUrl(item.getImageUrl())
-                        .createdAt(item.getCreatedAt())
-                        .updatedAt(item.getUpdatedAt())
-                        .build())
-                .toList();
-
-        log.info("Lấy giỏ hàng của người dùng [{}] thành công - {} món.", userId, itemResponses.size());
-        return CartResponse.builder()
-                .items(itemResponses)
-                .storeId(storeId)
-                .storeName(storeName)
-                .storeImageUrl(storeImageUrl)
-                .build();
     }
 
     public void capNhatSoLuongMon(String userId, String itemId, Integer quantity) {

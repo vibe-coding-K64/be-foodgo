@@ -29,8 +29,8 @@ public class ProductDTO {
 
     private String imageUrl;
     
-    private Boolean isOutOfStock;
-    private Boolean isFeatured;
+    private boolean outOfStock; // note boolean outOfStock to match Jackson
+    private boolean featured;
 
     private List<ProductOptionGroupDTO> optionGroups;
 
@@ -38,8 +38,7 @@ public class ProductDTO {
     public static class ProductOptionGroupDTO {
         @NotBlank(message = "Tên nhóm không được để trống")
         private String name;
-        private Boolean isSingleSelect;
-        private Boolean isRequired;
+        private boolean isRequired;
         private int maxChoices;
         private List<ProductOptionDTO> options;
     }
