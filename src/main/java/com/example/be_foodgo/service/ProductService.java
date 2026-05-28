@@ -87,8 +87,8 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setBasePrice(dto.getBasePrice());
         product.setImageUrl(dto.getImageUrl());
-        product.setIsOutOfStock(dto.isOutOfStock());
-        product.setIsFeatured(dto.isFeatured());
+        product.setIsOutOfStock(dto.getIsOutOfStock());
+        product.setIsFeatured(dto.getIsFeatured());
 
         if (dto.getOptionGroups() != null) {
             List<Product.ProductOptionGroup> groups = dto.getOptionGroups().stream().map(g -> {
