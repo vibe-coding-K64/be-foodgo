@@ -202,4 +202,12 @@ public class BusinessException extends RuntimeException {
                 "Không tìm thấy phương thức thanh toán với ID [" + paymentMethodId + "]."
         );
     }
+
+    public static BusinessException thongBaoKhongTimThay(String notifId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "NOTIFICATION_NOT_FOUND",
+                "Không tìm thấy thông báo với ID [" + notifId + "]."
+        );
+    }
 }
