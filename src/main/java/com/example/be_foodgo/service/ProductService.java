@@ -94,7 +94,8 @@ public class ProductService {
             List<Product.ProductOptionGroup> groups = dto.getOptionGroups().stream().map(g -> {
                 Product.ProductOptionGroup group = new Product.ProductOptionGroup();
                 group.setName(g.getName());
-                group.setRequired(g.isRequired());
+                group.setIsSingleSelect(g.getIsSingleSelect());
+                group.setIsRequired(g.getIsRequired());
                 group.setMaxChoices(g.getMaxChoices());
                 if (g.getOptions() != null) {
                     group.setOptions(g.getOptions().stream().map(o -> {
@@ -152,6 +153,8 @@ public class ProductService {
                     }
                     return OptionGroupDTO.builder()
                             .name(group.getName())
+                            .isSingleSelect(group.getIsSingleSelect())
+                            .isRequired(group.getIsRequired())
                             .options(optionDTOs)
                             .build();
                 }).collect(Collectors.toList());

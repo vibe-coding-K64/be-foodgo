@@ -377,7 +377,7 @@ Firestore Root
 | 8   | `imageUrl`     | String       | Có       | Đường dẫn ảnh món ăn                        |
 | 9   | `isOutOfStock` | Boolean      | Có       | Có đang hết hàng không                        |
 | 10  | `isFeatured`   | Boolean      | Có       | Có phải món nổi bật không                    |
-| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)   |
+| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)  |
 | 12  | `createdAt`    | Timestamp    | Có       | Thời điểm tạo                               |
 | 13  | `updatedAt`    | Timestamp    | Có       | Thời điểm cập nhật                          |
 
@@ -386,21 +386,30 @@ Firestore Root
 ```json
 "optionGroups": [
   {
-    "name": "Kích thước",
+    "name": "Kich thuoc",
+    "isSingleSelect": true,
+    "isRequired": true,
     "options": [
-      {"name": "M", "price": 0.0},
-      {"name": "L", "price": 5000.0}
+      {"name": "Vua", "price": 0.0},
+      {"name": "Lon", "price": 10000.0}
     ]
   },
   {
     "name": "Topping",
+    "isSingleSelect": false,
+    "isRequired": false,
     "options": [
-      {"name": "Trân châu", "price": 5000.0},
-      {"name": "Thạch", "price": 3000.0}
+      {"name": "Tran chau", "price": 5000.0},
+      {"name": "Thach", "price": 3000.0}
     ]
   }
 ]
 ```
+
+> **Giải thích trường:**
+> - `isSingleSelect`: `true` = chọn một (radio / single-select), `false` = chọn nhiều (checkbox / multi-select)
+> - `isRequired`: `true` = bắt buộc chọn ít nhất một option trong nhóm
+> - Quy tắc ngầm: nhóm chứa `"size"`, `"Kich thuoc"`, `"kích thước"` → `isSingleSelect: true`; nhóm chứa `"topping"`, `"Topping"` → `isSingleSelect: false`
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -418,10 +427,21 @@ Firestore Root
   "isFeatured": true,
   "optionGroups": [
     {
-      "name": "Kích thước",
+      "name": "Kich thuoc",
+      "isSingleSelect": true,
+      "isRequired": true,
       "options": [
-        {"name": "Vừa", "price": 0.0},
-        {"name": "Lớn", "price": 10000.0}
+        {"name": "Vua", "price": 0.0},
+        {"name": "Lon", "price": 10000.0}
+      ]
+    },
+    {
+      "name": "Topping",
+      "isSingleSelect": false,
+      "isRequired": false,
+      "options": [
+        {"name": "Tran chau", "price": 5000.0},
+        {"name": "Thach", "price": 3000.0}
       ]
     }
   ],
