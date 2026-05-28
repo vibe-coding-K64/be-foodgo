@@ -13,7 +13,8 @@ public class OrderDTO {
     private String customerName;
     private String customerPhone;
     private String deliveryAddress;
-    
+    private String addressId;
+
     private String driverName;
     private String driverPhone;
     
@@ -28,6 +29,10 @@ public class OrderDTO {
     private String status;
     private Date createdAt;
     private Date updatedAt;
+
+    private Double deliveryHeading;
+    private Double deliveryLat;
+    private Double deliveryLng;
 
     public OrderDTO() {}
 
@@ -47,6 +52,8 @@ public class OrderDTO {
     public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
     public String getDeliveryAddress() { return deliveryAddress; }
     public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public String getAddressId() { return addressId; }
+    public void setAddressId(String addressId) { this.addressId = addressId; }
     public String getDriverName() { return driverName; }
     public void setDriverName(String driverName) { this.driverName = driverName; }
     public String getDriverPhone() { return driverPhone; }
@@ -69,4 +76,10 @@ public class OrderDTO {
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
     public Date getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
+    public Double getDeliveryHeading() { return deliveryHeading; }
+    public void setDeliveryHeading(Double deliveryHeading) { this.deliveryHeading = deliveryHeading; }
+    public Double getDeliveryLat() { return deliveryLat; }
+    public void setDeliveryLat(Double deliveryLat) { this.deliveryLat = deliveryLat; }
+    public Double getDeliveryLng() { return deliveryLng; }
+    public void setDeliveryLng(Double deliveryLng) { this.deliveryLng = deliveryLng; }
 }

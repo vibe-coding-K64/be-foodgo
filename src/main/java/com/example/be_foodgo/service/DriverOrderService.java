@@ -4,6 +4,7 @@ import com.example.be_foodgo.dto.driver.DriverOrderDTO;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.DriverOrderRepository;
 import com.example.be_foodgo.repository.DriverRepository;
+import com.example.be_foodgo.repository.OrderRequestRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class DriverOrderService {
@@ -23,13 +25,16 @@ public class DriverOrderService {
     private final DriverOrderRepository driverOrderRepository;
     private final DriverRepository driverRepository;
     private final DriverWalletService driverWalletService;
+    private final OrderRequestRepository orderRequestRepository;
 
     public DriverOrderService(DriverOrderRepository driverOrderRepository,
                               DriverRepository driverRepository,
-                              DriverWalletService driverWalletService) {
+                              DriverWalletService driverWalletService,
+                              OrderRequestRepository orderRequestRepository) {
         this.driverOrderRepository = driverOrderRepository;
         this.driverRepository = driverRepository;
         this.driverWalletService = driverWalletService;
+        this.orderRequestRepository = orderRequestRepository;
     }
 
     public List<DriverOrderDTO> getAvailableOrders() {
@@ -324,6 +329,127 @@ public class DriverOrderService {
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi lay lich su don hang: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    public void respondDeclineOrder(String orderId, String userId) {
+        log.info("Tai xe tu choi don tu he thong push: orderId={}, userId={}", orderId, userId);
+        try {
+            Map<String, Object> orderRequest = orderRequestRepository.findByOrderId(orderId);
+            if (orderRequest == null) {
+                log.warn("Khong tim thay order_request cho don [{}]", orderId);
+                return;
+            }
+
+            @SuppressWarnings("unchecked")
+            List<String> targetDrivers = (List<String>) orderRequest.get("targetDriverIds");
+            @SuppressWarnings("unchecked")
+            List<String> attemptedDrivers = (List<String>) orderRequest.get("attemptedDriverIds");
+            if (attemptedDrivers == null) attemptedDrivers = new ArrayList<>();
+
+            if (targetDrivers == null || !targetDrivers.contains(userId)) {
+                log.warn("Tai xe [{}] khong nam trong danh sach yeu cau nhan don [{}]", userId, orderId);
+                return;
+            }
+
+            targetDrivers = new ArrayList<>(targetDrivers);
+            targetDrivers.remove(userId);
+            attemptedDrivers = new ArrayList<>(attemptedDrivers);
+            attemptedDrivers.add(userId);
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("targetDriverIds", targetDrivers);
+            updates.put("attemptedDriverIds", attemptedDrivers);
+            orderRequestRepository.updateFields(orderId, updates);
+
+            Map<String, Object> notifData = new HashMap<>();
+            notifData.put("type", 13);
+            notifData.put("title", "Don hang da duoc giao cho tai xe khac");
+            notifData.put("body", "Don hang [" + orderId + "] da duoc tai xe khac nhan. Vui long cho don hang tiep theo.");
+            notifData.put("orderId", orderId);
+            notifData.put("referenceId", orderId);
+            notifData.put("isRead", false);
+            notifData.put("imageUrl", null);
+            notifData.put("createdAt", Instant.now());
+
+            driverRepository.getFirestore()
+                    .collection("driver_profiles")
+                    .document(userId)
+                    .collection("notifications")
+                    .add(notifData);
+
+            log.info("Tai xe [{}] da tu choi don [{}], {} tai xe con lai", userId, orderId, targetDrivers.size());
+        } catch (Exception e) {
+            log.error("Loi khi xu ly tu choi don [{}]: {}", orderId, e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    public DriverOrderDTO respondAcceptOrder(String orderId, String userId) {
+        log.info("Tai xe chap nhan don tu he thong push: orderId={}, userId={}", orderId, userId);
+        try {
+            Map<String, Object> orderRequest = orderRequestRepository.findByOrderId(orderId);
+            if (orderRequest == null) {
+                throw BusinessException.donHangKhongTimThay(orderId);
+            }
+
+            @SuppressWarnings("unchecked")
+            List<String> targetDrivers = (List<String>) orderRequest.get("targetDriverIds");
+            if (targetDrivers == null || !targetDrivers.contains(userId)) {
+                throw BusinessException.donHangDaCoTaiXe(orderId);
+            }
+
+            String requestStatus = (String) orderRequest.get("status");
+            if (!"pending".equals(requestStatus)) {
+                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, 1, "nhan");
+            }
+
+            Map<String, Object> driverProfileData = driverRepository.findDriverProfileById(userId);
+            if (driverProfileData == null) {
+                throw BusinessException.hoSoTaiXeChuaTonTai(userId);
+            }
+
+            Map<String, Object> userData = driverRepository.findUserById(userId);
+            String driverName = userData != null ? (String) userData.get("fullName") : "Tai xe";
+            String driverPhone = userData != null ? (String) userData.get("phoneNumber") : "";
+            String vehiclePlate = (String) driverProfileData.get("vehiclePlate");
+
+            final String finalDriverName = driverName != null ? driverName : "Tai xe";
+            final String finalDriverPhone = driverPhone != null ? driverPhone : "";
+            final String finalVehiclePlate = vehiclePlate != null ? vehiclePlate : "";
+
+            driverOrderRepository.acceptOrderInTransaction(
+                    orderId, userId, finalDriverName, finalDriverPhone, finalVehiclePlate);
+
+            Map<String, Object> reqUpdates = new HashMap<>();
+            reqUpdates.put("status", "accepted");
+            reqUpdates.put("acceptedDriverId", userId);
+            reqUpdates.put("targetDriverIds", List.of());
+            orderRequestRepository.updateFields(orderId, reqUpdates);
+
+            Map<String, Object> orderData = driverOrderRepository.findOrderRawById(orderId);
+            DriverOrderDTO dto = mapToDriverOrderDTO(orderId, orderData);
+
+            if (dto.getStoreId() != null) {
+                Map<String, Object> storeData = driverOrderRepository.findStoreById(dto.getStoreId());
+                if (storeData != null) {
+                    dto.setStoreAddress((String) storeData.get("address"));
+                    dto.setStoreLat(toDouble(storeData.get("lat")));
+                    dto.setStoreLng(toDouble(storeData.get("lng")));
+                }
+            }
+
+            log.info("Tai xe [{}] da nhan don [{}] thanh cong tu he thong push", userId, orderId);
+            return dto;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi nhan don: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi nhan don: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
