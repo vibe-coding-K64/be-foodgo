@@ -15,7 +15,6 @@ import java.util.List;
 public class CartItem {
 
     private String id;
-    private String userId;
     private String storeId;
     private String foodId;
     private String name;

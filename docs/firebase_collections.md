@@ -311,11 +311,9 @@ Firestore Root
 | 9   | `deliveryTime`          | String            | Có       | Thời gian giao ước tính (VD: "20-30 phút")                   |
 | 10  | `deliveryFee`           | Number            | Có       | Phí giao hàng (VND)                                          |
 | 11  | `categoryIds`           | ArrayString       | Không    | Danh sách ID danh mục hệ thống mà quán này thuộc            |
-| 12  | `lat`                  | Number            | Không    | Vĩ độ (latitude) của tọa độ quán (VD: 10.8500)              |
-| 13  | `lng`                  | Number            | Không    | Kinh độ (longitude) của tọa độ quán (VD: 106.7900)          |
-| 14  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
-| 15  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
-| 16  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
+| 12  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
+| 13  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
+| 14  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -331,8 +329,6 @@ Firestore Root
   "isOpen": true,
   "deliveryTime": "20-30 phút",
   "deliveryFee": 15000.0,
-  "lat": 10.8500,
-  "lng": 106.7900,
   "categoryIds": ["cate_001", "cate_004"],
   "restaurant_categories": {
     "rest_cate_001": {
@@ -377,7 +373,7 @@ Firestore Root
 | 8   | `imageUrl`     | String       | Có       | Đường dẫn ảnh món ăn                        |
 | 9   | `isOutOfStock` | Boolean      | Có       | Có đang hết hàng không                        |
 | 10  | `isFeatured`   | Boolean      | Có       | Có phải món nổi bật không                    |
-| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)  |
+| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)   |
 | 12  | `createdAt`    | Timestamp    | Có       | Thời điểm tạo                               |
 | 13  | `updatedAt`    | Timestamp    | Có       | Thời điểm cập nhật                          |
 
@@ -386,30 +382,21 @@ Firestore Root
 ```json
 "optionGroups": [
   {
-    "name": "Kich thuoc",
-    "isSingleSelect": true,
-    "isRequired": true,
+    "name": "Kích thước",
     "options": [
-      {"name": "Vua", "price": 0.0},
-      {"name": "Lon", "price": 10000.0}
+      {"name": "M", "price": 0.0},
+      {"name": "L", "price": 5000.0}
     ]
   },
   {
     "name": "Topping",
-    "isSingleSelect": false,
-    "isRequired": false,
     "options": [
-      {"name": "Tran chau", "price": 5000.0},
-      {"name": "Thach", "price": 3000.0}
+      {"name": "Trân châu", "price": 5000.0},
+      {"name": "Thạch", "price": 3000.0}
     ]
   }
 ]
 ```
-
-> **Giải thích trường:**
-> - `isSingleSelect`: `true` = chọn một (radio / single-select), `false` = chọn nhiều (checkbox / multi-select)
-> - `isRequired`: `true` = bắt buộc chọn ít nhất một option trong nhóm
-> - Quy tắc ngầm: nhóm chứa `"size"`, `"Kich thuoc"`, `"kích thước"` → `isSingleSelect: true`; nhóm chứa `"topping"`, `"Topping"` → `isSingleSelect: false`
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -427,21 +414,10 @@ Firestore Root
   "isFeatured": true,
   "optionGroups": [
     {
-      "name": "Kich thuoc",
-      "isSingleSelect": true,
-      "isRequired": true,
+      "name": "Kích thước",
       "options": [
-        {"name": "Vua", "price": 0.0},
-        {"name": "Lon", "price": 10000.0}
-      ]
-    },
-    {
-      "name": "Topping",
-      "isSingleSelect": false,
-      "isRequired": false,
-      "options": [
-        {"name": "Tran chau", "price": 5000.0},
-        {"name": "Thach", "price": 3000.0}
+        {"name": "Vừa", "price": 0.0},
+        {"name": "Lớn", "price": 10000.0}
       ]
     }
   ],

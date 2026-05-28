@@ -8,7 +8,7 @@ public class VoucherDTO {
     private String code;
     private int type;
     private double value;
-    private double minOrderValue;
+    private double minOrder;
     private int limitCount;
     private int usedCount;
     private Date expiryDate;
@@ -29,8 +29,8 @@ public class VoucherDTO {
     public double getValue() { return value; }
     public void setValue(double value) { this.value = value; }
 
-    public double getMinOrderValue() { return minOrderValue; }
-    public void setMinOrderValue(double minOrderValue) { this.minOrderValue = minOrderValue; }
+    public double getMinOrder() { return minOrder; }
+    public void setMinOrder(double minOrder) { this.minOrder = minOrder; }
 
     public int getLimitCount() { return limitCount; }
     public void setLimitCount(int limitCount) { this.limitCount = limitCount; }

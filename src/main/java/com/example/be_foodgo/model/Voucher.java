@@ -1,21 +1,16 @@
 package com.example.be_foodgo.model;
 
+import com.google.cloud.firestore.annotation.DocumentId;
 import java.util.Date;
 
 public class Voucher {
-
+    @DocumentId
     private String id;
     private String storeId;
-    private String title;
-    private String subtitle;
     private String code;
-    private int type; // 1: %, 2: cash (không phần trăm)
+    private int type; // 1: %, 2: cash
     private double value;
-    private String imageUrl;
-    private String terms;
-    private int pointsRequired;
-    private int remaining;
-    private double minOrderValue;
+    private double minOrder;
     private int limitCount;
     private int usedCount;
     private Date expiryDate;
@@ -32,12 +27,6 @@ public class Voucher {
     public String getStoreId() { return storeId; }
     public void setStoreId(String storeId) { this.storeId = storeId; }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public String getSubtitle() { return subtitle; }
-    public void setSubtitle(String subtitle) { this.subtitle = subtitle; }
-
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
 
@@ -47,20 +36,8 @@ public class Voucher {
     public double getValue() { return value; }
     public void setValue(double value) { this.value = value; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-
-    public String getTerms() { return terms; }
-    public void setTerms(String terms) { this.terms = terms; }
-
-    public int getPointsRequired() { return pointsRequired; }
-    public void setPointsRequired(int pointsRequired) { this.pointsRequired = pointsRequired; }
-
-    public int getRemaining() { return remaining; }
-    public void setRemaining(int remaining) { this.remaining = remaining; }
-
-    public double getMinOrderValue() { return minOrderValue; }
-    public void setMinOrderValue(double minOrderValue) { this.minOrderValue = minOrderValue; }
+    public double getMinOrder() { return minOrder; }
+    public void setMinOrder(double minOrder) { this.minOrder = minOrder; }
 
     public int getLimitCount() { return limitCount; }
     public void setLimitCount(int limitCount) { this.limitCount = limitCount; }
