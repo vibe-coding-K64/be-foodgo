@@ -116,6 +116,8 @@ public class StoreService {
         dto.setBankName(store.getBankName());
         dto.setBankAccountNumber(store.getBankAccountNumber());
         dto.setAcceptingOrders(store.isAcceptingOrders());
+        dto.setLat(store.getLat());
+        dto.setLng(store.getLng());
         return dto;
     }
 
