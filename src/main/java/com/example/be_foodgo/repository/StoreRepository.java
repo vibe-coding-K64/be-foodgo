@@ -5,10 +5,15 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
@@ -45,5 +50,39 @@ public class StoreRepository {
             ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(store.getId()).set(store);
             return collectionsApiFuture.get().getUpdateTime().toString();
         }
+    }
+
+    public String updateFields(String id, Map<String, Object> fields) throws ExecutionException, InterruptedException {
+        ApiFuture<WriteResult> collectionsApiFuture = firestore.collection(COLLECTION_NAME).document(id).update(fields);
+        return collectionsApiFuture.get().getUpdateTime().toString();
+    }
+
+    public List<Store> layTatCaStores() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Store> stores = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Store store = doc.toObject(Store.class);
+            if (store != null) {
+                store.setId(doc.getId());
+                stores.add(store);
+            }
+        }
+        return stores;
+    }
+
+    public List<Store> findOpenStores() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("isOpen", true).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Store> stores = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Store store = doc.toObject(Store.class);
+            if (store != null) {
+                store.setId(doc.getId());
+                stores.add(store);
+            }
+        }
+        return stores;
     }
 }

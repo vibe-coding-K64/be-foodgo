@@ -2,6 +2,8 @@ package com.example.be_foodgo.model;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class Store {
     private String id;
@@ -15,4 +17,14 @@ public class Store {
     private String bankName;
     private String bankAccountNumber;
     private boolean isAcceptingOrders;
+    private Boolean isOpen;
+    private Double lat;
+    private Double lng;
+    private Double rating;
+    private Integer reviewCount;
+    private String avtUrl;
+    private String backUrl;
+    private String deliveryTime;
+    private Double deliveryFee;
+    private List<String> categoryIds;
 }

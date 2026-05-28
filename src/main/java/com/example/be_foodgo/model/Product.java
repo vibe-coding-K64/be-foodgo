@@ -13,14 +13,17 @@ public class Product {
     private String description;
     private double basePrice;
     private String imageUrl;
-    private boolean isOutOfStock;
-    private boolean isFeatured;
+    private Boolean isOutOfStock;
+    private Boolean isFeatured;
     private List<ProductOptionGroup> optionGroups;
+    private com.google.cloud.Timestamp createdAt;
+    private com.google.cloud.Timestamp updatedAt;
 
     @Data
     public static class ProductOptionGroup {
         private String name;
-        private boolean isRequired;
+        private Boolean isSingleSelect;
+        private Boolean isRequired;
         private int maxChoices;
         private List<ProductOption> options;
     }

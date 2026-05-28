@@ -1,6 +1,7 @@
 package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.CartRequest;
+import com.example.be_foodgo.dto.CartResponse;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.model.CartItem;
 import com.example.be_foodgo.service.CartService;
@@ -29,6 +30,40 @@ public class CartController {
         this.cartService = cartService;
     }
 
+    @GetMapping
+    @Operation(
+            summary = "Lấy giỏ hàng của người dùng",
+            description = "Truy xuất toàn bộ giỏ hàng của khách hàng, bao gồm thông tin cửa hàng và danh sách các món đã chọn."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lấy giỏ hàng thành công",
+                    content = @Content(schema = @Schema(implementation = CartResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Lỗi hệ thống",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<CartResponse>> layGioHang(
+            @RequestParam
+            @Parameter(description = "ID người dùng khách hàng")
+            String userId
+    ) {
+        log.info("Nhận yêu cầu lấy giỏ hàng - userId: {}", userId);
+
+        CartResponse cart = cartService.layGioHang(userId);
+
+        log.info("Trả giỏ hàng cho người dùng [{}] - {} món.", userId,
+                cart.getItems() != null ? cart.getItems().size() : 0);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(cart, "Lấy giỏ hàng thành công."));
+    }
+
+    @Schema(name = "CartResponseSchema", description = "Schema cho CartResponse trong phản hồi thành công")
+    public static class CartResponseSchema extends CartResponse {
+    }
     @PostMapping("/add")
     @Operation(
             summary = "Thêm món vào giỏ hàng",
