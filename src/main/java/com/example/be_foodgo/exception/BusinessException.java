@@ -203,6 +203,38 @@ public class BusinessException extends RuntimeException {
         );
     }
 
+    public static BusinessException diemKhongDu(int diemHienTai, int diemCan) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "NOT_ENOUGH_POINTS",
+                String.format("Diem hien tai cua ban la %d, can it nhat %d diem de doi voucher nay.", diemHienTai, diemCan)
+        );
+    }
+
+    public static BusinessException voucherDaDuocDoi(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_ALREADY_EXCHANGED",
+                "Ban da doi voucher [" + voucherId + "] roi."
+        );
+    }
+
+    public static BusinessException voucherInactive(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_INACTIVE",
+                "Voucher [" + voucherId + "] khong con kich hoat."
+        );
+    }
+
+    public static BusinessException diemKhongTimThay() {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "POINTS_NOT_FOUND",
+                "Khong tim thay diem cua tai khoan nay."
+        );
+    }
+
     public static BusinessException thongBaoKhongTimThay(String notifId) {
         return new BusinessException(
                 HttpStatus.NOT_FOUND,

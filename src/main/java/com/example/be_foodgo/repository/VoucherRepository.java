@@ -11,7 +11,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
@@ -108,14 +110,14 @@ public class VoucherRepository {
                 .code(doc.getString("code"))
                 .description(doc.getString("description"))
                 .expiryDate(toInstant(doc.get("expiryDate")))
-                .discountValue(doc.getDouble("discountValue"))
-                .isPercentage(toBoolean(doc.get("isPercentage")))
+                .type(doc.get("type") != null ? doc.getLong("type").intValue() : 2)
+                .value(doc.getDouble("value"))
                 .minOrderValue(doc.getDouble("minOrderValue"))
                 .createdAt(toInstant(doc.get("createdAt")))
                 .updatedAt(toInstant(doc.get("updatedAt")))
                 .build();
-        log.info("Da doc voucher ca nhan [{}] - name: {}, isPercentage: {}, discountValue: {}",
-                voucherId, mv.getName(), mv.getIsPercentage(), mv.getDiscountValue());
+        log.info("Da doc voucher ca nhan [{}] - name: {}, type: {}, value: {}",
+                voucherId, mv.getName(), mv.getType(), mv.getValue());
         return mv;
     }
 
@@ -127,6 +129,7 @@ public class VoucherRepository {
                 .delete();
     }
 
+    @SuppressWarnings("unchecked")
     private Instant toInstant(Object value) {
         if (value == null) return null;
         if (value instanceof com.google.protobuf.Timestamp) {
@@ -136,6 +139,20 @@ public class VoucherRepository {
         if (value instanceof java.util.Date) {
             return ((java.util.Date) value).toInstant();
         }
+        if (value instanceof String) {
+            return Instant.parse((String) value);
+        }
+        if (value instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) value;
+            Object seconds = map.get("epochSecond");
+            Object nanos = map.get("nano");
+            if (seconds != null) {
+                long sec = seconds instanceof Long ? (Long) seconds : ((Integer) seconds).longValue();
+                int nano = nanos != null ? (nanos instanceof Long ? ((Long) nanos).intValue() : (Integer) nanos) : 0;
+                return Instant.ofEpochSecond(sec, nano);
+            }
+            return null;
+        }
         return null;
     }
 
@@ -143,5 +160,129 @@ public class VoucherRepository {
         if (value == null) return false;
         if (value instanceof Boolean) return (Boolean) value;
         return false;
+    }
+
+    public Voucher getSystemVoucher(String voucherId) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection("system_vouchers").document(voucherId);
+        ApiFuture<DocumentSnapshot> future = docRef.get();
+        DocumentSnapshot doc = future.get();
+        if (!doc.exists()) {
+            log.warn("System voucher [{}] khong ton tai.", voucherId);
+            return null;
+        }
+        Voucher voucher = doc.toObject(Voucher.class);
+        if (voucher != null) {
+            voucher.setId(doc.getId());
+        }
+        log.info("Da doc system voucher [{}] - title: {}, pointsRequired: {}, remaining: {}",
+                voucherId, voucher != null ? voucher.getTitle() : null,
+                voucher != null ? voucher.getPointsRequired() : null,
+                voucher != null ? voucher.getRemaining() : null);
+        return voucher;
+    }
+
+    public List<Voucher> getAllSystemVouchers() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection("system_vouchers").get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Voucher> list = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Voucher v = doc.toObject(Voucher.class);
+            if (v != null) {
+                v.setId(doc.getId());
+            }
+            list.add(v);
+        }
+        return list;
+    }
+
+    public void luuMyVoucher(String userId, MyVoucher myVoucher) throws ExecutionException, InterruptedException {
+        String path = "customer_profiles/" + userId + "/my_vouchers/" + myVoucher.getId();
+        DocumentReference docRef = firestore
+                .collection("customer_profiles")
+                .document(userId)
+                .collection("my_vouchers")
+                .document(myVoucher.getId());
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", myVoucher.getId());
+        data.put("name", myVoucher.getName());
+        data.put("code", myVoucher.getCode());
+        data.put("description", myVoucher.getDescription());
+        data.put("expiryDate", myVoucher.getExpiryDate() != null ? myVoucher.getExpiryDate().toString() : null);
+        data.put("type", myVoucher.getType());
+        data.put("value", myVoucher.getValue());
+        data.put("minOrderValue", myVoucher.getMinOrderValue());
+        data.put("createdAt", myVoucher.getCreatedAt() != null ? myVoucher.getCreatedAt().toString() : null);
+        data.put("updatedAt", myVoucher.getUpdatedAt() != null ? myVoucher.getUpdatedAt().toString() : null);
+        ApiFuture<WriteResult> future = docRef.set(data);
+        future.get();
+        log.info("Da luu my_voucher [{}] tai [{}]", myVoucher.getId(), path);
+    }
+
+    public void giamRemainingSystemVoucher(String voucherId) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection("system_vouchers").document(voucherId);
+        ApiFuture<WriteResult> future = docRef.update("remaining", FieldValue.increment(-1));
+        future.get();
+        log.info("Da giam remaining cua system voucher [{}]", voucherId);
+    }
+
+    public Integer getLoyaltyPoints(String userId) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection("customer_profiles").document(userId);
+        ApiFuture<DocumentSnapshot> future = docRef.get();
+        DocumentSnapshot doc = future.get();
+        if (!doc.exists()) {
+            return null;
+        }
+        Object pointsObj = doc.get("loyaltyPoints");
+        if (pointsObj instanceof Long) {
+            return ((Long) pointsObj).intValue();
+        }
+        if (pointsObj instanceof Integer) {
+            return (Integer) pointsObj;
+        }
+        return null;
+    }
+
+    public void truLoyaltyPoints(String userId, int soDiem) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection("customer_profiles").document(userId);
+        ApiFuture<WriteResult> future = docRef.update("loyaltyPoints", FieldValue.increment(-soDiem));
+        future.get();
+        log.info("Da tru [{}] diem cua user [{}]", soDiem, userId);
+    }
+
+    public boolean kiemTraTonTaiMyVoucher(String userId, String voucherId)
+            throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore
+                .collection("customer_profiles")
+                .document(userId)
+                .collection("my_vouchers")
+                .document(voucherId);
+        ApiFuture<DocumentSnapshot> future = docRef.get();
+        return future.get().exists();
+    }
+
+    public List<MyVoucher> getAllMyVouchers(String userId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore
+                .collection("customer_profiles")
+                .document(userId)
+                .collection("my_vouchers")
+                .get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<MyVoucher> list = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            MyVoucher mv = MyVoucher.builder()
+                    .id(doc.getId())
+                    .name(doc.getString("name"))
+                    .code(doc.getString("code"))
+                    .description(doc.getString("description"))
+                    .expiryDate(toInstant(doc.get("expiryDate")))
+                    .type(doc.get("type") != null ? doc.getLong("type").intValue() : 2)
+                    .value(doc.getDouble("value"))
+                    .minOrderValue(doc.getDouble("minOrderValue"))
+                    .createdAt(toInstant(doc.get("createdAt")))
+                    .updatedAt(toInstant(doc.get("updatedAt")))
+                    .build();
+            list.add(mv);
+        }
+        return list;
     }
 }

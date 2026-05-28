@@ -348,15 +348,15 @@ public class CheckoutService {
             }
         } else {
             MyVoucher v = info.getMyVoucher();
-            Boolean isPercentage = v.getIsPercentage() != null ? v.getIsPercentage() : false;
-            Double discountValue = v.getDiscountValue() != null ? v.getDiscountValue() : 0.0;
+            Integer type = v.getType() != null ? v.getType() : 2;
+            Double voucherValue = v.getValue() != null ? v.getValue() : 0.0;
 
-            if (isPercentage) {
-                double soTienGiam = tongTienHang * (discountValue / 100.0);
-                log.info("Voucher ca nhan phan tram - giam {}% tuong duong {} VND.", discountValue, soTienGiam);
+            if (type == 1) {
+                double soTienGiam = tongTienHang * (voucherValue / 100.0);
+                log.info("Voucher ca nhan phan tram - giam {}% tuong duong {} VND.", voucherValue, soTienGiam);
                 return soTienGiam;
             } else {
-                double soTienGiam = discountValue;
+                double soTienGiam = voucherValue;
                 if (soTienGiam > tongTienHang) {
                     soTienGiam = tongTienHang;
                 }
