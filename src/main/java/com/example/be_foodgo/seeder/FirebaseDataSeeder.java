@@ -232,16 +232,19 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "sh_001"),
                         Map.entry("keyword", "com tam"),
+                        Map.entry("keywordNormalized", "com tam"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "sh_002"),
                         Map.entry("keyword", "tra sua"),
+                        Map.entry("keywordNormalized", "tra sua"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "sh_003"),
                         Map.entry("keyword", "ga ran"),
+                        Map.entry("keywordNormalized", "ga ran"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 )
         );
