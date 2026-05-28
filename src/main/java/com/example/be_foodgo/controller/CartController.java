@@ -68,7 +68,6 @@ public class CartController {
     @Operation(
             summary = "Thêm món vào giỏ hàng",
             description = "Thêm một món ăn vào giỏ hàng của khách hàng. " +
-                    "Nếu giỏ hàng đã có món từ cửa hàng khác, hệ thống sẽ trả về lỗi yêu cầu xác nhận xóa giỏ hàng cũ. " +
                     "Giá tiền được tính toán từ phía server dựa trên basePrice, size và toppings từ collection products."
     )
     @ApiResponses(value = {
@@ -79,7 +78,7 @@ public class CartController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "Yêu cầu không hợp lệ - Món ăn hết hàng hoặc vi phạm quy tắc một cửa hàng",
+                    description = "Yêu cầu không hợp lệ - Món ăn hết hàng",
                     content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

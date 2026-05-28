@@ -27,39 +27,33 @@ public class CartService {
     }
 
     public CartItem themMonVaoGio(CartRequest request) {
-        log.info("Bắt đầu xử lý thêm món vào giỏ - Người dùng: {}, Sản phẩm: {}, Số lượng: {}",
+        log.info("Bat dau xu ly them mon vao gio - Nguoi dung: {}, San pham: {}, So luong: {}",
                 request.getUserId(), request.getFoodId(), request.getQuantity());
 
         FirestoreDocument sanPhamDoc;
         try {
             sanPhamDoc = cartRepository.layThongTinSanPham(request.getFoodId());
         } catch (Exception e) {
-            log.error("Lỗi khi truy vấn sản phẩm [{}]: {}", request.getFoodId(), e.getMessage());
-            throw BusinessException.loiHeThong("Không thể truy vấn thông tin sản phẩm.");
+            log.error("Loi khi truy van san pham [{}]: {}", request.getFoodId(), e.getMessage());
+            throw BusinessException.loiHeThong("Khong the truy van thong tin san pham.");
         }
 
         if (sanPhamDoc == null) {
-            log.warn("Sản phẩm [{}] không tồn tại trong hệ thống", request.getFoodId());
+            log.warn("San pham [{}] khong ton tai trong he thong", request.getFoodId());
             throw BusinessException.sanPhamKhongTimThay(request.getFoodId());
         }
 
         Boolean isOutOfStock = toBoolean(sanPhamDoc.get("isOutOfStock"));
         if (Boolean.TRUE.equals(isOutOfStock)) {
-            log.warn("Sản phẩm [{}] đang hết hàng", request.getFoodId());
+            log.warn("San pham [{}] dang het hang", request.getFoodId());
             throw BusinessException.monAnHetHang(request.getFoodId());
         }
-
-        kiemTraQuyTacMotCuaHang(request);
 
         Double basePrice = toDouble(sanPhamDoc.get("basePrice"));
         Double sizePrice = tinhGiaSize(request.getFoodId(), request.getSize(), sanPhamDoc);
         Double toppingPrice = tinhTongGiaTopping(request.getToppings());
 
         Double donGia = basePrice + sizePrice + toppingPrice;
-        Double tongGia = donGia * request.getQuantity();
-
-        log.info("Giá tính toán - Giá cơ sở: {}, Phụ phí size: {}, Phụ phí topping: {}, Đơn giá: {}, Tổng: {}",
-                basePrice, sizePrice, toppingPrice, donGia, tongGia);
 
         List<CartItem.ToppingItem> toppingItems = new ArrayList<>();
         if (request.getToppings() != null) {
@@ -71,6 +65,29 @@ public class CartService {
             }
         }
 
+        List<CartItem> gioHienTai;
+        try {
+            gioHienTai = cartRepository.layTatCaMonTrongGio(request.getUserId());
+        } catch (Exception e) {
+            log.error("Loi khi lay gio hang nguoi dung [{}]: {}", request.getUserId(), e.getMessage());
+            throw BusinessException.loiHeThong("Khong the lay thong tin gio hang.");
+        }
+
+        CartItem.ToppingItem[] toppingItemsArr = toppingItems.toArray(new CartItem.ToppingItem[0]);
+        CartItem itemTrung = timItemTrung(gioHienTai, request.getFoodId(), request.getSize(), toppingItemsArr);
+
+        if (itemTrung != null) {
+            Integer soLuongMoi = itemTrung.getQuantity() + request.getQuantity();
+            Double giaMoi = donGia * soLuongMoi;
+            itemTrung.setQuantity(soLuongMoi);
+            itemTrung.setPrice(giaMoi);
+            cartRepository.capNhatSoLuongVaGia(request.getUserId(), itemTrung.getId(), soLuongMoi, giaMoi);
+            log.info("Tang so luong mon [{}] tu {} len {} - Gia moi: {}",
+                    request.getFoodId(), itemTrung.getQuantity() - request.getQuantity(), soLuongMoi, giaMoi);
+            return itemTrung;
+        }
+
+        Double tongGia = donGia * request.getQuantity();
         CartItem item = CartItem.builder()
                 .storeId(request.getStoreId())
                 .foodId(request.getFoodId())
@@ -87,8 +104,21 @@ public class CartService {
         String cartItemId = cartRepository.themMonVaoGio(request.getUserId(), item);
         item.setId(cartItemId);
 
-        log.info("Đã thêm món [{}] vào giỏ hàng thành công với cartItemId: {}", request.getFoodId(), cartItemId);
+        log.info("Da them mon [{}] vao gio hang thanh cong voi cartItemId: {}", request.getFoodId(), cartItemId);
         return item;
+    }
+
+    private CartItem timItemTrung(List<CartItem> gioHienTai, String foodId, String size, CartItem.ToppingItem[] toppingItems) {
+        for (CartItem item : gioHienTai) {
+            if (!item.getFoodId().equals(foodId)) continue;
+            if (!java.util.Objects.equals(size, item.getSize())) continue;
+            if (!item.coCungTopping(toppingItems == null || toppingItems.length == 0
+                    ? null : java.util.Arrays.asList(toppingItems))) continue;
+            log.info("Tim thay mon trung trong gio - cartItemId: {}, foodId: {}, size: {}, toppings: {}",
+                    item.getId(), foodId, size, toppingItems);
+            return item;
+        }
+        return null;
     }
 
     public CartResponse layGioHang(String userId) {
@@ -211,32 +241,6 @@ public class CartService {
         } catch (Exception e) {
             log.error("Lỗi khi xóa toàn bộ giỏ hàng: {}", e.getMessage());
             throw BusinessException.loiHeThong("Không thể xóa giỏ hàng.");
-        }
-    }
-
-    private void kiemTraQuyTacMotCuaHang(CartRequest request) {
-        try {
-            List<CartItem> gioHienTai = cartRepository.layTatCaMonTrongGio(request.getUserId());
-
-            if (gioHienTai.isEmpty()) {
-                log.info("Giỏ hàng của người dùng {} hiện đang rỗng, không cần kiểm tra", request.getUserId());
-                return;
-            }
-
-            String storeIdHienTai = gioHienTai.get(0).getStoreId();
-            if (!storeIdHienTai.equals(request.getStoreId())) {
-                log.warn("Quy tắc một cửa hàng bị vi phạm. Giỏ hiện tại thuộc [{}], món mới thuộc [{}]",
-                        storeIdHienTai, request.getStoreId());
-                throw BusinessException.cuaHangKhongKhop(storeIdHienTai, request.getStoreId());
-            }
-
-            log.info("Quy tắc một cửa hàng được xác nhận - Cửa hàng: {}", storeIdHienTai);
-
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Lỗi khi kiểm tra quy tắc một cửa hàng: {}", e.getMessage());
-            throw BusinessException.loiHeThong("Không thể kiểm tra giỏ hàng hiện tại.");
         }
     }
 
