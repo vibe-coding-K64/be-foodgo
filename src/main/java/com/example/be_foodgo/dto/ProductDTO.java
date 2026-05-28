@@ -29,8 +29,8 @@ public class ProductDTO {
 
     private String imageUrl;
     
-    private boolean outOfStock; // note boolean outOfStock to match Jackson
-    private boolean featured;
+    private Boolean isOutOfStock;
+    private Boolean isFeatured;
 
     private List<ProductOptionGroupDTO> optionGroups;
 

@@ -212,7 +212,7 @@ public class CheckoutService {
             try {
                 var product = productRepository.findById(foodId);
                 if (product != null) {
-                    ketQua.put(foodId, !product.isOutOfStock());
+                    ketQua.put(foodId, !product.getIsOutOfStock());
                 } else {
                     log.warn("San pham [{}] khong ton tai trong collection products.", foodId);
                     ketQua.put(foodId, false);

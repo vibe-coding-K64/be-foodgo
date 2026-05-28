@@ -1,12 +1,16 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.FeaturedProductResponse;
+import com.example.be_foodgo.dto.FeaturedProductResponse.OptionDTO;
+import com.example.be_foodgo.dto.FeaturedProductResponse.OptionGroupDTO;
 import com.example.be_foodgo.dto.PaginationInfo;
 import com.example.be_foodgo.dto.ProductDTO;
 import com.example.be_foodgo.model.Product;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.repository.ProductRepository;
 import com.example.be_foodgo.repository.StoreRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +23,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
     @Autowired
     private ProductRepository productRepository;
@@ -81,8 +87,8 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setBasePrice(dto.getBasePrice());
         product.setImageUrl(dto.getImageUrl());
-        product.setOutOfStock(dto.isOutOfStock());
-        product.setFeatured(dto.isFeatured());
+        product.setIsOutOfStock(dto.isOutOfStock());
+        product.setIsFeatured(dto.isFeatured());
 
         if (dto.getOptionGroups() != null) {
             List<Product.ProductOptionGroup> groups = dto.getOptionGroups().stream().map(g -> {
@@ -108,9 +114,12 @@ public class ProductService {
 
     public Map<String, Object> getFeaturedProducts(int limit, String categoryId) throws ExecutionException, InterruptedException {
         List<Product> products = productRepository.findFeatured(categoryId);
+        log.info("Found {} featured products: {}", products.size(),
+                products.stream().map(p -> p.getId() + " (storeId=" + p.getStoreId() + ")").toList());
 
         List<String> storeIds = products.stream()
                 .map(Product::getStoreId)
+                .filter(storeId -> storeId != null && !storeId.isEmpty())
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -119,36 +128,59 @@ public class ProductService {
             Store store = storeRepository.getStoreById(storeId);
             if (store != null) {
                 storeMap.put(storeId, store);
+                log.debug("Store loaded: id={}, name={}", storeId, store.getName());
+            } else {
+                log.warn("Store NOT found for storeId={}. Check if document ID '{}' exists in 'stores' collection.", storeId, storeId);
             }
         }
 
         List<FeaturedProductResponse> responses = products.stream().limit(limit).map(product -> {
-            FeaturedProductResponse.StoreSummary storeSummary = null;
             Store store = storeMap.get(product.getStoreId());
-            if (store != null) {
-                storeSummary = FeaturedProductResponse.StoreSummary.builder()
-                        .id(store.getId())
-                        .name(store.getName())
-                        .rating(store.getRating())
-                        .avtUrl(store.getAvtUrl())
-                        .deliveryFee(store.getDeliveryFee())
-                        .deliveryTime(store.getDeliveryTime())
-                        .build();
+
+            // Map optionGroups sang DTO
+            List<OptionGroupDTO> optionGroupDTOs = new ArrayList<>();
+            if (product.getOptionGroups() != null) {
+                optionGroupDTOs = product.getOptionGroups().stream().map(group -> {
+                    List<OptionDTO> optionDTOs = new ArrayList<>();
+                    if (group.getOptions() != null) {
+                        optionDTOs = group.getOptions().stream().map(opt -> {
+                            return OptionDTO.builder()
+                                    .name(opt.getName())
+                                    .price(opt.getPrice())
+                                    .build();
+                        }).collect(Collectors.toList());
+                    }
+                    return OptionGroupDTO.builder()
+                            .name(group.getName())
+                            .options(optionDTOs)
+                            .build();
+                }).collect(Collectors.toList());
             }
+
             return FeaturedProductResponse.builder()
                     .id(product.getId())
+                    .storeId(product.getStoreId())
                     .name(product.getName())
                     .description(product.getDescription())
                     .basePrice(product.getBasePrice())
                     .imageUrl(product.getImageUrl())
-                    .isOutOfStock(product.isOutOfStock())
-                    .store(storeSummary)
+                    .isOutOfStock(product.getIsOutOfStock())
+                    .isFeatured(product.getIsFeatured())
+                    .categoryName(product.getCategoryName())
+                    .optionGroups(optionGroupDTOs)
+                    .storeName(store != null ? store.getName() : null)
+                    .storeAvtUrl(store != null ? store.getAvtUrl() : null)
+                    .rating(store != null ? store.getRating() : null)
+                    .reviewCount(store != null ? store.getReviewCount() : null)
+                    .isOpen(store != null ? store.getIsOpen() : null)
+                    .deliveryTime(store != null ? store.getDeliveryTime() : null)
+                    .deliveryFee(store != null ? store.getDeliveryFee() : null)
+                    .address(store != null ? store.getAddress() : null)
                     .build();
         }).collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("success", true);
-        result.put("data", responses);
+        result.put("featuredDishes", responses);
         result.put("pagination", PaginationInfo.builder()
                 .limit(limit)
                 .returned(responses.size())

@@ -17,7 +17,7 @@ public class Store {
     private String bankName;
     private String bankAccountNumber;
     private boolean isAcceptingOrders;
-    private boolean isOpen;
+    private Boolean isOpen;
     private Double lat;
     private Double lng;
     private Double rating;
