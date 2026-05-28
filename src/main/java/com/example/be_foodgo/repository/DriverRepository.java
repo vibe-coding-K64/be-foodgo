@@ -8,7 +8,7 @@ import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteBatch;
-import com.example.be_foodgo.exception.InsufficientBalanceException;
+import com.example.be_foodgo.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -178,8 +178,7 @@ public class DriverRepository {
             double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
 
             if (balance < amount) {
-                throw new InsufficientBalanceException(
-                        "INSUFFICIENT_BALANCE");
+                throw BusinessException.soDuKhongDu(balance, amount);
             }
 
             Map<String, Object> transData = new HashMap<>();

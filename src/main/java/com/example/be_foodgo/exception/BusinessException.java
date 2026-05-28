@@ -210,4 +210,12 @@ public class BusinessException extends RuntimeException {
                 "Không tìm thấy thông báo với ID [" + notifId + "]."
         );
     }
+
+    public static BusinessException soDuKhongDu(double soDu, double soTienRut) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "INSUFFICIENT_BALANCE",
+                String.format("So du hien tai %.0f VND khong du de rut %.0f VND.", soDu, soTienRut)
+        );
+    }
 }
