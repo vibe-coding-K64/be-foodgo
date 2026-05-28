@@ -692,21 +692,32 @@ public class FirebaseResetService {
     private void seedSystemVouchers() {
         List<Map<String, Object>> systemVouchers = Arrays.asList(
                 Map.ofEntries(
-                        Map.entry("id", "sys_voucher_001"), Map.entry("title", "Giam 20K cho don tu 100K"),
+                        Map.entry("id", "sys_voucher_001"),
+                        Map.entry("title", "Giam 20K cho don tu 100K"),
                         Map.entry("subtitle", "Danh cho khach hang moi"),
+                        Map.entry("type", 2),
+                        Map.entry("value", 20000.0),
                         Map.entry("pointsRequired", 200),
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 100), Map.entry("terms", "Ap dung cho tat ca quan an."),
+                        Map.entry("remaining", 100),
+                        Map.entry("isActive", true),
+                        Map.entry("validityDays", 30),
                         Map.entry("minOrderValue", 100000.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "sys_voucher_002"), Map.entry("title", "Giam 15% cho don tu 150K"),
+                        Map.entry("id", "sys_voucher_002"),
+                        Map.entry("title", "Giam 15% cho don tu 150K"),
                         Map.entry("subtitle", "Khuyen mai he thong"),
+                        Map.entry("type", 1),
+                        Map.entry("value", 15.0),
                         Map.entry("pointsRequired", 400),
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"),
-                        Map.entry("remaining", 75), Map.entry("terms", "Giam toi da 40K. Ap dung toan he thong."),
+                        Map.entry("remaining", 75),
+                        Map.entry("isActive", true),
+                        Map.entry("validityDays", 30),
+                        Map.entry("terms", "Giam toi da 40K. Ap dung toan he thong."),
                         Map.entry("minOrderValue", 150000.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
@@ -1066,21 +1077,25 @@ public class FirebaseResetService {
 
         List<Map<String, Object>> myVouchers = Arrays.asList(
                 Map.ofEntries(
-                        Map.entry("id", "mv_001"), Map.entry("name", "Giam 20K phi giao hang"),
+                        Map.entry("id", "mv_001"),
+                        Map.entry("name", "Giam 20K phi giao hang"),
                         Map.entry("code", "FREESHIP20"),
                         Map.entry("description", "Ap dung cho don tu 100K"),
-                        Map.entry("expiryDate", java.time.Instant.parse("2026-12-31T23:59:59Z")),
-                        Map.entry("discountValue", 20000.0), Map.entry("isPercentage", false),
+                        Map.entry("expiryDate", java.time.Instant.parse("2027-12-31T23:59:59Z")),
+                        Map.entry("type", 2),
+                        Map.entry("value", 20000.0),
                         Map.entry("minOrderValue", 50000.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "mv_002"), Map.entry("name", "Giam 10% cho don hang"),
+                        Map.entry("id", "mv_002"),
+                        Map.entry("name", "Giam 10% cho don hang"),
                         Map.entry("code", "SAVE10"),
                         Map.entry("description", "Giam 10% cho moi don hang"),
-                        Map.entry("expiryDate", java.time.Instant.parse("2026-12-31T23:59:59Z")),
-                        Map.entry("discountValue", 10.0), Map.entry("isPercentage", true),
+                        Map.entry("expiryDate", java.time.Instant.parse("2027-12-31T23:59:59Z")),
+                        Map.entry("type", 1),
+                        Map.entry("value", 10.0),
                         Map.entry("minOrderValue", 50000.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())

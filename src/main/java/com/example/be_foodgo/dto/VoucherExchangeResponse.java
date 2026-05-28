@@ -1,26 +1,25 @@
-package com.example.be_foodgo.model;
+package com.example.be_foodgo.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MyVoucher {
+public class VoucherExchangeResponse {
 
-    private String id;
+    private String myVoucherId;
     private String name;
     private String code;
     private String description;
-    private Instant expiryDate;
-    private Double value;
     private Integer type;
+    private Double value;
     private Double minOrderValue;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private String expiryDate;
+    private int diemDaDung;
+    private int diemConLai;
+    private String message;
 }

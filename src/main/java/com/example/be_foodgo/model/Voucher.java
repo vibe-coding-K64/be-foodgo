@@ -20,6 +20,7 @@ public class Voucher {
     private int usedCount;
     private Date expiryDate;
     private boolean isActive;
+    private int validityDays;
     private Date createdAt;
     private Date updatedAt;
 
@@ -73,6 +74,9 @@ public class Voucher {
 
     public boolean getIsActive() { return isActive; }
     public void setIsActive(boolean isActive) { this.isActive = isActive; }
+
+    public int getValidityDays() { return validityDays; }
+    public void setValidityDays(int validityDays) { this.validityDays = validityDays; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
