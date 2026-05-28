@@ -13,8 +13,8 @@ public class Product {
     private String description;
     private double basePrice;
     private String imageUrl;
-    private boolean isOutOfStock;
-    private boolean isFeatured;
+    private Boolean isOutOfStock;
+    private Boolean isFeatured;
     private List<ProductOptionGroup> optionGroups;
     private com.google.cloud.Timestamp createdAt;
     private com.google.cloud.Timestamp updatedAt;

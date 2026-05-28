@@ -155,7 +155,7 @@ public class StoreService {
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
                         .distance(Math.round(distance * 10.0) / 10.0)
-                        .isOpen(store.isOpen())
+                        .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build());
             }
@@ -222,7 +222,7 @@ public class StoreService {
                         .backUrl(store.getBackUrl())
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
-                        .isOpen(store.isOpen())
+                        .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build()
         ).collect(Collectors.toList());
