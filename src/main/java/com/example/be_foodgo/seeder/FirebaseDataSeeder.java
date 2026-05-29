@@ -133,6 +133,28 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("pendingBalance", 0.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "wallet_004"),
+                        Map.entry("userId", "user_004"),
+                        Map.entry("role", "driver"),
+                        Map.entry("balance", 950000.0),
+                        Map.entry("totalEarned", 1800000.0),
+                        Map.entry("totalWithdrawn", 850000.0),
+                        Map.entry("pendingBalance", 0.0),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "wallet_005"),
+                        Map.entry("userId", "user_005"),
+                        Map.entry("role", "driver"),
+                        Map.entry("balance", 750000.0),
+                        Map.entry("totalEarned", 1500000.0),
+                        Map.entry("totalWithdrawn", 750000.0),
+                        Map.entry("pendingBalance", 0.0),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
         );
         kiemTraVaSeed(collectionName, wallets);
@@ -215,6 +237,28 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("fullName", "Le Van B"),
                         Map.entry("phoneNumber", "0912345678"),
                         Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
+                        Map.entry("roles", Arrays.asList(2)),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_004"),
+                        Map.entry("email", "taixe2@gmail.com"),
+                        Map.entry("password", "driver456"),
+                        Map.entry("fullName", "Nguyen Van C"),
+                        Map.entry("phoneNumber", "0923456789"),
+                        Map.entry("photoUrl", "https://example.com/avatar/driver002.jpg"),
+                        Map.entry("roles", Arrays.asList(2)),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_005"),
+                        Map.entry("email", "taixe3@gmail.com"),
+                        Map.entry("password", "driver789"),
+                        Map.entry("fullName", "Tran Van D"),
+                        Map.entry("phoneNumber", "0934567890"),
+                        Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
@@ -1392,6 +1436,28 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isActive", true),
                         Map.entry("rating", 4.7),
                         Map.entry("totalTrips", 80),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_004"),
+                        Map.entry("vehiclePlate", "60A-111.22"),
+                        Map.entry("vehicleType", "Honda Vision"),
+                        Map.entry("driverLicense", "DL456789123"),
+                        Map.entry("isActive", true),
+                        Map.entry("rating", 4.6),
+                        Map.entry("totalTrips", 120),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_005"),
+                        Map.entry("vehiclePlate", "61C-333.44"),
+                        Map.entry("vehicleType", "Yamaha Nozza"),
+                        Map.entry("driverLicense", "DL789123456"),
+                        Map.entry("isActive", true),
+                        Map.entry("rating", 4.8),
+                        Map.entry("totalTrips", 200),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )

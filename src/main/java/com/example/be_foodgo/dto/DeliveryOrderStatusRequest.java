@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yeu cau cap nhat trang thai don hang boi tai xe")
-public class DriverOrderStatusUpdateRequest {
+@Schema(description = "Yeu cau cap nhat trang thai don hang")
+public class DeliveryOrderStatusRequest {
 
     @NotNull(message = "Trang thai khong duoc de trong")
     @Min(value = 2, message = "Trang thai phai nam trong khoang 2-4")

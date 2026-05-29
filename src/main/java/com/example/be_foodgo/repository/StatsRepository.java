@@ -1,7 +1,12 @@
 package com.example.be_foodgo.repository;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.*;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -11,11 +16,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
-public class DriverOrderRepository {
+public class StatsRepository {
 
     private final Firestore firestore;
 
-    public DriverOrderRepository(Firestore firestore) {
+    public StatsRepository(Firestore firestore) {
         this.firestore = firestore;
     }
 
@@ -159,7 +164,7 @@ public class DriverOrderRepository {
     public void updateDriverTotalEarnings(String userId, double amount) throws ExecutionException, InterruptedException {
         firestore.collection(COLLECTION_DRIVER_PROFILES)
                 .document(userId)
-                .update("totalEarnings", FieldValue.increment(amount))
+                .update("totalEarnings", com.google.cloud.firestore.FieldValue.increment(amount))
                 .get();
     }
 
@@ -200,13 +205,13 @@ public class DriverOrderRepository {
             orderUpdates.put("driverName", driverName);
             orderUpdates.put("driverPhone", driverPhone);
             orderUpdates.put("vehiclePlate", vehiclePlate);
-            orderUpdates.put("updatedAt", java.time.Instant.now());
+            orderUpdates.put("updatedAt", Instant.now());
             transaction.update(orderRef, orderUpdates);
 
             Map<String, Object> driverUpdates = new HashMap<>();
             driverUpdates.put("currentOrderId", orderId);
             driverUpdates.put("isAvailable", false);
-            driverUpdates.put("updatedAt", java.time.Instant.now());
+            driverUpdates.put("updatedAt", Instant.now());
             transaction.update(driverProfileRef, driverUpdates);
 
             return null;

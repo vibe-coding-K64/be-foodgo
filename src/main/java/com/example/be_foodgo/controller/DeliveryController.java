@@ -1,12 +1,12 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.driver.DriverLocationUpdateRequest;
-import com.example.be_foodgo.dto.driver.DriverProfileDTO;
-import com.example.be_foodgo.dto.driver.DriverUpdateProfileRequest;
-import com.example.be_foodgo.dto.driver.DriverUpdateStatusRequest;
-import com.example.be_foodgo.dto.driver.DriverUpdateVehicleRequest;
+import com.example.be_foodgo.dto.DeliveryLocationUpdateRequest;
+import com.example.be_foodgo.dto.DeliveryProfileDTO;
+import com.example.be_foodgo.dto.DeliveryProfileRequest;
+import com.example.be_foodgo.dto.DeliveryStatusRequest;
+import com.example.be_foodgo.dto.DeliveryVehicleRequest;
 import com.example.be_foodgo.exception.ApiResponse;
-import com.example.be_foodgo.service.DriverProfileService;
+import com.example.be_foodgo.service.DeliveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,16 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/drivers")
-@Tag(name = "Drivers", description = "API quan ly tai xe (Driver)")
-public class DriverController extends BaseDriverController {
+@Tag(name = "Delivery", description = "API quan ly tai xe giao hang")
+public class DeliveryController extends BaseController {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverController.class);
+    private static final Logger log = LoggerFactory.getLogger(DeliveryController.class);
 
-    private final DriverProfileService driverProfileService;
+    private final DeliveryService deliveryService;
 
-    public DriverController(DriverProfileService driverProfileService) {
+    public DeliveryController(DeliveryService deliveryService) {
         super(log);
-        this.driverProfileService = driverProfileService;
+        this.deliveryService = deliveryService;
     }
 
     @GetMapping("/profile")
@@ -50,7 +50,7 @@ public class DriverController extends BaseDriverController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+                    description = "Chua xac thuc"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "Khong tim thay ho so tai xe")
@@ -62,7 +62,7 @@ public class DriverController extends BaseDriverController {
         }
 
         try {
-            DriverProfileDTO profile = driverProfileService.getDriverProfile(holder.userId);
+            DeliveryProfileDTO profile = deliveryService.getDriverProfile(holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Lay ho so tai xe thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay ho so tai xe: {}", e.getMessage());
@@ -86,21 +86,21 @@ public class DriverController extends BaseDriverController {
                     description = "Du lieu khong hop le"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+                    description = "Chua xac thuc"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "Khong tim thay ho so tai xe")
     })
     public ResponseEntity<?> updateProfile(
             HttpServletRequest httpRequest,
-            @Valid @RequestBody DriverUpdateProfileRequest request) {
+            @Valid @RequestBody DeliveryProfileRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            DriverProfileDTO profile = driverProfileService.updateDriverProfile(holder.userId, request);
+            DeliveryProfileDTO profile = deliveryService.updateDriverProfile(holder.userId, request);
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Cap nhat ho so tai xe thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi cap nhat ho so tai xe: {}", e.getMessage());
@@ -112,7 +112,7 @@ public class DriverController extends BaseDriverController {
     @PutMapping("/status")
     @Operation(
             summary = "Cap nhat trang thai nhan don",
-            description = "Bat/tat trang thai san sang nhan don cua tai xe. Khi tat (isActive=false), tai xe se bi xoa khoi danh sach active_drivers trong Realtime Database."
+            description = "Bat/tat trang thai san sang nhan don cua tai xe."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -124,21 +124,21 @@ public class DriverController extends BaseDriverController {
                     description = "Du lieu khong hop le"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+                    description = "Chua xac thuc"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "Khong tim thay ho so tai xe")
     })
     public ResponseEntity<?> updateStatus(
             HttpServletRequest httpRequest,
-            @Valid @RequestBody DriverUpdateStatusRequest request) {
+            @Valid @RequestBody DeliveryStatusRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            DriverProfileDTO profile = driverProfileService.updateDriverStatus(holder.userId, request.getIsActive());
+            DeliveryProfileDTO profile = deliveryService.updateDriverStatus(holder.userId, request.getIsActive());
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Cap nhat trang thai nhan don thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi cap nhat trang thai nhan don: {}", e.getMessage());
@@ -162,21 +162,21 @@ public class DriverController extends BaseDriverController {
                     description = "Du lieu khong hop le"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+                    description = "Chua xac thuc"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "Khong tim thay ho so tai xe")
     })
     public ResponseEntity<?> updateVehicle(
             HttpServletRequest httpRequest,
-            @Valid @RequestBody DriverUpdateVehicleRequest request) {
+            @Valid @RequestBody DeliveryVehicleRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            DriverProfileDTO profile = driverProfileService.updateDriverVehicle(holder.userId, request);
+            DeliveryProfileDTO profile = deliveryService.updateDriverVehicle(holder.userId, request);
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Cap nhat phuong tien thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi cap nhat phuong tien: {}", e.getMessage());
@@ -188,7 +188,7 @@ public class DriverController extends BaseDriverController {
     @PostMapping("/location")
     @Operation(
             summary = "Cap nhat vi tri GPS",
-            description = "Tai xe gui vi tri GPS hien tai len Realtime Database. Duoc goi lien tuc moi 3-5 giay khi dang giao hang. Khong blocking - tra ket qua ngay khi du lieu duoc queue, khong cho doi xac nhan tu Realtime Database."
+            description = "Tai xe gui vi tri GPS hien tai len Realtime Database."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -200,18 +200,18 @@ public class DriverController extends BaseDriverController {
                     description = "Du lieu GPS khong hop le"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap")
+                    description = "Chua xac thuc")
     })
     public ResponseEntity<?> updateLocation(
             HttpServletRequest httpRequest,
-            @Valid @RequestBody DriverLocationUpdateRequest request) {
+            @Valid @RequestBody DeliveryLocationUpdateRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            driverProfileService.updateDriverLocation(
+            deliveryService.updateDriverLocation(
                     holder.userId,
                     request.getLat(),
                     request.getLng(),

@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yeu cau cap nhat vi tri GPS cua tai xe")
-public class DriverLocationUpdateRequest {
+@Schema(description = "Yeu cau cap nhat vi tri GPS")
+public class DeliveryLocationUpdateRequest {
 
     @NotNull(message = "Vĩ độ không được để trống")
     @DecimalMin(value = "-90.0", message = "Vĩ độ phải từ -90 đến 90")

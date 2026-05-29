@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Repository
-public class DriverRepository {
+public class WalletRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverRepository.class);
+    private static final Logger log = LoggerFactory.getLogger(WalletRepository.class);
 
     private static final String COLLECTION_DRIVER_PROFILES = "driver_profiles";
     private static final String COLLECTION_USERS = "users";
@@ -32,7 +32,7 @@ public class DriverRepository {
 
     private final Firestore firestore;
 
-    public DriverRepository(Firestore firestore) {
+    public WalletRepository(Firestore firestore) {
         this.firestore = firestore;
     }
 

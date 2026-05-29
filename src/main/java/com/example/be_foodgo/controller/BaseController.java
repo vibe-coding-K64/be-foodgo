@@ -6,14 +6,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public abstract class BaseDriverController {
+public abstract class BaseController {
 
     protected final Logger log;
 
     @Autowired
     protected JwtTokenProvider jwtTokenProvider;
 
-    protected BaseDriverController(Logger log) {
+    protected BaseController(Logger log) {
         this.log = log;
     }
 

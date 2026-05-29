@@ -1,10 +1,9 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.driver.DriverTransactionDTO;
-import com.example.be_foodgo.dto.driver.DriverWalletDTO;
+import com.example.be_foodgo.dto.TransactionDTO;
+import com.example.be_foodgo.dto.WalletDTO;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.repository.DriverRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,30 +15,30 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class DriverWalletService {
+public class WalletService {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverWalletService.class);
+    private static final Logger log = LoggerFactory.getLogger(WalletService.class);
 
-    private final DriverRepository driverRepository;
+    private final WalletRepository walletRepository;
 
-    public DriverWalletService(DriverRepository driverRepository) {
-        this.driverRepository = driverRepository;
+    public WalletService(WalletRepository walletRepository) {
+        this.walletRepository = walletRepository;
     }
 
-    public DriverWalletDTO getDriverWallet(String userId) {
+    public WalletDTO getDriverWallet(String userId) {
         log.info("Bat dau lay vi cua tai xe: {}", userId);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = driverRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = walletRepository
                     .findDriverWalletByUserIdAndRole(userId, "driver");
             if (!wallets.isEmpty()) {
                 com.google.cloud.firestore.DocumentSnapshot doc = wallets.get(0);
-                return mapToDriverWalletDTO(doc.getId(), doc.getData());
+                return mapToWalletDTO(doc.getId(), doc.getData());
             }
 
-            driverRepository.createDriverWallet(userId);
+            walletRepository.createDriverWallet(userId);
 
             log.info("Da tao vi moi cho tai xe: {}", userId);
-            return DriverWalletDTO.builder()
+            return WalletDTO.builder()
                     .userId(userId)
                     .role("driver")
                     .balance(0.0)
@@ -59,10 +58,10 @@ public class DriverWalletService {
         }
     }
 
-    public List<DriverTransactionDTO> getDriverTransactions(String userId, int page, int size) {
+    public List<TransactionDTO> getDriverTransactions(String userId, int page, int size) {
         log.info("Bat dau lay lich su giao dich cua tai xe: {}, page={}, size={}", userId, page, size);
         try {
-            com.google.cloud.firestore.QueryDocumentSnapshot firstDoc = driverRepository
+            com.google.cloud.firestore.QueryDocumentSnapshot firstDoc = walletRepository
                     .findTransactionsPaginated(userId, "delivery_income", page, size)
                     .get()
                     .getDocuments()
@@ -75,14 +74,14 @@ public class DriverWalletService {
                 return List.of();
             }
 
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> allInPage = driverRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> allInPage = walletRepository
                     .findTransactionsPaginated(userId, "delivery_income", page, size)
                     .get()
                     .getDocuments();
 
-            List<DriverTransactionDTO> result = new java.util.ArrayList<>();
+            List<TransactionDTO> result = new java.util.ArrayList<>();
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : allInPage) {
-                result.add(mapToDriverTransactionDTO(doc.getId(), doc.getData()));
+                result.add(mapToTransactionDTO(doc.getId(), doc.getData()));
             }
             log.info("Tim thay {} giao dich", result.size());
             return result;
@@ -96,10 +95,10 @@ public class DriverWalletService {
         }
     }
 
-    public DriverTransactionDTO requestWithdrawal(String userId, double amount) {
+    public TransactionDTO requestWithdrawal(String userId, double amount) {
         log.info("Bat dau yeu cau rut tien: userId={}, amount={}", userId, amount);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = driverRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = walletRepository
                     .findDriverWalletByUserIdAndRole(userId, "driver");
             if (walletSnapshots.isEmpty()) {
                 throw BusinessException.viKhongTonTai(userId);
@@ -113,7 +112,7 @@ public class DriverWalletService {
                 throw BusinessException.soDuKhongDu(currentBalance, amount);
             }
 
-            Map<String, Object> configData = driverRepository.findSystemConfig();
+            Map<String, Object> configData = walletRepository.findSystemConfig();
             double minWithdrawal = configData != null && configData.get("minWithdrawalAmount") != null
                     ? toDouble(configData.get("minWithdrawalAmount")) : 50000.0;
             double maxWithdrawal = configData != null && configData.get("maxWithdrawalAmount") != null
@@ -128,15 +127,15 @@ public class DriverWalletService {
                         String.format("So tien rut toi da la %.0f VND.", maxWithdrawal));
             }
 
-            String transId = driverRepository.withdrawInTransaction(walletId, userId, amount);
+            String transId = walletRepository.withdrawInTransaction(walletId, userId, amount);
 
-            com.google.cloud.firestore.DocumentSnapshot createdTrans = driverRepository.getFirestore()
+            com.google.cloud.firestore.DocumentSnapshot createdTrans = walletRepository.getFirestore()
                     .collection("transactions")
                     .document(transId)
                     .get()
                     .get();
             log.info("Yeu cau rut tien thanh cong: transId={}", transId);
-            return mapToDriverTransactionDTO(transId, createdTrans.getData());
+            return mapToTransactionDTO(transId, createdTrans.getData());
         } catch (BusinessException e) {
             throw e;
         } catch (InterruptedException e) {
@@ -152,7 +151,7 @@ public class DriverWalletService {
     public void taoGiaoDichThuNhap(String driverId, String orderId, double deliveryFee) {
         try {
             String walletId = null;
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = driverRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = walletRepository
                     .findDriverWalletByUserIdAndRole(driverId, "driver");
             if (!wallets.isEmpty()) {
                 walletId = wallets.get(0).getId();
@@ -170,7 +169,7 @@ public class DriverWalletService {
             transData.put("status", "completed");
             transData.put("createdAt", Instant.now());
 
-            driverRepository.createTransaction(transData);
+            walletRepository.createTransaction(transData);
 
             if (walletId != null) {
                 Map<String, Object> walletUpdates = new HashMap<>();
@@ -179,7 +178,7 @@ public class DriverWalletService {
                 walletUpdates.put("totalEarned",
                         com.google.cloud.firestore.FieldValue.increment(deliveryFee));
                 walletUpdates.put("updatedAt", Instant.now());
-                driverRepository.updateWalletFields(walletId, walletUpdates);
+                walletRepository.updateWalletFields(walletId, walletUpdates);
             }
 
             log.info("Da tao giao dich thu nhap: driverId={}, orderId={}, amount={}", driverId, orderId, deliveryFee);
@@ -188,11 +187,11 @@ public class DriverWalletService {
         }
     }
 
-    private DriverWalletDTO mapToDriverWalletDTO(String id, Map<String, Object> data) {
+    private WalletDTO mapToWalletDTO(String id, Map<String, Object> data) {
         if (data == null) {
-            return DriverWalletDTO.builder().id(id).build();
+            return WalletDTO.builder().id(id).build();
         }
-        return DriverWalletDTO.builder()
+        return WalletDTO.builder()
                 .id(id)
                 .userId((String) data.get("userId"))
                 .role((String) data.get("role"))
@@ -205,11 +204,11 @@ public class DriverWalletService {
                 .build();
     }
 
-    private DriverTransactionDTO mapToDriverTransactionDTO(String id, Map<String, Object> data) {
+    private TransactionDTO mapToTransactionDTO(String id, Map<String, Object> data) {
         if (data == null) {
-            return DriverTransactionDTO.builder().id(id).build();
+            return TransactionDTO.builder().id(id).build();
         }
-        return DriverTransactionDTO.builder()
+        return TransactionDTO.builder()
                 .id(id)
                 .walletId((String) data.get("walletId"))
                 .userId((String) data.get("userId"))

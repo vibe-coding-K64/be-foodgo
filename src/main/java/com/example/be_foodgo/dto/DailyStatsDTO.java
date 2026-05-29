@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -12,8 +12,8 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Thong ke theo ngay cua tai xe")
-public class DriverDailyStatsDTO {
+@Schema(description = "Thong ke theo ngay")
+public class DailyStatsDTO {
 
     @Schema(description = "Ngày thong ke", example = "2026-05-27")
     private LocalDate date;
