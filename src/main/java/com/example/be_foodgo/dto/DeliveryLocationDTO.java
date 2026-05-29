@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Vi tri GPS cua tai xe (Realtime Database)")
-public class DriverLocationDTO {
+public class DeliveryLocationDTO {
 
     @Schema(description = "ID tai xe (trung voi userId)", example = "user_001")
     private String driverId;

@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Yeu cau rut tien")
-public class DriverWithdrawRequest {
+public class WithdrawRequest {
 
     @NotNull(message = "So tien rut khong duoc de trong")
     @Positive(message = "So tien rut phai lon hon 0")

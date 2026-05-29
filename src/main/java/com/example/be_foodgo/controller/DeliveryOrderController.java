@@ -1,11 +1,11 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.driver.DriverOrderDTO;
-import com.example.be_foodgo.dto.driver.DriverOrderStatusUpdateRequest;
-import com.example.be_foodgo.dto.driver.DriverRespondRequest;
+import com.example.be_foodgo.dto.DeliveryOrderDTO;
+import com.example.be_foodgo.dto.DeliveryOrderStatusRequest;
+import com.example.be_foodgo.dto.DeliveryRespondRequest;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.service.DriverOrderService;
+import com.example.be_foodgo.service.DeliveryOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,16 +29,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/drivers/orders")
-@Tag(name = "Driver Orders", description = "API quan ly don hang cua tai xe")
-public class DriverOrderController extends BaseDriverController {
+@Tag(name = "Delivery Orders", description = "API quan ly don hang cua tai xe")
+public class DeliveryOrderController extends BaseController {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverOrderController.class);
+    private static final Logger log = LoggerFactory.getLogger(DeliveryOrderController.class);
 
-    private final DriverOrderService driverOrderService;
+    private final DeliveryOrderService deliveryOrderService;
 
-    public DriverOrderController(DriverOrderService driverOrderService) {
+    public DeliveryOrderController(DeliveryOrderService deliveryOrderService) {
         super(log);
-        this.driverOrderService = driverOrderService;
+        this.deliveryOrderService = deliveryOrderService;
     }
 
     @GetMapping("/available")
@@ -52,7 +52,7 @@ public class DriverOrderController extends BaseDriverController {
                     description = "Lay danh sach don hang kha dung thanh cong"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap")
+                    description = "Chua xac thuc")
     })
     public ResponseEntity<?> getAvailableOrders(HttpServletRequest httpRequest) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
@@ -61,7 +61,7 @@ public class DriverOrderController extends BaseDriverController {
         }
 
         try {
-            List<DriverOrderDTO> orders = driverOrderService.getAvailableOrders();
+            List<DeliveryOrderDTO> orders = deliveryOrderService.getAvailableOrders();
             return ResponseEntity.ok(ApiResponse.thatSuccess(orders, "Lay danh sach don hang kha dung thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay don hang kha dung: {}", e.getMessage());
@@ -99,7 +99,7 @@ public class DriverOrderController extends BaseDriverController {
         }
 
         try {
-            DriverOrderDTO order = driverOrderService.acceptOrder(orderId, holder.userId);
+            DeliveryOrderDTO order = deliveryOrderService.acceptOrder(orderId, holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(order, "Nhan don hang thanh cong."));
         } catch (BusinessException e) {
             log.warn("Loi business khi nhan don: {}", e.getMessage());
@@ -115,7 +115,7 @@ public class DriverOrderController extends BaseDriverController {
     @PostMapping("/{id}/decline")
     @Operation(
             summary = "Tu choi don hang",
-            description = "Tai xe tu choi nhan don hang. He thong se gui thong bao type 13 va xoa thong bao type 11 lien quan."
+            description = "Tai xe tu choi nhan don hang."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -135,7 +135,7 @@ public class DriverOrderController extends BaseDriverController {
         }
 
         try {
-            driverOrderService.declineOrder(orderId, holder.userId);
+            deliveryOrderService.declineOrder(orderId, holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Tu choi don hang thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi tu choi don hang: {}", e.getMessage());
@@ -147,7 +147,7 @@ public class DriverOrderController extends BaseDriverController {
     @PostMapping("/{id}/respond")
     @Operation(
             summary = "Tra loi yeu cau nhan don",
-            description = "Tai xe tra loi (accept/decline) yeu cau nhan don tu he thong. Chi ap dung khi co thong bao push yeu cau nhan don."
+            description = "Tai xe tra loi (accept/decline) yeu cau nhan don tu he thong."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -167,7 +167,7 @@ public class DriverOrderController extends BaseDriverController {
             HttpServletRequest httpRequest,
             @Parameter(description = "ID don hang", required = true)
             @PathVariable("id") String orderId,
-            @Valid @RequestBody DriverRespondRequest request) {
+            @Valid @RequestBody DeliveryRespondRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
@@ -175,10 +175,10 @@ public class DriverOrderController extends BaseDriverController {
 
         try {
             if ("accept".equals(request.getAction())) {
-                DriverOrderDTO order = driverOrderService.respondAcceptOrder(orderId, holder.userId);
+                DeliveryOrderDTO order = deliveryOrderService.respondAcceptOrder(orderId, holder.userId);
                 return ResponseEntity.ok(ApiResponse.thatSuccess(order, "Nhan don hang thanh cong."));
             } else {
-                driverOrderService.respondDeclineOrder(orderId, holder.userId);
+                deliveryOrderService.respondDeclineOrder(orderId, holder.userId);
                 return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Tu choi don hang thanh cong."));
             }
         } catch (BusinessException e) {
@@ -218,14 +218,14 @@ public class DriverOrderController extends BaseDriverController {
             HttpServletRequest httpRequest,
             @Parameter(description = "ID don hang", required = true)
             @PathVariable("id") String orderId,
-            @Valid @RequestBody DriverOrderStatusUpdateRequest request) {
+            @Valid @RequestBody DeliveryOrderStatusRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            DriverOrderDTO order = driverOrderService.updateOrderStatus(orderId, holder.userId, request.getStatus());
+            DeliveryOrderDTO order = deliveryOrderService.updateOrderStatus(orderId, holder.userId, request.getStatus());
             return ResponseEntity.ok(ApiResponse.thatSuccess(order, "Cap nhat trang thai don hang thanh cong."));
         } catch (BusinessException e) {
             log.warn("Loi business khi cap nhat trang thai: {}", e.getMessage());
@@ -258,7 +258,7 @@ public class DriverOrderController extends BaseDriverController {
         }
 
         try {
-            List<DriverOrderDTO> orders = driverOrderService.getCurrentOrder(holder.userId);
+            List<DeliveryOrderDTO> orders = deliveryOrderService.getCurrentOrder(holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(orders, "Lay don hien tai thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay don hien tai: {}", e.getMessage());
@@ -287,7 +287,7 @@ public class DriverOrderController extends BaseDriverController {
         }
 
         try {
-            List<DriverOrderDTO> orders = driverOrderService.getOrderHistory(holder.userId);
+            List<DeliveryOrderDTO> orders = deliveryOrderService.getOrderHistory(holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(orders, "Lay lich su don hang thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay lich su don hang: {}", e.getMessage());

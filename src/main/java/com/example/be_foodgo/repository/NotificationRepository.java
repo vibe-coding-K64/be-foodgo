@@ -16,16 +16,16 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 @Repository
-public class DriverNotificationRepository {
+public class NotificationRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverNotificationRepository.class);
+    private static final Logger log = LoggerFactory.getLogger(NotificationRepository.class);
 
     private static final String COLLECTION_DRIVER_PROFILES = "driver_profiles";
     private static final String SUB_COLLECTION_NOTIFICATIONS = "notifications";
 
     private final Firestore firestore;
 
-    public DriverNotificationRepository(Firestore firestore) {
+    public NotificationRepository(Firestore firestore) {
         this.firestore = firestore;
     }
 

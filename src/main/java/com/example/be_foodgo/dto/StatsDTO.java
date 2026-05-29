@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Tong quan thu nhap va thong ke cua tai xe")
-public class DriverStatsDTO {
+@Schema(description = "Tong quan thu nhap va thong ke")
+public class StatsDTO {
 
     @Schema(description = "Tong thu nhap tu truoc den nay (VND)", example = "7500000.0")
     private Double totalEarnings;

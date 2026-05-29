@@ -1,8 +1,8 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.driver.DriverNotificationDTO;
+import com.example.be_foodgo.dto.NotificationDTO;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.repository.DriverNotificationRepository;
+import com.example.be_foodgo.repository.NotificationRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,23 +15,23 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class DriverNotificationService {
+public class NotificationService {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverNotificationService.class);
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
-    private final DriverNotificationRepository driverNotificationRepository;
+    private final NotificationRepository notificationRepository;
 
-    public DriverNotificationService(DriverNotificationRepository driverNotificationRepository) {
-        this.driverNotificationRepository = driverNotificationRepository;
+    public NotificationService(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
     }
 
-    public List<DriverNotificationDTO> getNotifications(String userId, Integer type) {
+    public List<NotificationDTO> getNotifications(String userId, Integer type) {
         log.info("Bat dau lay danh sach thong bao: userId={}, type={}", userId, type);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs =
-                    driverNotificationRepository.findNotifications(userId, type);
+                    notificationRepository.findNotifications(userId, type);
 
-            List<DriverNotificationDTO> notifications = new ArrayList<>();
+            List<NotificationDTO> notifications = new ArrayList<>();
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 notifications.add(mapToDTO(doc.getId(), doc.getData()));
             }
@@ -48,17 +48,17 @@ public class DriverNotificationService {
         }
     }
 
-    public DriverNotificationDTO markAsRead(String userId, String notifId) {
+    public NotificationDTO markAsRead(String userId, String notifId) {
         log.info("Bat dau danh dau da doc thong bao: userId={}, notifId={}", userId, notifId);
         try {
             com.google.cloud.firestore.DocumentSnapshot doc =
-                    driverNotificationRepository.findNotificationById(userId, notifId);
+                    notificationRepository.findNotificationById(userId, notifId);
 
             if (!doc.exists()) {
                 throw BusinessException.thongBaoKhongTimThay(notifId);
             }
 
-            driverNotificationRepository.updateNotificationRead(userId, notifId);
+            notificationRepository.updateNotificationRead(userId, notifId);
 
             Map<String, Object> updatedData = doc.getData();
             if (updatedData == null) {
@@ -83,14 +83,14 @@ public class DriverNotificationService {
     public int markAllAsRead(String userId) {
         log.info("Bat dau danh dau tat ca thong bao da doc: userId={}", userId);
         try {
-            List<String> unreadIds = driverNotificationRepository.findUnreadNotificationIds(userId);
+            List<String> unreadIds = notificationRepository.findUnreadNotificationIds(userId);
 
             if (unreadIds.isEmpty()) {
                 log.info("Khong co thong bao nao chua doc cho userId={}", userId);
                 return 0;
             }
 
-            driverNotificationRepository.updateAllNotificationsRead(userId, unreadIds);
+            notificationRepository.updateAllNotificationsRead(userId, unreadIds);
 
             log.info("Danh dau {} thong bao thanh cong cho userId={}", unreadIds.size(), userId);
             return unreadIds.size();
@@ -108,13 +108,13 @@ public class DriverNotificationService {
         log.info("Bat dau xoa thong bao: userId={}, notifId={}", userId, notifId);
         try {
             com.google.cloud.firestore.DocumentSnapshot doc =
-                    driverNotificationRepository.findNotificationById(userId, notifId);
+                    notificationRepository.findNotificationById(userId, notifId);
 
             if (!doc.exists()) {
                 throw BusinessException.thongBaoKhongTimThay(notifId);
             }
 
-            driverNotificationRepository.deleteNotification(userId, notifId);
+            notificationRepository.deleteNotification(userId, notifId);
             log.info("Xoa thong bao thanh cong: userId={}, notifId={}", userId, notifId);
         } catch (BusinessException e) {
             throw e;
@@ -128,12 +128,12 @@ public class DriverNotificationService {
         }
     }
 
-    private DriverNotificationDTO mapToDTO(String notifId, Map<String, Object> data) {
+    private NotificationDTO mapToDTO(String notifId, Map<String, Object> data) {
         if (data == null) {
-            return DriverNotificationDTO.builder().id(notifId).build();
+            return NotificationDTO.builder().id(notifId).build();
         }
 
-        return DriverNotificationDTO.builder()
+        return NotificationDTO.builder()
                 .id(notifId)
                 .type(toInteger(data.get("type")))
                 .title((String) data.get("title"))

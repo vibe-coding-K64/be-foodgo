@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -12,8 +12,8 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Lich su giao dich cua tai xe")
-public class DriverTransactionDTO {
+@Schema(description = "Lich su giao dich")
+public class TransactionDTO {
 
     @Schema(description = "ID giao dich", example = "trans_001")
     private String id;

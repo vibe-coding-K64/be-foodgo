@@ -1,17 +1,17 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.driver.DriverNotificationDTO;
+import com.example.be_foodgo.dto.NotificationDTO;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.service.DriverNotificationService;
+import com.example.be_foodgo.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,20 +25,20 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/drivers/notifications")
-@Tag(name = "Driver Notifications", description = "API quan ly thong bao cua tai xe")
-public class DriverNotificationController extends BaseDriverController {
+@Tag(name = "Notifications", description = "API quan ly thong bao cua tai xe")
+public class NotificationController extends BaseController {
 
-    private final DriverNotificationService driverNotificationService;
+    private final NotificationService notificationService;
 
-    public DriverNotificationController(DriverNotificationService driverNotificationService) {
-        super(LoggerFactory.getLogger(DriverNotificationController.class));
-        this.driverNotificationService = driverNotificationService;
+    public NotificationController(NotificationService notificationService) {
+        super(LoggerFactory.getLogger(NotificationController.class));
+        this.notificationService = notificationService;
     }
 
     @GetMapping
     @Operation(
             summary = "Lay danh sach thong bao",
-            description = "Lay danh sach tat ca thong bao cua tai xe hien tai. Ho tro loc theo query param 'type'. Sap xep moi nhat len dau."
+            description = "Lay danh sach tat ca thong bao cua tai xe hien tai. Ho tro loc theo query param 'type'."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -46,7 +46,7 @@ public class DriverNotificationController extends BaseDriverController {
                     description = "Lay danh sach thong bao thanh cong"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap")
+                    description = "Chua xac thuc")
     })
     public ResponseEntity<?> getNotifications(
             HttpServletRequest httpRequest,
@@ -59,8 +59,8 @@ public class DriverNotificationController extends BaseDriverController {
         }
 
         try {
-            List<DriverNotificationDTO> notifications =
-                    driverNotificationService.getNotifications(holder.userId, type);
+            List<NotificationDTO> notifications =
+                    notificationService.getNotifications(holder.userId, type);
             return ResponseEntity.ok(
                     ApiResponse.thatSuccess(notifications, "Lay danh sach thong bao thanh cong."));
         } catch (Exception e) {
@@ -97,8 +97,8 @@ public class DriverNotificationController extends BaseDriverController {
         }
 
         try {
-            DriverNotificationDTO notification =
-                    driverNotificationService.markAsRead(holder.userId, notifId);
+            NotificationDTO notification =
+                    notificationService.markAsRead(holder.userId, notifId);
             return ResponseEntity.ok(
                     ApiResponse.thatSuccess(notification, "Danh dau da doc thong bao thanh cong."));
         } catch (BusinessException e) {
@@ -115,7 +115,7 @@ public class DriverNotificationController extends BaseDriverController {
     @PutMapping("/read-all")
     @Operation(
             summary = "Danh dau tat ca thong bao da doc",
-            description = "Danh dau tat ca thong bao cua tai xe hien tai thanh da doc (isRead = true). Su dung WriteBatch cua Firestore de cap nhat nhieu document cung luc."
+            description = "Danh dau tat ca thong bao cua tai xe hien tai thanh da doc (isRead = true)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -133,7 +133,7 @@ public class DriverNotificationController extends BaseDriverController {
         }
 
         try {
-            int count = driverNotificationService.markAllAsRead(holder.userId);
+            int count = notificationService.markAllAsRead(holder.userId);
             return ResponseEntity.ok(
                     ApiResponse.thatSuccess(count, "Danh dau tat ca thong bao thanh cong. So thong bao duoc cap nhat: " + count + "."));
         } catch (Exception e) {
@@ -170,7 +170,7 @@ public class DriverNotificationController extends BaseDriverController {
         }
 
         try {
-            driverNotificationService.deleteNotification(holder.userId, notifId);
+            notificationService.deleteNotification(holder.userId, notifId);
             return ResponseEntity.ok(
                     ApiResponse.thatSuccess(null, "Xoa thong bao thanh cong."));
         } catch (BusinessException e) {

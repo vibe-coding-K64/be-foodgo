@@ -1,10 +1,10 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.driver.DriverDailyStatsDTO;
-import com.example.be_foodgo.dto.driver.DriverStatsDTO;
+import com.example.be_foodgo.dto.DailyStatsDTO;
+import com.example.be_foodgo.dto.StatsDTO;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.repository.DriverOrderRepository;
-import com.example.be_foodgo.repository.DriverRepository;
+import com.example.be_foodgo.repository.StatsRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,26 +20,26 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class DriverStatsService {
+public class StatsService {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverStatsService.class);
+    private static final Logger log = LoggerFactory.getLogger(StatsService.class);
 
-    private final DriverRepository driverRepository;
-    private final DriverOrderRepository driverOrderRepository;
+    private final WalletRepository walletRepository;
+    private final StatsRepository statsRepository;
 
-    public DriverStatsService(DriverRepository driverRepository,
-                              DriverOrderRepository driverOrderRepository) {
-        this.driverRepository = driverRepository;
-        this.driverOrderRepository = driverOrderRepository;
+    public StatsService(WalletRepository walletRepository,
+                        StatsRepository statsRepository) {
+        this.walletRepository = walletRepository;
+        this.statsRepository = statsRepository;
     }
 
-    public DriverStatsDTO getDriverStats(String userId) {
+    public StatsDTO getDriverStats(String userId) {
         log.info("Bat dau lay thong ke tong quan cua tai xe: {}", userId);
         try {
             Double balance = 0.0;
             Double totalEarned = 0.0;
 
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = driverRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = walletRepository
                     .findDriverWalletByUserIdAndRole(userId, "driver");
             if (!walletSnapshots.isEmpty()) {
                 com.google.cloud.firestore.DocumentSnapshot walletDoc = walletSnapshots.get(0);
@@ -50,7 +50,7 @@ public class DriverStatsService {
             Long totalTrips = 0L;
             Double averageRating = 0.0;
 
-            Map<String, Object> profileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData != null) {
                 totalTrips = toLong(profileData.get("totalTrips"));
                 averageRating = toDouble(profileData.get("rating"));
@@ -67,7 +67,7 @@ public class DriverStatsService {
             double monthEarnings = 0.0;
             long monthTrips = 0L;
 
-            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : driverRepository
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : walletRepository
                     .findAllDeliveryTransactionsByUserId(userId).get().getDocuments()) {
                 Instant transTime = toInstant(doc.get("createdAt"));
                 if (transTime == null) continue;
@@ -76,7 +76,7 @@ public class DriverStatsService {
                 if (!transTime.isBefore(monthStart)) monthEarnings += amount;
             }
 
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> orderDocs = driverOrderRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> orderDocs = statsRepository
                     .findByDriverIdAndStatus(userId, 3);
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : orderDocs) {
                 Instant orderTime = toInstant(doc.get("updatedAt"));
@@ -85,7 +85,7 @@ public class DriverStatsService {
                 if (!orderTime.isBefore(monthStart)) monthTrips++;
             }
 
-            return DriverStatsDTO.builder()
+            return StatsDTO.builder()
                     .totalEarnings(totalEarned)
                     .balance(balance)
                     .totalTrips(totalTrips)
@@ -105,7 +105,7 @@ public class DriverStatsService {
         }
     }
 
-    public List<DriverDailyStatsDTO> getDriverDailyStats(String userId, String period, String date) {
+    public List<DailyStatsDTO> getDriverDailyStats(String userId, String period, String date) {
         log.info("Bat dau lay thong ke theo ngay: userId={}, period={}, date={}", userId, period, date);
         try {
             LocalDate startDate;
@@ -128,7 +128,7 @@ public class DriverStatsService {
             Map<LocalDate, Double> earningsByDay = new HashMap<>();
             Map<LocalDate, Long> tripsByDay = new HashMap<>();
 
-            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : driverRepository
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : walletRepository
                     .findAllDeliveryTransactionsByUserId(userId).get().getDocuments()) {
                 Instant transTime = toInstant(doc.get("createdAt"));
                 if (transTime == null) continue;
@@ -139,7 +139,7 @@ public class DriverStatsService {
                 }
             }
 
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> orderDocs = driverOrderRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> orderDocs = statsRepository
                     .findByDriverIdAndStatus(userId, 3);
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : orderDocs) {
                 Instant orderTime = toInstant(doc.get("updatedAt"));
@@ -150,10 +150,10 @@ public class DriverStatsService {
                 }
             }
 
-            List<DriverDailyStatsDTO> result = new ArrayList<>();
+            List<DailyStatsDTO> result = new ArrayList<>();
             LocalDate cursor = startDate;
             while (!cursor.isAfter(endDate)) {
-                result.add(DriverDailyStatsDTO.builder()
+                result.add(DailyStatsDTO.builder()
                         .date(cursor)
                         .earnings(earningsByDay.getOrDefault(cursor, 0.0))
                         .trips(tripsByDay.getOrDefault(cursor, 0L))

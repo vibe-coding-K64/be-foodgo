@@ -1,9 +1,9 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.driver.DriverDailyStatsDTO;
-import com.example.be_foodgo.dto.driver.DriverStatsDTO;
+import com.example.be_foodgo.dto.DailyStatsDTO;
+import com.example.be_foodgo.dto.StatsDTO;
 import com.example.be_foodgo.exception.ApiResponse;
-import com.example.be_foodgo.service.DriverStatsService;
+import com.example.be_foodgo.service.StatsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,16 +22,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/drivers")
-@Tag(name = "Driver Stats", description = "API thong ke cua tai xe")
-public class DriverStatsController extends BaseDriverController {
+@Tag(name = "Stats", description = "API thong ke cua tai xe")
+public class StatsController extends BaseController {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverStatsController.class);
+    private static final Logger log = LoggerFactory.getLogger(StatsController.class);
 
-    private final DriverStatsService driverStatsService;
+    private final StatsService statsService;
 
-    public DriverStatsController(DriverStatsService driverStatsService) {
+    public StatsController(StatsService statsService) {
         super(log);
-        this.driverStatsService = driverStatsService;
+        this.statsService = statsService;
     }
 
     @GetMapping("/stats")
@@ -46,7 +46,7 @@ public class DriverStatsController extends BaseDriverController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap")
+                    description = "Chua xac thuc")
     })
     public ResponseEntity<?> getStats(HttpServletRequest httpRequest) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
@@ -55,7 +55,7 @@ public class DriverStatsController extends BaseDriverController {
         }
 
         try {
-            DriverStatsDTO stats = driverStatsService.getDriverStats(holder.userId);
+            StatsDTO stats = statsService.getDriverStats(holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay thong ke: {}", e.getMessage());
@@ -76,10 +76,10 @@ public class DriverStatsController extends BaseDriverController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "Tham so khong hop le (period phai la 'day' hoac 'month')"),
+                    description = "Tham so khong hop le"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap")
+                    description = "Chua xac thuc")
     })
     public ResponseEntity<?> getDailyStats(
             HttpServletRequest httpRequest,
@@ -91,7 +91,7 @@ public class DriverStatsController extends BaseDriverController {
         }
 
         try {
-            List<DriverDailyStatsDTO> stats = driverStatsService.getDriverDailyStats(holder.userId, period, date);
+            List<DailyStatsDTO> stats = statsService.getDriverDailyStats(holder.userId, period, date);
             return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke theo ngay thanh cong."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(

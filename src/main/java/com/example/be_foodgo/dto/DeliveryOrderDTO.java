@@ -1,4 +1,4 @@
-package com.example.be_foodgo.dto.driver;
+package com.example.be_foodgo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -13,8 +13,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Chi tiet don hang tai xe nhan/xem")
-public class DriverOrderDTO {
+@Schema(description = "Chi tiet don hang giao hang")
+public class DeliveryOrderDTO {
 
     @Schema(description = "ID don hang", example = "order_001")
     private String id;

@@ -1,10 +1,10 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.driver.DriverOrderDTO;
+import com.example.be_foodgo.dto.DeliveryOrderDTO;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.repository.DriverOrderRepository;
-import com.example.be_foodgo.repository.DriverRepository;
 import com.example.be_foodgo.repository.OrderRequestRepository;
+import com.example.be_foodgo.repository.StatsRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,41 +15,40 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
-public class DriverOrderService {
+public class DeliveryOrderService {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverOrderService.class);
+    private static final Logger log = LoggerFactory.getLogger(DeliveryOrderService.class);
 
-    private final DriverOrderRepository driverOrderRepository;
-    private final DriverRepository driverRepository;
-    private final DriverWalletService driverWalletService;
+    private final StatsRepository statsRepository;
+    private final WalletRepository walletRepository;
+    private final WalletService walletService;
     private final OrderRequestRepository orderRequestRepository;
 
-    public DriverOrderService(DriverOrderRepository driverOrderRepository,
-                              DriverRepository driverRepository,
-                              DriverWalletService driverWalletService,
-                              OrderRequestRepository orderRequestRepository) {
-        this.driverOrderRepository = driverOrderRepository;
-        this.driverRepository = driverRepository;
-        this.driverWalletService = driverWalletService;
+    public DeliveryOrderService(StatsRepository statsRepository,
+                                WalletRepository walletRepository,
+                                WalletService walletService,
+                                OrderRequestRepository orderRequestRepository) {
+        this.statsRepository = statsRepository;
+        this.walletRepository = walletRepository;
+        this.walletService = walletService;
         this.orderRequestRepository = orderRequestRepository;
     }
 
-    public List<DriverOrderDTO> getAvailableOrders() {
+    public List<DeliveryOrderDTO> getAvailableOrders() {
         log.info("Bat dau lay danh sach don hang kha dung");
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = driverOrderRepository.findAvailableOrders();
-            List<DriverOrderDTO> orders = new ArrayList<>();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository.findAvailableOrders();
+            List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DriverOrderDTO dto = mapToDriverOrderDTO(doc.getId(), data);
+                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
 
                 Object storeIdObj = data.get("storeId");
                 if (storeIdObj != null) {
-                    Map<String, Object> storeData = driverOrderRepository.findStoreById(storeIdObj.toString());
+                    Map<String, Object> storeData = statsRepository.findStoreById(storeIdObj.toString());
                     if (storeData != null) {
                         dto.setStoreAddress((String) storeData.get("address"));
                         dto.setStoreLat(toDouble(storeData.get("lat")));
@@ -72,15 +71,15 @@ public class DriverOrderService {
         }
     }
 
-    public DriverOrderDTO acceptOrder(String orderId, String userId) {
+    public DeliveryOrderDTO acceptOrder(String orderId, String userId) {
         log.info("Bat dau nhan don hang: orderId={}, userId={}", orderId, userId);
         try {
-            Map<String, Object> driverProfileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> driverProfileData = walletRepository.findDriverProfileById(userId);
             if (driverProfileData == null) {
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
             }
 
-            Map<String, Object> userData = driverRepository.findUserById(userId);
+            Map<String, Object> userData = walletRepository.findUserById(userId);
             String driverName = userData != null ? (String) userData.get("fullName") : "Tai xe";
             String driverPhone = userData != null ? (String) userData.get("phoneNumber") : "";
             String vehiclePlate = (String) driverProfileData.get("vehiclePlate");
@@ -90,7 +89,7 @@ public class DriverOrderService {
             final String finalVehiclePlate = vehiclePlate != null ? vehiclePlate : "";
 
             try {
-                driverOrderRepository.acceptOrderInTransaction(
+                statsRepository.acceptOrderInTransaction(
                         orderId, userId, finalDriverName, finalDriverPhone, finalVehiclePlate);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -112,11 +111,11 @@ public class DriverOrderService {
                 throw BusinessException.loiHeThong(e.getMessage());
             }
 
-            Map<String, Object> orderData = driverOrderRepository.findOrderRawById(orderId);
-            DriverOrderDTO dto = mapToDriverOrderDTO(orderId, orderData);
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, orderData);
 
             if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = driverOrderRepository.findStoreById(dto.getStoreId());
+                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
                 if (storeData != null) {
                     dto.setStoreAddress((String) storeData.get("address"));
                     dto.setStoreLat(toDouble(storeData.get("lat")));
@@ -151,12 +150,12 @@ public class DriverOrderService {
             notifData.put("imageUrl", null);
             notifData.put("createdAt", Instant.now());
 
-            driverOrderRepository.saveDriverNotification(userId, notifData);
+            statsRepository.saveDriverNotification(userId, notifData);
 
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> oldNotifs = driverOrderRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> oldNotifs = statsRepository
                     .findDriverNotificationsByTypeAndOrderId(userId, 11, orderId);
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : oldNotifs) {
-                driverOrderRepository.deleteNotification(doc.getReference().getPath());
+                statsRepository.deleteNotification(doc.getReference().getPath());
             }
 
             log.info("Tu choi don hang thanh cong: orderId={}, userId={}", orderId, userId);
@@ -170,10 +169,10 @@ public class DriverOrderService {
         }
     }
 
-    public DriverOrderDTO updateOrderStatus(String orderId, String userId, int newStatus) {
+    public DeliveryOrderDTO updateOrderStatus(String orderId, String userId, int newStatus) {
         log.info("Bat dau cap nhat trang thai don hang: orderId={}, userId={}, newStatus={}", orderId, userId, newStatus);
         try {
-            Map<String, Object> orderData = driverOrderRepository.findOrderRawById(orderId);
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
             if (orderData == null) {
                 throw BusinessException.donHangKhongTimThay(orderId);
             }
@@ -205,18 +204,18 @@ public class DriverOrderService {
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
                 orderUpdates.put("updatedAt", Instant.now());
-                driverOrderRepository.updateOrderFields(orderId, orderUpdates);
+                statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 driverUpdates.put("totalTrips",
                         com.google.cloud.firestore.FieldValue.increment(1));
-                driverRepository.updateDriverProfileFields(userId, driverUpdates);
+                walletRepository.updateDriverProfileFields(userId, driverUpdates);
 
                 if (customerId != null) {
                     taoThongBaoKhachHang(customerId, orderId);
                 }
 
                 if (deliveryFee != null && deliveryFee > 0) {
-                    driverWalletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
+                    walletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
                 }
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);
@@ -228,17 +227,17 @@ public class DriverOrderService {
                 orderUpdates.put("driverPhone", null);
                 orderUpdates.put("vehiclePlate", null);
                 orderUpdates.put("updatedAt", Instant.now());
-                driverOrderRepository.updateOrderFields(orderId, orderUpdates);
+                statsRepository.updateOrderFields(orderId, orderUpdates);
 
-                driverRepository.updateDriverProfileFields(userId, driverUpdates);
+                walletRepository.updateDriverProfileFields(userId, driverUpdates);
                 log.info("Don hang da bi huy boi tai xe: orderId={}", orderId);
             }
 
-            Map<String, Object> updatedOrderData = driverOrderRepository.findOrderRawById(orderId);
-            DriverOrderDTO dto = mapToDriverOrderDTO(orderId, updatedOrderData);
+            Map<String, Object> updatedOrderData = statsRepository.findOrderRawById(orderId);
+            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, updatedOrderData);
 
             if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = driverOrderRepository.findStoreById(dto.getStoreId());
+                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
                 if (storeData != null) {
                     dto.setStoreAddress((String) storeData.get("address"));
                     dto.setStoreLat(toDouble(storeData.get("lat")));
@@ -260,19 +259,19 @@ public class DriverOrderService {
         }
     }
 
-    public List<DriverOrderDTO> getCurrentOrder(String userId) {
+    public List<DeliveryOrderDTO> getCurrentOrder(String userId) {
         log.info("Bat dau lay don hien tai cua tai xe: {}", userId);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = driverOrderRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
                     .findByDriverIdAndStatus(userId, 2);
-            List<DriverOrderDTO> orders = new ArrayList<>();
+            List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DriverOrderDTO dto = mapToDriverOrderDTO(doc.getId(), data);
+                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
 
                 if (data.get("storeId") != null) {
-                    Map<String, Object> storeData = driverOrderRepository
+                    Map<String, Object> storeData = statsRepository
                             .findStoreById(data.get("storeId").toString());
                     if (storeData != null) {
                         dto.setStoreAddress((String) storeData.get("address"));
@@ -296,20 +295,20 @@ public class DriverOrderService {
         }
     }
 
-    public List<DriverOrderDTO> getOrderHistory(String userId) {
+    public List<DeliveryOrderDTO> getOrderHistory(String userId) {
         log.info("Bat dau lay lich su don hang cua tai xe: {}", userId);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = driverOrderRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
                     .findByDriverIdAndStatusOrderByCreatedAt(userId, 3,
                             com.google.cloud.firestore.Query.Direction.DESCENDING);
-            List<DriverOrderDTO> orders = new ArrayList<>();
+            List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DriverOrderDTO dto = mapToDriverOrderDTO(doc.getId(), data);
+                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
 
                 if (data.get("storeId") != null) {
-                    Map<String, Object> storeData = driverOrderRepository
+                    Map<String, Object> storeData = statsRepository
                             .findStoreById(data.get("storeId").toString());
                     if (storeData != null) {
                         dto.setStoreAddress((String) storeData.get("address"));
@@ -373,7 +372,7 @@ public class DriverOrderService {
             notifData.put("imageUrl", null);
             notifData.put("createdAt", Instant.now());
 
-            driverRepository.getFirestore()
+            walletRepository.getFirestore()
                     .collection("driver_profiles")
                     .document(userId)
                     .collection("notifications")
@@ -386,7 +385,7 @@ public class DriverOrderService {
         }
     }
 
-    public DriverOrderDTO respondAcceptOrder(String orderId, String userId) {
+    public DeliveryOrderDTO respondAcceptOrder(String orderId, String userId) {
         log.info("Tai xe chap nhan don tu he thong push: orderId={}, userId={}", orderId, userId);
         try {
             Map<String, Object> orderRequest = orderRequestRepository.findByOrderId(orderId);
@@ -405,12 +404,12 @@ public class DriverOrderService {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, 1, "nhan");
             }
 
-            Map<String, Object> driverProfileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> driverProfileData = walletRepository.findDriverProfileById(userId);
             if (driverProfileData == null) {
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
             }
 
-            Map<String, Object> userData = driverRepository.findUserById(userId);
+            Map<String, Object> userData = walletRepository.findUserById(userId);
             String driverName = userData != null ? (String) userData.get("fullName") : "Tai xe";
             String driverPhone = userData != null ? (String) userData.get("phoneNumber") : "";
             String vehiclePlate = (String) driverProfileData.get("vehiclePlate");
@@ -419,7 +418,7 @@ public class DriverOrderService {
             final String finalDriverPhone = driverPhone != null ? driverPhone : "";
             final String finalVehiclePlate = vehiclePlate != null ? vehiclePlate : "";
 
-            driverOrderRepository.acceptOrderInTransaction(
+            statsRepository.acceptOrderInTransaction(
                     orderId, userId, finalDriverName, finalDriverPhone, finalVehiclePlate);
 
             Map<String, Object> reqUpdates = new HashMap<>();
@@ -428,11 +427,11 @@ public class DriverOrderService {
             reqUpdates.put("targetDriverIds", List.of());
             orderRequestRepository.updateFields(orderId, reqUpdates);
 
-            Map<String, Object> orderData = driverOrderRepository.findOrderRawById(orderId);
-            DriverOrderDTO dto = mapToDriverOrderDTO(orderId, orderData);
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, orderData);
 
             if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = driverOrderRepository.findStoreById(dto.getStoreId());
+                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
                 if (storeData != null) {
                     dto.setStoreAddress((String) storeData.get("address"));
                     dto.setStoreLat(toDouble(storeData.get("lat")));
@@ -464,7 +463,7 @@ public class DriverOrderService {
             notifData.put("isRead", false);
             notifData.put("createdAt", Instant.now());
 
-            driverOrderRepository.saveCustomerNotification(userId, notifData);
+            statsRepository.saveCustomerNotification(userId, notifData);
             log.info("Da tao thong bao cho khach hang: userId={}, orderId={}", userId, orderId);
         } catch (Exception e) {
             log.warn("Loi khi tao thong bao cho khach hang: {}", e.getMessage());
@@ -472,29 +471,29 @@ public class DriverOrderService {
     }
 
     @SuppressWarnings("unchecked")
-    private DriverOrderDTO mapToDriverOrderDTO(String orderId, Map<String, Object> data) {
+    private DeliveryOrderDTO mapToDeliveryOrderDTO(String orderId, Map<String, Object> data) {
         if (data == null) {
-            return DriverOrderDTO.builder().id(orderId).build();
+            return DeliveryOrderDTO.builder().id(orderId).build();
         }
 
         List<Map<String, Object>> rawItems = (List<Map<String, Object>>) data.get("items");
-        List<DriverOrderDTO.OrderItemData> orderItems = new ArrayList<>();
+        List<DeliveryOrderDTO.OrderItemData> orderItems = new ArrayList<>();
 
         if (rawItems != null) {
             for (Map<String, Object> rawItem : rawItems) {
                 List<Map<String, Object>> rawOptions = (List<Map<String, Object>>) rawItem.get("options");
-                List<DriverOrderDTO.OptionData> optionDataList = new ArrayList<>();
+                List<DeliveryOrderDTO.OptionData> optionDataList = new ArrayList<>();
 
                 if (rawOptions != null) {
                     for (Map<String, Object> rawOption : rawOptions) {
-                        optionDataList.add(DriverOrderDTO.OptionData.builder()
+                        optionDataList.add(DeliveryOrderDTO.OptionData.builder()
                                 .name((String) rawOption.get("name"))
                                 .price(toDouble(rawOption.get("price")))
                                 .build());
                     }
                 }
 
-                orderItems.add(DriverOrderDTO.OrderItemData.builder()
+                orderItems.add(DeliveryOrderDTO.OrderItemData.builder()
                         .foodId((String) rawItem.get("foodId"))
                         .name((String) rawItem.get("name"))
                         .price(toDouble(rawItem.get("price")))
@@ -505,7 +504,7 @@ public class DriverOrderService {
             }
         }
 
-        return DriverOrderDTO.builder()
+        return DeliveryOrderDTO.builder()
                 .id(orderId)
                 .userId((String) data.get("userId"))
                 .storeId((String) data.get("storeId"))

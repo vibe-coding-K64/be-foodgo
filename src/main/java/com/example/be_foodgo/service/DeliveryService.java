@@ -1,10 +1,10 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.driver.DriverProfileDTO;
-import com.example.be_foodgo.dto.driver.DriverUpdateProfileRequest;
-import com.example.be_foodgo.dto.driver.DriverUpdateVehicleRequest;
+import com.example.be_foodgo.dto.DeliveryProfileDTO;
+import com.example.be_foodgo.dto.DeliveryProfileRequest;
+import com.example.be_foodgo.dto.DeliveryVehicleRequest;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.repository.DriverRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -17,30 +17,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class DriverProfileService {
+public class DeliveryService {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverProfileService.class);
+    private static final Logger log = LoggerFactory.getLogger(DeliveryService.class);
 
     private static final String RDB_ACTIVE_DRIVERS = "active_drivers";
 
-    private final DriverRepository driverRepository;
+    private final WalletRepository walletRepository;
 
-    public DriverProfileService(DriverRepository driverRepository) {
-        this.driverRepository = driverRepository;
+    public DeliveryService(WalletRepository walletRepository) {
+        this.walletRepository = walletRepository;
     }
 
-    public DriverProfileDTO getDriverProfile(String userId) {
+    public DeliveryProfileDTO getDriverProfile(String userId) {
         log.info("Bat dau lay ho so tai xe: {}", userId);
         try {
-            Map<String, Object> profileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData == null) {
                 log.warn("Khong tim thay ho so tai xe: {}", userId);
                 throw BusinessException.taiXeKhongTimThay(userId);
             }
 
-            DriverProfileDTO dto = mapToDriverProfileDTO(userId, profileData);
+            DeliveryProfileDTO dto = mapToDriverProfileDTO(userId, profileData);
 
-            Map<String, Object> userData = driverRepository.findUserById(userId);
+            Map<String, Object> userData = walletRepository.findUserById(userId);
             if (userData != null) {
                 dto.setFullName((String) userData.get("fullName"));
                 dto.setPhoneNumber((String) userData.get("phoneNumber"));
@@ -63,10 +63,10 @@ public class DriverProfileService {
         }
     }
 
-    public DriverProfileDTO updateDriverProfile(String userId, DriverUpdateProfileRequest request) {
+    public DeliveryProfileDTO updateDriverProfile(String userId, DeliveryProfileRequest request) {
         log.info("Bat dau cap nhat ho so tai xe: {}", userId);
         try {
-            Map<String, Object> profileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData == null) {
                 log.warn("Ho so tai xe chua ton tai: {}", userId);
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
@@ -75,7 +75,7 @@ public class DriverProfileService {
             Map<String, Object> profileUpdates = buildDriverProfileUpdateMap(request);
             if (!profileUpdates.isEmpty()) {
                 profileUpdates.put("updatedAt", Instant.now());
-                driverRepository.updateDriverProfileFields(userId, profileUpdates);
+                walletRepository.updateDriverProfileFields(userId, profileUpdates);
             }
 
             Map<String, Object> userUpdates = new HashMap<>();
@@ -90,7 +90,7 @@ public class DriverProfileService {
             }
             if (!userUpdates.isEmpty()) {
                 userUpdates.put("updatedAt", Instant.now());
-                driverRepository.updateUserFields(userId, userUpdates);
+                walletRepository.updateUserFields(userId, userUpdates);
             }
 
             log.info("Cap nhat ho so tai xe thanh cong: {}", userId);
@@ -107,10 +107,10 @@ public class DriverProfileService {
         }
     }
 
-    public DriverProfileDTO updateDriverStatus(String userId, Boolean isActive) {
+    public DeliveryProfileDTO updateDriverStatus(String userId, Boolean isActive) {
         log.info("Bat dau cap nhat trang thai tai xe: {}, isActive={}", userId, isActive);
         try {
-            Map<String, Object> profileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData == null) {
                 log.warn("Ho so tai xe chua ton tai: {}", userId);
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
@@ -120,7 +120,7 @@ public class DriverProfileService {
             updates.put("isActive", isActive);
             updates.put("isAvailable", isActive);
             updates.put("updatedAt", Instant.now());
-            driverRepository.updateDriverProfileFields(userId, updates);
+            walletRepository.updateDriverProfileFields(userId, updates);
 
             if (!isActive) {
                 xoaKhoiRealtimeDatabase(userId);
@@ -140,10 +140,10 @@ public class DriverProfileService {
         }
     }
 
-    public DriverProfileDTO updateDriverVehicle(String userId, DriverUpdateVehicleRequest request) {
+    public DeliveryProfileDTO updateDriverVehicle(String userId, DeliveryVehicleRequest request) {
         log.info("Bat dau cap nhat phuong tien tai xe: {}", userId);
         try {
-            Map<String, Object> profileData = driverRepository.findDriverProfileById(userId);
+            Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData == null) {
                 log.warn("Ho so tai xe chua ton tai: {}", userId);
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
@@ -154,12 +154,12 @@ public class DriverProfileService {
             profileUpdates.put("vehicleType", request.getVehicleType());
             profileUpdates.put("driverLicense", request.getDriverLicense());
             profileUpdates.put("updatedAt", Instant.now());
-            driverRepository.updateDriverProfileFields(userId, profileUpdates);
+            walletRepository.updateDriverProfileFields(userId, profileUpdates);
 
             Map<String, Object> userUpdates = new HashMap<>();
             userUpdates.put("vehiclePlate", request.getVehiclePlate());
             userUpdates.put("updatedAt", Instant.now());
-            driverRepository.updateUserFields(userId, userUpdates);
+            walletRepository.updateUserFields(userId, userUpdates);
 
             log.info("Cap nhat phuong tien tai xe thanh cong: {}", userId);
             return getDriverProfile(userId);
@@ -213,11 +213,11 @@ public class DriverProfileService {
         }
     }
 
-    private DriverProfileDTO mapToDriverProfileDTO(String docId, Map<String, Object> data) {
+    private DeliveryProfileDTO mapToDriverProfileDTO(String docId, Map<String, Object> data) {
         if (data == null) {
-            return DriverProfileDTO.builder().id(docId).build();
+            return DeliveryProfileDTO.builder().id(docId).build();
         }
-        return DriverProfileDTO.builder()
+        return DeliveryProfileDTO.builder()
                 .id(docId)
                 .vehiclePlate((String) data.get("vehiclePlate"))
                 .vehicleType((String) data.get("vehicleType"))
@@ -237,7 +237,7 @@ public class DriverProfileService {
                 .build();
     }
 
-    private Map<String, Object> buildDriverProfileUpdateMap(DriverUpdateProfileRequest request) {
+    private Map<String, Object> buildDriverProfileUpdateMap(DeliveryProfileRequest request) {
         Map<String, Object> updates = new HashMap<>();
         if (request.getVehiclePlate() != null) updates.put("vehiclePlate", request.getVehiclePlate());
         if (request.getVehicleType() != null) updates.put("vehicleType", request.getVehicleType());

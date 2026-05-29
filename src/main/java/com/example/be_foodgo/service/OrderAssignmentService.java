@@ -1,8 +1,7 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.repository.DriverOrderRepository;
-import com.example.be_foodgo.repository.DriverRepository;
 import com.example.be_foodgo.repository.OrderRequestRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -33,15 +32,15 @@ public class OrderAssignmentService {
     private static final String RDB_ACTIVE_DRIVERS = "active_drivers";
 
     private final OrderRequestRepository orderRequestRepository;
-    private final DriverRepository driverRepository;
+    private final WalletRepository walletRepository;
     private final FCMService fcmService;
 
     public OrderAssignmentService(
             OrderRequestRepository orderRequestRepository,
-            DriverRepository driverRepository,
+            WalletRepository walletRepository,
             FCMService fcmService) {
         this.orderRequestRepository = orderRequestRepository;
-        this.driverRepository = driverRepository;
+        this.walletRepository = walletRepository;
         this.fcmService = fcmService;
     }
 
@@ -96,7 +95,7 @@ public class OrderAssignmentService {
 
         for (String driverId : driverIds) {
             try {
-                Map<String, Object> profile = driverRepository.findDriverProfileById(driverId);
+                Map<String, Object> profile = walletRepository.findDriverProfileById(driverId);
                 if (profile == null) continue;
 
                 Double driverLat = toDouble(profile.get("lat"));
@@ -235,7 +234,7 @@ public class OrderAssignmentService {
 
     private void guiPushDenTaiXe(String driverId, String orderId) {
         try {
-            Map<String, Object> profile = driverRepository.findDriverProfileById(driverId);
+            Map<String, Object> profile = walletRepository.findDriverProfileById(driverId);
             String fcmToken = profile != null ? (String) profile.get("fcmToken") : null;
 
             if (fcmToken != null && !fcmToken.isBlank()) {
@@ -258,7 +257,7 @@ public class OrderAssignmentService {
             notifData.put("imageUrl", null);
             notifData.put("createdAt", Instant.now());
 
-            driverRepository.getFirestore()
+            walletRepository.getFirestore()
                     .collection("driver_profiles")
                     .document(driverId)
                     .collection("notifications")

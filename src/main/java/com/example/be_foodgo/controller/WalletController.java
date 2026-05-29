@@ -1,11 +1,11 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.driver.DriverTransactionDTO;
-import com.example.be_foodgo.dto.driver.DriverWalletDTO;
-import com.example.be_foodgo.dto.driver.DriverWithdrawRequest;
+import com.example.be_foodgo.dto.TransactionDTO;
+import com.example.be_foodgo.dto.WalletDTO;
+import com.example.be_foodgo.dto.WithdrawRequest;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.exception.BusinessException;
-import com.example.be_foodgo.service.DriverWalletService;
+import com.example.be_foodgo.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,16 +27,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/drivers")
-@Tag(name = "Driver Wallet", description = "API quan ly vi tien cua tai xe")
-public class DriverWalletController extends BaseDriverController {
+@Tag(name = "Wallet", description = "API quan ly vi tien cua tai xe")
+public class WalletController extends BaseController {
 
-    private static final Logger log = LoggerFactory.getLogger(DriverWalletController.class);
+    private static final Logger log = LoggerFactory.getLogger(WalletController.class);
 
-    private final DriverWalletService driverWalletService;
+    private final WalletService walletService;
 
-    public DriverWalletController(DriverWalletService driverWalletService) {
+    public WalletController(WalletService walletService) {
         super(log);
-        this.driverWalletService = driverWalletService;
+        this.walletService = walletService;
     }
 
     @GetMapping("/wallet")
@@ -60,7 +60,7 @@ public class DriverWalletController extends BaseDriverController {
         }
 
         try {
-            DriverWalletDTO wallet = driverWalletService.getDriverWallet(holder.userId);
+            WalletDTO wallet = walletService.getDriverWallet(holder.userId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(wallet, "Lay thong tin vi thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay thong tin vi: {}", e.getMessage());
@@ -93,7 +93,7 @@ public class DriverWalletController extends BaseDriverController {
         }
 
         try {
-            List<DriverTransactionDTO> transactions = driverWalletService.getDriverTransactions(holder.userId, page, size);
+            List<TransactionDTO> transactions = walletService.getDriverTransactions(holder.userId, page, size);
             return ResponseEntity.ok(ApiResponse.thatSuccess(transactions, "Lay lich su giao dich thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay lich su giao dich: {}", e.getMessage());
@@ -105,7 +105,7 @@ public class DriverWalletController extends BaseDriverController {
     @PostMapping("/withdraw")
     @Operation(
             summary = "Yeu cau rut tien",
-            description = "Tai xe yeu cau rut tien tu vi. He thong kiem tra so du, gioi han rut tien (min/max), va tao giao dich pending. Su dung Firestore Transaction dam bao tinh toan ven cua phep rut."
+            description = "Tai xe yeu cau rut tien tu vi. He thong kiem tra so du, gioi han rut tien (min/max), va tao giao dich pending."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -117,21 +117,21 @@ public class DriverWalletController extends BaseDriverController {
                     description = "So du khong du hoac vuot gioi han rut tien"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
-                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+                    description = "Chua xac thuc"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
                     description = "Khong tim thay vi cua tai xe")
     })
     public ResponseEntity<?> withdraw(
             HttpServletRequest httpRequest,
-            @Valid @RequestBody DriverWithdrawRequest request) {
+            @Valid @RequestBody WithdrawRequest request) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
         try {
-            DriverTransactionDTO transaction = driverWalletService.requestWithdrawal(holder.userId, request.getAmount());
+            TransactionDTO transaction = walletService.requestWithdrawal(holder.userId, request.getAmount());
             return ResponseEntity.ok(ApiResponse.thatSuccess(transaction, "Yeu cau rut tien thanh cong. Vui long cho he thong xu ly."));
         } catch (BusinessException e) {
             log.warn("Loi business khi rut tien: {}", e.getMessage());
