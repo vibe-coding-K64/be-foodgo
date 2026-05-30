@@ -66,13 +66,15 @@ public class VoucherService {
 
     private void mapDTOToEntity(VoucherDTO dto, Voucher entity) {
         if (dto.getStoreId() != null) entity.setStoreId(dto.getStoreId());
+        if (dto.getTitle() != null) entity.setTitle(dto.getTitle());
+        if (dto.getSubtitle() != null) entity.setSubtitle(dto.getSubtitle());
         if (dto.getCode() != null) entity.setCode(dto.getCode());
         entity.setType(dto.getType());
         entity.setValue(dto.getValue());
+        entity.setPointsRequired(dto.getPointsRequired());
+        if (dto.getImageUrl() != null) entity.setImageUrl(dto.getImageUrl());
+        entity.setRemaining(dto.getRemaining());
+        if (dto.getTerms() != null) entity.setTerms(dto.getTerms());
         entity.setMinOrderValue(dto.getMinOrderValue());
-        entity.setLimitCount(dto.getLimitCount());
-        entity.setUsedCount(dto.getUsedCount());
-        if (dto.getExpiryDate() != null) entity.setExpiryDate(dto.getExpiryDate());
-        entity.setIsActive(dto.getIsActive());
     }
 }
