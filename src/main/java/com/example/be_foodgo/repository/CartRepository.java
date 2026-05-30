@@ -227,7 +227,7 @@ public class CartRepository {
     }
 
     public void capNhatSoLuongVaGia(String userId, String itemId, Integer quantity, Double price) {
-        log.info("Cập nhật số lượng và giá món {} trong giỏ hàng người dùng {} - số lượng mới: {}, giá mới: {}",
+        log.info("Cap nhat so luong va gia mon {} trong gio hang nguoi dung {} - so luong moi: {}, gia moi: {}",
                 itemId, userId, quantity, price);
         DocumentReference docRef = firestore
                 .collection(CART_COLLECTION)
@@ -242,11 +242,11 @@ public class CartRepository {
                     "updatedAt", FieldValue.serverTimestamp()
             ).get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Lỗi khi cập nhật số lượng và giá món [{}]: {}", itemId, e.getMessage());
+            log.error("Loi khi cap nhat so luong va gia mon [{}]: {}", itemId, e.getMessage());
             Thread.currentThread().interrupt();
         }
 
-        log.info("Đã cập nhật số lượng và giá món [{}] thành ({}, {}) trong giỏ hàng người dùng {}",
+        log.info("Da cap nhat so luong va gia mon [{}] thanh ({}, {}) trong gio hang nguoi dung {}",
                 itemId, quantity, price, userId);
     }
 
