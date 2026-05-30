@@ -64,6 +64,7 @@ public class CartService {
                         .build());
             }
         }
+        final List<CartItem.ToppingItem> toppingItemsFinal = toppingItems;
 
         List<CartItem> gioHienTai;
         try {
@@ -96,7 +97,7 @@ public class CartService {
                 .quantity(request.getQuantity())
                 .size(request.getSize())
                 .sizePrice(sizePrice)
-                .toppings(toppingItems.isEmpty() ? null : toppingItems)
+                .toppings(toppingItemsFinal.isEmpty() ? null : toppingItemsFinal)
                 .note(request.getNote())
                 .imageUrl((String) sanPhamDoc.get("imageUrl"))
                 .build();
@@ -115,7 +116,8 @@ public class CartService {
             if (!item.coCungTopping(toppingItems == null || toppingItems.length == 0
                     ? null : java.util.Arrays.asList(toppingItems))) continue;
             log.info("Tim thay mon trung trong gio - cartItemId: {}, foodId: {}, size: {}, toppings: {}",
-                    item.getId(), foodId, size, toppingItems);
+                    item.getId(), foodId, size,
+                    toppingItems != null ? java.util.Arrays.stream(toppingItems).map(CartItem.ToppingItem::getName).toList() : null);
             return item;
         }
         return null;
