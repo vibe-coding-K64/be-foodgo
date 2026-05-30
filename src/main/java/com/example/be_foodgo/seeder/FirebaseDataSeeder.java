@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.*;
 
-@Component
+//comment nó lại đi
+//@Component
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);

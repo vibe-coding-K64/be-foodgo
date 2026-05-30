@@ -14,15 +14,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/products")
 @CrossOrigin(origins = "*")
+@Tag(name = "Product Management", description = "Quản lý món ăn của cửa hàng")
 public class ProductController {
 
     @Autowired
     private ProductService productService;
 
     @GetMapping
+    @Operation(summary = "Lấy danh sách món ăn", description = "Lấy tất cả món ăn của một cửa hàng")
     public ResponseEntity<Map<String, Object>> getAllProducts(@RequestParam String storeId) {
         try {
             List<Product> products = productService.getAllProducts(storeId);
@@ -34,6 +39,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Lấy thông tin chi tiết món ăn", description = "Lấy thông tin món ăn theo ID")
     public ResponseEntity<Map<String, Object>> getProductById(@PathVariable String id) {
         try {
             Product product = productService.getProductById(id);
@@ -50,6 +56,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @Operation(summary = "Tạo món ăn mới", description = "Thêm một món ăn mới vào cửa hàng")
     public ResponseEntity<Map<String, Object>> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         try {
             String updateTime = productService.createProduct(productDTO);
@@ -61,6 +68,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Cập nhật thông tin món ăn", description = "Cập nhật thông tin món ăn theo ID")
     public ResponseEntity<Map<String, Object>> updateProduct(@PathVariable String id, @Valid @RequestBody ProductDTO productDTO) {
         try {
             String updateTime = productService.updateProduct(id, productDTO);
@@ -75,6 +83,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Xóa món ăn", description = "Xóa một món ăn khỏi hệ thống")
     public ResponseEntity<Map<String, Object>> deleteProduct(@PathVariable String id) {
         try {
             String updateTime = productService.deleteProduct(id);
@@ -86,6 +95,7 @@ public class ProductController {
     }
 
     @GetMapping("/featured")
+    @Operation(summary = "Lấy danh sách món ăn nổi bật", description = "Lấy danh sách các món ăn nổi bật (featured)")
     public ResponseEntity<Map<String, Object>> getFeaturedProducts(
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String categoryId) {

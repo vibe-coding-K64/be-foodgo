@@ -15,9 +15,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/stores")
 @CrossOrigin(origins = "*")
+@Tag(name = "Store Management", description = "Quản lý thông tin cửa hàng")
 public class StoreController {
 
     @Autowired
@@ -34,6 +38,7 @@ public class StoreController {
 
     // Lấy thông tin quán theo id
     @GetMapping("/{id}")
+    @Operation(summary = "Lấy thông tin cửa hàng", description = "Trả về thông tin chi tiết của cửa hàng dựa trên ID")
     public ResponseEntity<StoreDTO> getStore(@PathVariable String id) {
         try {
             StoreDTO store = storeService.getStoreById(id);
@@ -46,6 +51,7 @@ public class StoreController {
 
     // Cập nhật thông tin quán
     @PutMapping("/{id}")
+    @Operation(summary = "Cập nhật thông tin cửa hàng", description = "Cập nhật các thông tin cơ bản của cửa hàng")
     public ResponseEntity<?> updateStore(@PathVariable String id, @Valid @RequestBody StoreDTO storeDTO) {
         try {
             StoreDTO updatedStore = storeService.updateStore(id, storeDTO);
@@ -62,6 +68,7 @@ public class StoreController {
     }
 
     @PostMapping("/merchant/{uid}")
+    @Operation(summary = "Tạo cửa hàng mới cho merchant", description = "Tạo một cửa hàng mới và gán cho tài khoản merchant")
     public ResponseEntity<?> createStoreForMerchant(@PathVariable String uid, @RequestBody StoreDTO storeDTO) {
         try {
             return ResponseEntity.ok(storeService.createMerchantStore(uid, storeDTO));
@@ -71,6 +78,7 @@ public class StoreController {
     }
 
     @GetMapping("/nearby")
+    @Operation(summary = "Lấy danh sách cửa hàng lân cận", description = "Tìm các cửa hàng trong bán kính cho trước")
     public ResponseEntity<Map<String, Object>> getNearbyStores(
             @RequestParam double lat,
             @RequestParam double lng,
@@ -87,6 +95,7 @@ public class StoreController {
     }
 
     @GetMapping("/popular")
+    @Operation(summary = "Lấy danh sách cửa hàng phổ biến", description = "Lấy danh sách cửa hàng có đánh giá cao")
     public ResponseEntity<Map<String, Object>> getPopularStores(
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String categoryId,
@@ -101,6 +110,7 @@ public class StoreController {
     }
 
     @PostMapping("/{storeId}/orders/{orderId}/confirm")
+    @Operation(summary = "Xác nhận đơn hàng", description = "Cửa hàng xác nhận đơn hàng và hệ thống tìm tài xế")
     public ResponseEntity<?> confirmOrder(
             @PathVariable String storeId,
             @PathVariable String orderId) {

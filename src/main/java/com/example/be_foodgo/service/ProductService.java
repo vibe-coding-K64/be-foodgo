@@ -95,8 +95,7 @@ public class ProductService {
                 Product.ProductOptionGroup group = new Product.ProductOptionGroup();
                 group.setName(g.getName());
                 group.setIsSingleSelect(g.getIsSingleSelect());
-                group.setIsRequired(g.getIsRequired());
-                group.setMaxChoices(g.getMaxChoices());
+                group.setIsSingleSelect(g.getIsSingleSelect());
                 if (g.getOptions() != null) {
                     group.setOptions(g.getOptions().stream().map(o -> {
                         Product.ProductOption opt = new Product.ProductOption();
@@ -154,7 +153,7 @@ public class ProductService {
                     return OptionGroupDTO.builder()
                             .name(group.getName())
                             .isSingleSelect(group.getIsSingleSelect())
-                            .isRequired(group.getIsRequired())
+                            .isSingleSelect(group.getIsSingleSelect())
                             .options(optionDTOs)
                             .build();
                 }).collect(Collectors.toList());
@@ -175,7 +174,7 @@ public class ProductService {
                     .storeAvtUrl(store != null ? store.getAvtUrl() : null)
                     .rating(store != null ? store.getRating() : null)
                     .reviewCount(store != null ? store.getReviewCount() : null)
-                    .isOpen(store != null ? store.getIsOpen() : null)
+                    .isOpen(store != null ? store.isOpen() : null)
                     .deliveryTime(store != null ? store.getDeliveryTime() : null)
                     .deliveryFee(store != null ? store.getDeliveryFee() : null)
                     .address(store != null ? store.getAddress() : null)

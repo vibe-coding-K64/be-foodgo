@@ -26,11 +26,13 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping
+    @Operation(summary = "Lấy danh sách đơn hàng", description = "Lấy danh sách tất cả các đơn hàng")
     public ResponseEntity<List<OrderDTO>> getOrders(@RequestParam String storeId) throws Exception {
         return ResponseEntity.ok(orderService.getOrdersByStoreId(storeId));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Lấy thông tin chi tiết đơn hàng", description = "Lấy chi tiết đơn hàng theo ID")
     public ResponseEntity<OrderDTO> getOrder(@PathVariable String id) throws Exception {
         OrderDTO order = orderService.getOrderById(id);
         if (order != null) {
@@ -40,6 +42,7 @@ public class OrderController {
     }
 
     @PostMapping
+    @Operation(summary = "Tạo đơn hàng mới", description = "Thêm một đơn hàng mới vào hệ thống")
     public ResponseEntity<ApiResponse<OrderDTO>> createOrder(@RequestBody OrderDTO orderDTO) throws Exception {
         String orderId = orderService.createOrder(orderDTO);
         OrderDTO createdOrder = orderService.getOrderById(orderId);
@@ -47,6 +50,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @Operation(summary = "Cập nhật trạng thái đơn hàng", description = "Cập nhật trạng thái của đơn hàng (ví dụ: đang giao, đã giao, v.v.)")
     public ResponseEntity<String> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, String> body) throws Exception {
         String status = body.get("status");
         String result = orderService.updateOrderStatus(id, status);

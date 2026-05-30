@@ -44,13 +44,32 @@ public class StoreService {
         store.setName(storeDTO.getName());
         store.setDescription(storeDTO.getDescription());
         store.setAddress(storeDTO.getAddress());
-        store.setTaxCode(storeDTO.getTaxCode());
-        store.setBusinessLicense(storeDTO.getBusinessLicense());
-        store.setCoverImageUrl(storeDTO.getCoverImageUrl());
-        store.setLogoUrl(storeDTO.getLogoUrl());
-        store.setBankName(storeDTO.getBankName());
-        store.setBankAccountNumber(storeDTO.getBankAccountNumber());
-        store.setAcceptingOrders(true);
+        store.setRating(storeDTO.getRating() != null ? storeDTO.getRating() : 0.0);
+        store.setReviewCount(storeDTO.getReviewCount() != null ? storeDTO.getReviewCount() : 0);
+        store.setAvtUrl(storeDTO.getAvtUrl());
+        store.setBackUrl(storeDTO.getBackUrl());
+        store.setOpen(true);
+        store.setDeliveryTime(storeDTO.getDeliveryTime() != null ? storeDTO.getDeliveryTime() : "20-30 phút");
+        store.setDeliveryFee(storeDTO.getDeliveryFee() != null ? storeDTO.getDeliveryFee() : 15000.0);
+        store.setCategoryIds(storeDTO.getCategoryIds() != null ? storeDTO.getCategoryIds() : new java.util.ArrayList<>());
+        
+        // Khởi tạo restaurant_categories mặc định nếu chưa có
+        if (storeDTO.getRestaurant_categories() != null) {
+            store.setRestaurant_categories(storeDTO.getRestaurant_categories());
+        } else {
+            java.util.Map<String, Object> defaultCats = new java.util.HashMap<>();
+            java.util.Map<String, Object> cat1 = new java.util.HashMap<>();
+            cat1.put("name", "Món chính");
+            cat1.put("order", 1);
+            cat1.put("createdAt", java.time.Instant.now().toString());
+            cat1.put("updatedAt", java.time.Instant.now().toString());
+            defaultCats.put("rest_cate_001", cat1);
+            store.setRestaurant_categories(defaultCats);
+        }
+        store.setLat(storeDTO.getLat() != null ? storeDTO.getLat() : 0.0);
+        store.setLng(storeDTO.getLng() != null ? storeDTO.getLng() : 0.0);
+        store.setCreatedAt(new java.util.Date());
+        store.setUpdatedAt(new java.util.Date());
         storeRepository.saveStore(store);
 
         com.google.cloud.firestore.DocumentReference merchantRef = firestore.collection("merchant_profiles").document(uid);
@@ -75,7 +94,7 @@ public class StoreService {
             store = new Store();
             store.setId(id);
             store.setName("Cửa hàng mới");
-            store.setAcceptingOrders(true);
+            store.setOpen(true);
             storeRepository.saveStore(store);
         }
         return mapToDTO(store);
@@ -89,15 +108,19 @@ public class StoreService {
         }
 
         store.setName(storeDTO.getName());
-        store.setDescription(storeDTO.getDescription());
         store.setAddress(storeDTO.getAddress());
-        store.setTaxCode(storeDTO.getTaxCode());
-        store.setBusinessLicense(storeDTO.getBusinessLicense());
-        store.setCoverImageUrl(storeDTO.getCoverImageUrl());
-        store.setLogoUrl(storeDTO.getLogoUrl());
-        store.setBankName(storeDTO.getBankName());
-        store.setBankAccountNumber(storeDTO.getBankAccountNumber());
-        store.setAcceptingOrders(storeDTO.isAcceptingOrders());
+        store.setRating(storeDTO.getRating());
+        store.setReviewCount(storeDTO.getReviewCount());
+        store.setAvtUrl(storeDTO.getAvtUrl());
+        store.setBackUrl(storeDTO.getBackUrl());
+        store.setOpen(storeDTO.isOpen());
+        store.setDeliveryTime(storeDTO.getDeliveryTime());
+        store.setDeliveryFee(storeDTO.getDeliveryFee());
+        store.setCategoryIds(storeDTO.getCategoryIds());
+        store.setRestaurant_categories(storeDTO.getRestaurant_categories());
+        store.setLat(storeDTO.getLat());
+        store.setLng(storeDTO.getLng());
+        store.setUpdatedAt(new java.util.Date());
 
         storeRepository.saveStore(store);
         return mapToDTO(store);
@@ -109,13 +132,15 @@ public class StoreService {
         dto.setName(store.getName());
         dto.setDescription(store.getDescription());
         dto.setAddress(store.getAddress());
-        dto.setTaxCode(store.getTaxCode());
-        dto.setBusinessLicense(store.getBusinessLicense());
-        dto.setCoverImageUrl(store.getCoverImageUrl());
-        dto.setLogoUrl(store.getLogoUrl());
-        dto.setBankName(store.getBankName());
-        dto.setBankAccountNumber(store.getBankAccountNumber());
-        dto.setAcceptingOrders(store.isAcceptingOrders());
+        dto.setRating(store.getRating());
+        dto.setReviewCount(store.getReviewCount());
+        dto.setAvtUrl(store.getAvtUrl());
+        dto.setBackUrl(store.getBackUrl());
+        dto.setOpen(store.isOpen());
+        dto.setDeliveryTime(store.getDeliveryTime());
+        dto.setDeliveryFee(store.getDeliveryFee());
+        dto.setCategoryIds(store.getCategoryIds());
+        dto.setRestaurant_categories(store.getRestaurant_categories());
         dto.setLat(store.getLat());
         dto.setLng(store.getLng());
         return dto;
@@ -157,7 +182,7 @@ public class StoreService {
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
                         .distance(Math.round(distance * 10.0) / 10.0)
-                        .isOpen(store.getIsOpen())
+                        .isOpen(store.isOpen())
                         .categoryIds(store.getCategoryIds())
                         .build());
             }
@@ -224,7 +249,7 @@ public class StoreService {
                         .backUrl(store.getBackUrl())
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
-                        .isOpen(store.getIsOpen())
+                        .isOpen(store.isOpen())
                         .categoryIds(store.getCategoryIds())
                         .build()
         ).collect(Collectors.toList());
