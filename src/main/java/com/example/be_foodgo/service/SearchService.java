@@ -121,8 +121,7 @@ public class SearchService {
                                 .map(og -> OptionGroupDTO.builder()
                                         .name(og.getName())
                                         .isSingleSelect(og.getIsSingleSelect())
-                                        .isRequired(og.getIsRequired())
-                                        .maxChoices(og.getMaxChoices())
+                                        .isSingleSelect(og.getIsSingleSelect())
                                         .options(og.getOptions() != null
                                                 ? og.getOptions().stream()
                                                         .map(o -> OptionDTO.builder()

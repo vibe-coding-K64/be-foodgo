@@ -39,8 +39,6 @@ public class ProductDTO {
         @NotBlank(message = "Tên nhóm không được để trống")
         private String name;
         private Boolean isSingleSelect;
-        private Boolean isRequired;
-        private int maxChoices;
         private List<ProductOptionDTO> options;
     }
 

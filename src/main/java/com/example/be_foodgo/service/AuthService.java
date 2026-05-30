@@ -243,7 +243,29 @@ public class AuthService {
         User user = userRepository.timTheoId(uid);
         if (user != null && user.getRoles() != null && user.getRoles().contains(3)) {
             result.put("isMerchant", true);
+            result.put("fullName", user.getFullName());
+            result.put("email", user.getEmail());
+            result.put("phoneNumber", user.getPhoneNumber());
+            result.put("photoUrl", user.getPhotoUrl());
             log.info("Nguoi dung {} co quyen nguoi ban", uid);
+            
+            try {
+                com.google.cloud.firestore.Firestore db = com.google.firebase.cloud.FirestoreClient.getFirestore();
+                com.google.cloud.firestore.DocumentSnapshot doc = db.collection("merchant_profiles").document(uid).get().get();
+                if (doc.exists()) {
+                    if (doc.contains("storeIds")) {
+                        java.util.List<String> storeIds = (java.util.List<String>) doc.get("storeIds");
+                        if (storeIds != null && !storeIds.isEmpty()) {
+                            result.put("storeId", storeIds.get(0));
+                        }
+                    }
+                    if (doc.contains("taxCode")) {
+                        result.put("taxCode", doc.getString("taxCode"));
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Lỗi lấy storeId cho merchant {}: {}", uid, e.getMessage());
+            }
         }
         return result;
     }

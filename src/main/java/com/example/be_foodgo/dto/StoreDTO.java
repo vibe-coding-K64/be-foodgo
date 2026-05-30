@@ -12,13 +12,16 @@ public class StoreDTO {
     
     private String description;
     private String address;
-    private String taxCode;
-    private String businessLicense;
-    private String coverImageUrl;
-    private String logoUrl;
-    private String bankName;
-    private String bankAccountNumber;
-    private boolean isAcceptingOrders;
+    private Double rating;
+    private Integer reviewCount;
+    private String avtUrl;
+    private String backUrl;
+    @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
+    private boolean isOpen;
+    private String deliveryTime;
+    private Double deliveryFee;
+    private java.util.List<String> categoryIds;
+    private Object restaurant_categories;
     private Double lat;
     private Double lng;
 }

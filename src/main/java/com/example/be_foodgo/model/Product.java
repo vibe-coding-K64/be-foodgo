@@ -23,8 +23,6 @@ public class Product {
     public static class ProductOptionGroup {
         private String name;
         private Boolean isSingleSelect;
-        private Boolean isRequired;
-        private int maxChoices;
         private List<ProductOption> options;
     }
 
