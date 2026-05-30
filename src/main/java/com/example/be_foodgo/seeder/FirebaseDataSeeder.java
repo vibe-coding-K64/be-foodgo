@@ -34,6 +34,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         seedTransactions();
         seedUsers();
         seedSystemCategories();
+        seedStoreCategories();
         seedStores();
         seedProducts();
         seedBanners();
@@ -296,98 +297,45 @@ public class FirebaseDataSeeder implements ApplicationRunner {
     }
 
     private void seedSystemCategories() {
-        String collectionName = "system_categories";
+        String collectionName = "categories";
         List<Map<String, Object>> categories = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "cate_001"),
-                        Map.entry("name", "Com"),
-                        Map.entry("icon", "restaurant"),
-                        Map.entry("order", 1),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_002"),
-                        Map.entry("name", "Pho/Bun"),
-                        Map.entry("icon", "restaurant"),
-                        Map.entry("order", 2),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_003"),
-                        Map.entry("name", "Tra sua"),
-                        Map.entry("icon", "local_cafe"),
-                        Map.entry("order", 3),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_004"),
-                        Map.entry("name", "An vat"),
-                        Map.entry("icon", "fastfood"),
-                        Map.entry("order", 4),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_005"),
-                        Map.entry("name", "Ga ran"),
-                        Map.entry("icon", "fastfood"),
-                        Map.entry("order", 5),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_006"),
-                        Map.entry("name", "Mon Han"),
-                        Map.entry("icon", "restaurant"),
-                        Map.entry("order", 6),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_007"),
-                        Map.entry("name", "Mon Nhat"),
-                        Map.entry("icon", "restaurant"),
-                        Map.entry("order", 7),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_008"),
-                        Map.entry("name", "Banh mi"),
-                        Map.entry("icon", "bakery_dining"),
-                        Map.entry("order", 8),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_009"),
-                        Map.entry("name", "Lau/Buffet"),
-                        Map.entry("icon", "restaurant"),
-                        Map.entry("order", 9),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_010"),
-                        Map.entry("name", "Tra cay"),
-                        Map.entry("icon", "local_cafe"),
-                        Map.entry("order", 10),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
+                createCategoryMap("syscate_001", null, "Com", "restaurant", 1, "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
+                createCategoryMap("syscate_002", null, "Pho/Bun", "restaurant", 2, "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
+                createCategoryMap("syscate_003", null, "Tra sua", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("syscate_004", null, "An vat", "fastfood", 4, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
+                createCategoryMap("syscate_005", null, "Ga ran", "fastfood", 5, "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
+                createCategoryMap("syscate_006", null, "Mon Han", "restaurant", 6, "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400&q=80"),
+                createCategoryMap("syscate_007", null, "Mon Nhat", "restaurant", 7, "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
+                createCategoryMap("syscate_008", null, "Banh mi", "bakery_dining", 8, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
+                createCategoryMap("syscate_009", null, "Lau/Buffet", "restaurant", 9, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
+                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80")
+        );
+        kiemTraVaSeed(collectionName, categories);
+    }
+
+    private Map<String, Object> createCategoryMap(String id, String storeId, String name, String icon, int order, String imageUrl) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("storeId", storeId);
+        map.put("name", name);
+        map.put("icon", icon);
+        map.put("order", order);
+        map.put("imageUrl", imageUrl);
+        map.put("createdAt", FieldValue.serverTimestamp());
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        return map;
+    }
+
+    private void seedStoreCategories() {
+        String collectionName = "categories";
+        List<Map<String, Object>> categories = Arrays.asList(
+                createCategoryMap("stocate_001", "store_001", "Mon chinh", "restaurant", 1, "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
+                createCategoryMap("stocate_002", "store_001", "Mon phu", "restaurant", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
+                createCategoryMap("stocate_003", "store_001", "Nuoc uong", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("stocate_004", "store_002", "Tra sua", "local_cafe", 1, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                createCategoryMap("stocate_006", "store_003", "Banh mi", "bakery_dining", 1, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
+                createCategoryMap("stocate_007", "store_003", "Do an them", "fastfood", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80")
         );
         kiemTraVaSeed(collectionName, categories);
     }
@@ -1003,7 +951,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order1Item1.put("name", "Com tam suon bi cha");
         order1Item1.put("price", 45000.0);
         order1Item1.put("quantity", 2);
-        order1Item1.put("imageUrl", "https://example.com/comtam.jpg");
+        order1Item1.put("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80");
         order1Items.add(order1Item1);
         Map<String, Object> order1 = new HashMap<>();
         order1.put("id", "order_001");
@@ -1030,7 +978,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order2Item1.put("name", "Tra sua trach tang");
         order2Item1.put("price", 34000.0);
         order2Item1.put("quantity", 2);
-        order2Item1.put("imageUrl", "https://example.com/trasua.jpg");
+        order2Item1.put("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80");
         List<Map<String, Object>> order2Item1Options = new ArrayList<>();
         Map<String, Object> order2Item1Opt = new HashMap<>();
         order2Item1Opt.put("name", "Tran chau");
@@ -1063,14 +1011,14 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order3Item1.put("name", "Ga lap xuong");
         order3Item1.put("price", 55000.0);
         order3Item1.put("quantity", 1);
-        order3Item1.put("imageUrl", "https://example.com/ga.jpg");
+        order3Item1.put("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80");
         order3Items.add(order3Item1);
         Map<String, Object> order3Item2 = new HashMap<>();
         order3Item2.put("foodId", "prod_009");
         order3Item2.put("name", "Khoai tay chien");
         order3Item2.put("price", 20000.0);
         order3Item2.put("quantity", 1);
-        order3Item2.put("imageUrl", "https://example.com/khoai.jpg");
+        order3Item2.put("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
         order3Items.add(order3Item2);
         Map<String, Object> order3 = new HashMap<>();
         order3.put("id", "order_003");
@@ -1097,7 +1045,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order4Item1.put("name", "Bun bo Hue");
         order4Item1.put("price", 45000.0);
         order4Item1.put("quantity", 1);
-        order4Item1.put("imageUrl", "https://example.com/bunbo.jpg");
+        order4Item1.put("imageUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80");
         order4Items.add(order4Item1);
         Map<String, Object> order4 = new HashMap<>();
         order4.put("id", "order_004");
@@ -1124,7 +1072,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order5Item1.put("name", "Com tam ga xoi mo");
         order5Item1.put("price", 50000.0);
         order5Item1.put("quantity", 1);
-        order5Item1.put("imageUrl", "https://example.com/comga.jpg");
+        order5Item1.put("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80");
         order5Items.add(order5Item1);
         Map<String, Object> order5 = new HashMap<>();
         order5.put("id", "order_005");
@@ -1151,14 +1099,14 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order6Item1.put("name", "Tra dao cam");
         order6Item1.put("price", 25000.0);
         order6Item1.put("quantity", 2);
-        order6Item1.put("imageUrl", "https://example.com/tradao.jpg");
+        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80");
         order6Items.add(order6Item1);
         Map<String, Object> order6Item2 = new HashMap<>();
         order6Item2.put("foodId", "prod_014");
         order6Item2.put("name", "Tra sua trai cay");
         order6Item2.put("price", 32000.0);
         order6Item2.put("quantity", 1);
-        order6Item2.put("imageUrl", "https://example.com/tratraitac.jpg");
+        order6Item2.put("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
         order6Items.add(order6Item2);
         Map<String, Object> order6 = new HashMap<>();
         order6.put("id", "order_006");
@@ -1185,7 +1133,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order7Item1.put("name", "Mi ga chua cay");
         order7Item1.put("price", 35000.0);
         order7Item1.put("quantity", 2);
-        order7Item1.put("imageUrl", "https://example.com/miga.jpg");
+        order7Item1.put("imageUrl", "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&q=80");
         order7Items.add(order7Item1);
         Map<String, Object> order7 = new HashMap<>();
         order7.put("id", "order_007");
@@ -1356,7 +1304,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Com tam suon bi cha"),
                         Map.entry("price", 45000.0),
                         Map.entry("quantity", 2),
-                        Map.entry("imageUrl", "https://example.com/comtam.jpg"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
@@ -1374,7 +1322,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                                 Map.of("name", "Thach trai cay", "price", 8000.0)
                         )),
                         Map.entry("note", "It duong"),
-                        Map.entry("imageUrl", "https://example.com/trasua.jpg"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )

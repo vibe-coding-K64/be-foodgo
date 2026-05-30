@@ -26,6 +26,24 @@ public class CategoryService {
         return dtos;
     }
 
+    public List<CategoryDTO> getSystemCategories() throws ExecutionException, InterruptedException {
+        List<Category> categories = categoryRepository.findAllSystemCategories();
+        List<CategoryDTO> dtos = new ArrayList<>();
+        for (Category category : categories) {
+            dtos.add(mapToDTO(category));
+        }
+        return dtos;
+    }
+
+    public List<CategoryDTO> getStoreCategories(String storeId) throws ExecutionException, InterruptedException {
+        List<Category> categories = categoryRepository.findAllStoreCategories(storeId);
+        List<CategoryDTO> dtos = new ArrayList<>();
+        for (Category category : categories) {
+            dtos.add(mapToDTO(category));
+        }
+        return dtos;
+    }
+
     public CategoryDTO getCategoryById(String id) throws ExecutionException, InterruptedException {
         Category category = categoryRepository.findById(id);
         if (category != null) {
@@ -35,13 +53,22 @@ public class CategoryService {
     }
 
     public String createCategory(CategoryDTO dto) throws ExecutionException, InterruptedException {
-        Category existing = categoryRepository.findByOrder(dto.getStoreId(), dto.getOrder());
-        if (existing != null) {
-            throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại. Vui lòng chọn vị trí khác.");
+        boolean isSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty();
+
+        if (isSystem) {
+            Category existing = categoryRepository.findSystemCategoryByOrder(dto.getOrder());
+            if (existing != null) {
+                throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại trong danh mục hệ thống. Vui lòng chọn vị trí khác.");
+            }
+        } else {
+            Category existing = categoryRepository.findStoreCategoryByOrder(dto.getStoreId(), dto.getOrder());
+            if (existing != null) {
+                throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại trong danh mục cửa hàng. Vui lòng chọn vị trí khác.");
+            }
         }
 
         Category category = new Category();
-        category.setId(generateNextCategoryId());
+        category.setId(generateNextCategoryId(isSystem));
         category.setStoreId(dto.getStoreId());
         category.setName(dto.getName());
         category.setIcon(dto.getIcon());
@@ -49,17 +76,20 @@ public class CategoryService {
         category.setImageUrl(dto.getImageUrl());
         category.setCreatedAt(Timestamp.now());
         category.setUpdatedAt(Timestamp.now());
-        
+
         return categoryRepository.save(category);
     }
 
-    private String generateNextCategoryId() throws ExecutionException, InterruptedException {
-        List<String> ids = categoryRepository.getAllCategoryIds();
+    private String generateNextCategoryId(boolean isSystem) throws ExecutionException, InterruptedException {
+        List<String> ids = isSystem
+                ? categoryRepository.getAllSystemCategoryIds()
+                : categoryRepository.getAllStoreCategoryIds();
         int maxId = 0;
+        String prefix = isSystem ? "syscate_" : "stocate_";
         for (String id : ids) {
-            if (id != null && id.startsWith("cate_")) {
+            if (id != null && id.startsWith(prefix)) {
                 try {
-                    int num = Integer.parseInt(id.substring(5));
+                    int num = Integer.parseInt(id.substring(prefix.length()));
                     if (num > maxId) {
                         maxId = num;
                     }
@@ -67,14 +97,21 @@ public class CategoryService {
                 }
             }
         }
-        return String.format("cate_%03d", maxId + 1);
+        return String.format("%s%03d", prefix, maxId + 1);
     }
 
     public String updateCategory(String id, CategoryDTO dto) throws ExecutionException, InterruptedException {
         Category category = categoryRepository.findById(id);
         if (category != null) {
+            boolean newIsSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty();
+
             if (!category.getOrder().equals(dto.getOrder())) {
-                Category existing = categoryRepository.findByOrder(category.getStoreId(), dto.getOrder());
+                Category existing;
+                if (newIsSystem) {
+                    existing = categoryRepository.findSystemCategoryByOrder(dto.getOrder());
+                } else {
+                    existing = categoryRepository.findStoreCategoryByOrder(dto.getStoreId(), dto.getOrder());
+                }
                 if (existing != null && !existing.getId().equals(id)) {
                     throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại. Vui lòng chọn vị trí khác.");
                 }

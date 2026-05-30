@@ -247,7 +247,7 @@ Hệ thống sử dụng các collection chính sau:
 | `system_configs`      | Cấu hình hệ thống (phí platform, phí giao hàng...) |
 | `wallets`            | Ví tiền của merchant và driver                    |
 | `transactions`       | Lịch sử giao dịch                                  |
-| `system_categories`  | Danh mục hiển thị trang chủ (Cơm, Phở...)         |
+| `categories`  | Danh mục hiển thị trang chủ (Cơm, Phở...)         |
 | `stores`             | Thông tin cửa hàng                                 |
 | `products`           | Sản phẩm / món ăn                                  |
 | `banners`            | Banner quảng cáo trang chủ                         |
