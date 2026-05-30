@@ -11,7 +11,6 @@ import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/categories")
@@ -24,6 +23,28 @@ public class CategoryController {
     public ResponseEntity<?> getAllCategories(@RequestParam String storeId) {
         try {
             List<CategoryDTO> list = categoryService.getAllCategories(storeId);
+            return ResponseEntity.ok(createResponse(true, "Success", list));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createResponse(false, e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/system")
+    public ResponseEntity<?> getSystemCategories() {
+        try {
+            List<CategoryDTO> list = categoryService.getSystemCategories();
+            return ResponseEntity.ok(createResponse(true, "Success", list));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createResponse(false, e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/store")
+    public ResponseEntity<?> getStoreCategories(@RequestParam String storeId) {
+        try {
+            List<CategoryDTO> list = categoryService.getStoreCategories(storeId);
             return ResponseEntity.ok(createResponse(true, "Success", list));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -90,7 +111,6 @@ public class CategoryController {
         }
     }
 
-    // Helper method de tao response chuan
     private Map<String, Object> createResponse(boolean success, String message, Object data) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", success);

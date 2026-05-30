@@ -12,7 +12,7 @@ Tài liệu này ghi lại tất cả các Firebase Firestore Collections đư�
    - [2.2. system_configs](#22-system_configs)
    - [2.3. wallets](#23-wallets)
    - [2.4. transactions](#24-transactions)
-   - [2.5. system_categories](#25-system_categories)
+   - [2.5. categories](#25-categories)
    - [2.6. stores](#26-stores)
    - [2.7. products](#27-products)
    - [2.8. banners](#28-banners)
@@ -63,7 +63,7 @@ Firestore Root
 │   └── {userId}
 │       └── notifications        (Sub-collection)
 ├── admin_profiles                 (Root Collection)
-├── system_categories              (Root Collection)
+├── categories                    (Root Collection)
 ├── stores                        (Root Collection)
 ├── products                      (Root Collection)
 ├── banners                       (Root Collection)
@@ -252,41 +252,41 @@ Firestore Root
 
 ---
 
-### 2.5. `system_categories`
+### 2.5. `categories`
 
-**Mục đích sử dụng:** Lưu trữ danh sách danh mục món ăn/loại cửa hàng hiển thị trên trang chủ (Cơm, Phở/Bún, Trà sữa, Ăn vặt...).
+**Mục đích sử dụng:** Lưu trữ danh sách danh mục món ăn/loại cửa hàng. Phân biệt theo `storeId`: `null` = danh mục hệ thống (do admin quản lý), giá trị khác = danh mục cửa hàng (do chủ cửa hàng tạo).
 
-**Đường dẫn:** `/system_categories/{categoryId}`
+**Đường dẫn:** `/categories/{categoryId}`
 
 **Các trường (Fields):**
 
-| STT | Tên trường  | Kiểu dữ liệu         | Bắt buộc | Mô tả                                     |
-| --- | ----------- | -------------------- | -------- | ----------------------------------------- |
-| 1   | `id`        | String               | Có       | ID document từ Firestore                  |
-| 2   | `name`      | String               | Có       | Tên danh mục (VD: "Cơm", "Trà sữa")      |
-| 3   | `icon`      | String               | Có       | Tên icon (VD: "restaurant", "local_cafe") |
-| 4   | `order`     | Number               | Có       | Thứ tự sắp xếp hiển thị                  |
-| 5   | `imageUrl`  | String               | Có       | Đường dẫn ảnh danh mục                   |
-| 6   | `createdAt` | Timestamp            | Có       | Thời điểm tạo                            |
-| 7   | `updatedAt` | Timestamp            | Có       | Thời điểm cập nhật                       |
-| 8   | `deletedAt` | Timestamp (nullable)  | Không    | Thời điểm xóa (nếu có soft delete)       |
+| STT | Tên trường  | Kiểu dữ liệu | Bắt buộc | Mô tả                                                           |
+| --- | ----------- | ------------- | -------- | --------------------------------------------------------------- |
+| 1   | `id`        | String        | Có       | ID document từ Firestore                                        |
+| 2   | `storeId`   | String        | Không    | `null` = danh mục hệ thống, giá trị khác = cửa hàng         |
+| 3   | `name`      | String        | Có       | Tên danh mục (VD: "Cơm", "Trà sữa")                           |
+| 4   | `icon`      | String        | Có       | Tên icon (VD: "restaurant", "local_cafe")                       |
+| 5   | `order`     | Number        | Có       | Thứ tự sắp xếp hiển thị                                        |
+| 6   | `imageUrl`  | String        | Có       | Đường dẫn ảnh danh mục                                         |
+| 7   | `createdAt` | Timestamp     | Có       | Thời điểm tạo                                                  |
+| 8   | `updatedAt` | Timestamp     | Có       | Thời điểm cập nhật                                             |
 
 **Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
-  "id": "cate_001",
-  "name": "Cơm",
+  "id": "syscate_001",
+  "storeId": null,
+  "name": "Com",
   "icon": "restaurant",
   "order": 1,
   "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
   "createdAt": "2026-01-01T00:00:00Z",
-  "updatedAt": "2026-01-01T00:00:00Z",
-  "deletedAt": null
+  "updatedAt": "2026-01-01T00:00:00Z"
 }
 ```
 
-**Các mục hiện có:** Cơm (cate_001), Phở/Bún (cate_002), Trà sữa (cate_003), Ăn vặt (cate_004), Gà rán (cate_005), Món Hàn (cate_006), Món Nhật (cate_007), Bánh mì (cate_008), Lẩu/Buffet (cate_009), Trà trái cây (cate_010).
+**Các mục hiện có:** Com (syscate_001), Pho/Bun (syscate_002), Tra sua (syscate_003), An vat (syscate_004), Ga ran (syscate_005), Mon Han (syscate_006), Mon Nhat (syscate_007), Banh mi (syscate_008), Lau/Buffet (syscate_009), Tra cay (syscate_010).
 
 ---
 

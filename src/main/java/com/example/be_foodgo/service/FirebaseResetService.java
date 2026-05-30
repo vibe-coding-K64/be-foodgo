@@ -345,7 +345,7 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
         );
-        seedDirect("system_categories", categories);
+        seedDirect("categories", categories);
     }
 
     private void seedStores() {

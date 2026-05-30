@@ -15,6 +15,8 @@ import java.util.Date;
 @Builder
 public class CategoryDTO {
     private String id;
+    // storeId = null => danh muc he thong (system)
+    // storeId != null => danh muc cua hang (store)
     private String storeId;
 
     @NotBlank(message = "Tên danh mục không được để trống")
