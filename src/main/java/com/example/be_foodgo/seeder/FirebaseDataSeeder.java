@@ -12,13 +12,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.*;
 
-<<<<<<< HEAD
 //comment nó lại đi
 // @Component
-=======
-
-//@Component
->>>>>>> d691b68bea0610e991b8f97b77e19b88cdebe08d
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);
@@ -283,11 +278,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-<<<<<<< HEAD
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
                         Map.entry("isEmailVerified", true)
-=======
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_004"),
@@ -298,8 +290,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://placehold.co/150"),
                         Map.entry("roles", Arrays.asList(3)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
->>>>>>> d691b68bea0610e991b8f97b77e19b88cdebe08d
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 )
         );
         kiemTraVaSeed(collectionName, users);
