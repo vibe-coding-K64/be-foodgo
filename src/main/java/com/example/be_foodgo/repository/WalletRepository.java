@@ -137,6 +137,36 @@ public class WalletRepository {
                 .get();
     }
 
+    public ApiFuture<QuerySnapshot> findAllTransactionsPaginated(
+            String userId, int page, int size) {
+        return firestore.collection(COLLECTION_TRANSACTIONS)
+                .whereEqualTo("userId", userId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .offset(page * size)
+                .limit(size)
+                .get();
+    }
+
+    public String createMerchantWallet(String userId) throws ExecutionException, InterruptedException {
+        DocumentReference newDocRef = firestore.collection(COLLECTION_WALLETS).document();
+        String walletId = newDocRef.getId();
+
+        Map<String, Object> walletData = new HashMap<>();
+        walletData.put("id", walletId);
+        walletData.put("userId", userId);
+        walletData.put("role", "merchant");
+        walletData.put("balance", 0.0);
+        walletData.put("totalEarned", 0.0);
+        walletData.put("totalWithdrawn", 0.0);
+        walletData.put("pendingBalance", 0.0);
+        walletData.put("createdAt", Instant.now());
+        walletData.put("updatedAt", Instant.now());
+
+        newDocRef.set(walletData).get();
+        log.info("Da tao vi moi cho gian hang {}: walletId={}", userId, walletId);
+        return walletId;
+    }
+
     public String createTransaction(Map<String, Object> data)
             throws ExecutionException, InterruptedException {
         ApiFuture<DocumentReference> ref = firestore.collection(COLLECTION_TRANSACTIONS).add(data);
