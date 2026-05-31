@@ -77,17 +77,24 @@ public class CartService {
         CartItem.ToppingItem[] toppingItemsArr = toppingItems.toArray(new CartItem.ToppingItem[0]);
         CartItem itemTrung = timItemTrung(gioHienTai, request.getFoodId(), request.getSize(), toppingItemsArr);
 
+        log.info("=== [themMonVaoGio] Ket qua timItemTrung: {} ===",
+                itemTrung != null ? "TIM THAY (se GOP)" : "KHONG TIM THAY (se TAO DONG MOI)");
+
         if (itemTrung != null) {
+            List<CartItem.ToppingItem> mergedToppings = toppingItemsFinal.isEmpty() ? null : toppingItemsFinal;
             Integer soLuongMoi = itemTrung.getQuantity() + request.getQuantity();
             Double giaMoi = donGia * soLuongMoi;
             itemTrung.setQuantity(soLuongMoi);
             itemTrung.setPrice(giaMoi);
-            cartRepository.capNhatSoLuongVaGia(request.getUserId(), itemTrung.getId(), soLuongMoi, giaMoi);
+            itemTrung.setSizePrice(sizePrice);
+            itemTrung.setToppings(mergedToppings);
+            cartRepository.capNhatCartItem(request.getUserId(), itemTrung);
             log.info("Tang so luong mon [{}] tu {} len {} - Gia moi: {}",
                     request.getFoodId(), itemTrung.getQuantity() - request.getQuantity(), soLuongMoi, giaMoi);
             return itemTrung;
         }
 
+        log.info("=== [themMonVaoGio] Tao dong moi trong gio hang ===");
         Double tongGia = donGia * request.getQuantity();
         CartItem item = CartItem.builder()
                 .storeId(request.getStoreId())
@@ -110,32 +117,60 @@ public class CartService {
     }
 
     private CartItem timItemTrung(List<CartItem> gioHienTai, String foodId, String size, CartItem.ToppingItem[] toppingItems) {
-        for (CartItem item : gioHienTai) {
-            if (!item.getFoodId().equals(foodId)) continue;
-            if (!java.util.Objects.equals(size, item.getSize())) continue;
-            if (!item.coCungTopping(toppingItems == null || toppingItems.length == 0
-                    ? null : java.util.Arrays.asList(toppingItems))) continue;
-            log.info("Tim thay mon trung trong gio - cartItemId: {}, foodId: {}, size: {}, toppings: {}",
-                    item.getId(), foodId, size,
-                    toppingItems != null ? java.util.Arrays.stream(toppingItems).map(CartItem.ToppingItem::getName).toList() : null);
-            return item;
+        log.info("=== [timItemTrung] Bat dau tim kiem trung lap ===");
+        log.info("[timItemTrung] Can tim: foodId={}, size={}, toppings={}",
+                foodId, size,
+                toppingItems != null
+                        ? java.util.Arrays.stream(toppingItems).map(t -> t.getName() + "(" + t.getPrice() + ")").toList()
+                        : null);
+
+        for (int i = 0; i < gioHienTai.size(); i++) {
+            CartItem item = gioHienTai.get(i);
+            log.info("[timItemTrung] Kiem tra item[{}]: foodId={}, size={}, toppings={}",
+                    i, item.getFoodId(), item.getSize(),
+                    item.getToppings() != null
+                            ? item.getToppings().stream().map(t -> t.getName() + "(" + t.getPrice() + ")").toList()
+                            : null);
+
+            if (!item.getFoodId().equals(foodId)) {
+                log.info("[timItemTrung]   -> foodId khac '{}' != '{}' -> CONTINUE", item.getFoodId(), foodId);
+                continue;
+            }
+            if (!java.util.Objects.equals(size, item.getSize())) {
+                log.info("[timItemTrung]   -> size khac '{}' != '{}' -> CONTINUE",
+                        item.getSize(), size);
+                continue;
+            }
+
+            List<CartItem.ToppingItem> toppingList = toppingItems == null || toppingItems.length == 0
+                    ? null : java.util.Arrays.asList(toppingItems);
+            boolean cungTopping = item.coCungTopping(toppingList);
+            log.info("[timItemTrung]   -> foodId OK, size OK, coCungTopping={} -> {}",
+                    cungTopping, cungTopping ? "TIM THAY TRUNG!" : "toppings khac -> CONTINUE");
+
+            if (cungTopping) {
+                log.info("[timItemTrung] === TIM THAY ITEM TRUNG: id={} ===", item.getId());
+                return item;
+            }
         }
+
+        log.info("[timItemTrung] === KHONG TIM THAY item trung -> tra ve null ===");
         return null;
     }
 
     public CartResponse layGioHang(String userId) {
-        log.info("Bắt đầu lấy giỏ hàng - Người dùng: {}", userId);
+        log.info("Bat dau lay gio hang - Nguoi dung: {}", userId);
 
         List<CartItem> items;
         try {
             items = cartRepository.layTatCaMonTrongGio(userId);
         } catch (Exception e) {
-            log.error("Lỗi khi truy vấn giỏ hàng của người dùng [{}]: {}", userId, e.getMessage());
-            throw BusinessException.loiHeThong("Không thể lấy thông tin giỏ hàng.");
+            log.error("Loi khi truy van gio hang cua nguoi dung [{}]: {}", userId, e.getMessage());
+            throw BusinessException.loiHeThong("Khong the lay thong tin gio hang.");
         }
 
         if (items.isEmpty()) {
-            log.info("Giỏ hàng của người dùng [{}] đang trống.", userId);
+            log.info("Gio hang cua nguoi dung [{}] dang trong.", userId);
             return CartResponse.builder()
                     .items(List.of())
                     .storeId(null)
@@ -155,7 +190,7 @@ public class CartService {
                 resolvedStoreImageUrl = (String) storeDoc.get("avtUrl");
             }
         } catch (Exception e) {
-            log.warn("Không thể lấy thông tin cửa hàng [{}]: {}", storeId, e.getMessage());
+            log.warn("Khong the lay thong tin cua hang [{}]: {}", storeId, e.getMessage());
         }
 
         final String storeName = resolvedStoreName;
@@ -182,7 +217,7 @@ public class CartService {
                         .build())
                 .toList();
 
-        log.info("Lấy giỏ hàng của người dùng [{}] thành công - {} món.", userId, itemResponses.size());
+        log.info("Lay gio hang cua nguoi dung [{}] thanh cong - {} mon.", userId, itemResponses.size());
         return CartResponse.builder()
                 .items(itemResponses)
                 .storeId(storeId)
@@ -192,63 +227,63 @@ public class CartService {
     }
 
     public void capNhatSoLuongMon(String userId, String itemId, Integer quantity) {
-        log.info("Bắt đầu xử lý cập nhật số lượng - Người dùng: {}, Món: {}, Số lượng mới: {}",
+        log.info("Bat dau xu ly cap nhat so luong - Nguoi dung: {}, Mon: {}, So luong moi: {}",
                 userId, itemId, quantity);
 
         if (quantity == null || quantity <= 0) {
-            log.warn("Số lượng không hợp lệ: {}", quantity);
-            throw new IllegalArgumentException("Số lượng không hợp lệ.");
+            log.warn("So luong khong hop le: {}", quantity);
+            throw new IllegalArgumentException("So luong khong hop le.");
         }
 
         try {
             CartItem item = cartRepository.layMotMonTrongGio(userId, itemId);
             if (item == null) {
-                log.warn("Món với itemId [{}] không tồn tại trong giỏ hàng của người dùng {}", itemId, userId);
+                log.warn("Mon voi itemId [{}] khong ton tai trong gio hang cua nguoi dung {}", itemId, userId);
                 throw BusinessException.cartItemKhongTimThay(itemId);
             }
 
             cartRepository.capNhatSoLuongMon(userId, itemId, quantity);
-            log.info("Cập nhật số lượng món [{}] thành {} thành công.", itemId, quantity);
+            log.info("Cap nhat so luong mon [{}] thanh cong.", itemId, quantity);
 
         } catch (BusinessException e) {
             throw e;
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Lỗi khi cập nhật số lượng món [{}]: {}", itemId, e.getMessage());
-            throw BusinessException.loiHeThong("Không thể cập nhật số lượng món.");
+            log.error("Loi khi cap nhat so luong mon [{}]: {}", itemId, e.getMessage());
+            throw BusinessException.loiHeThong("Khong the cap nhat so luong mon.");
         }
     }
 
     public void xoaMotMon(String userId, String itemId) {
-        log.info("Bắt đầu xóa món [{}] khỏi giỏ hàng - Người dùng: {}", itemId, userId);
+        log.info("Bat dau xoa mon [{}] khoi gio hang - Nguoi dung: {}", itemId, userId);
 
         try {
             cartRepository.xoaMotMonTrongGio(userId, itemId);
-            log.info("Đã xóa món [{}] khỏi giỏ hàng của người dùng {}", itemId, userId);
+            log.info("Da xoa mon [{}] khoi gio hang cua nguoi dung {}", itemId, userId);
 
         } catch (Exception e) {
-            log.error("Lỗi khi xóa món [{}]: {}", itemId, e.getMessage());
-            throw BusinessException.loiHeThong("Không thể xóa món khỏi giỏ hàng.");
+            log.error("Loi khi xoa mon [{}]: {}", itemId, e.getMessage());
+            throw BusinessException.loiHeThong("Khong the xoa mon khoi gio hang.");
         }
     }
 
     public void xoaToanBoGioHang(String userId) {
-        log.info("Bắt đầu xóa toàn bộ giỏ hàng - Người dùng: {}", userId);
+        log.info("Bat dau xoa toan bo gio hang - Nguoi dung: {}", userId);
 
         try {
             cartRepository.xoaTatCaMonTrongGio(userId);
-            log.info("Đã xóa toàn bộ giỏ hàng của người dùng {}", userId);
+            log.info("Da xoa toan bo gio hang cua nguoi dung {}", userId);
 
         } catch (Exception e) {
-            log.error("Lỗi khi xóa toàn bộ giỏ hàng: {}", e.getMessage());
-            throw BusinessException.loiHeThong("Không thể xóa giỏ hàng.");
+            log.error("Loi khi xoa toan bo gio hang: {}", e.getMessage());
+            throw BusinessException.loiHeThong("Khong the xoa gio hang.");
         }
     }
 
     private Double tinhGiaSize(String foodId, String size, FirestoreDocument sanPhamDoc) {
         if (size == null || size.isBlank()) {
-            log.info("Sản phẩm [{}] không chọn size, giá size = 0", foodId);
+            log.info("San pham [{}] khong chon size, gia size = 0", foodId);
             return 0.0;
         }
 
@@ -261,7 +296,7 @@ public class CartService {
         try {
             optionGroups = (List<?>) optionGroupsObj;
         } catch (Exception e) {
-            log.warn("Không thể parse optionGroups của sản phẩm [{}]: {}", foodId, e.getMessage());
+            log.warn("Khong the parse optionGroups cua san pham [{}]: {}", foodId, e.getMessage());
             return 0.0;
         }
 
@@ -281,7 +316,7 @@ public class CartService {
                         String optName = (String) option.get("name");
                         if (optName != null && optName.equalsIgnoreCase(size)) {
                             Double gia = toDouble(option.get("price"));
-                            log.info("Tìm thấy size [{}] với giá: {}", size, gia);
+                            log.info("Tim thay size [{}] voi gia: {}", size, gia);
                             return gia;
                         }
                     }
@@ -289,7 +324,7 @@ public class CartService {
             }
         }
 
-        log.info("Size [{}] không tồn tại trong cấu hình sản phẩm [{}], giá = 0", size, foodId);
+        log.info("Size [{}] khong ton tai trong cau hinh san pham [{}], gia = 0", size, foodId);
         return 0.0;
     }
 
@@ -302,7 +337,7 @@ public class CartService {
             Double gia = t.getPrice() != null ? t.getPrice() : 0.0;
             tong += gia;
         }
-        log.info("Tổng giá {} topping: {}", toppings.size(), tong);
+        log.info("Tong gia {} topping: {}", toppings.size(), tong);
         return tong;
     }
 

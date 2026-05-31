@@ -5,6 +5,7 @@ import com.example.be_foodgo.dto.ReviewRequest;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,6 +28,7 @@ public class ReviewController {
     private ReviewService reviewService;
 
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(
             summary = "Tao danh gia",
             description = "Cho phep khach hang tao mot danh gia cho don hang da nhan. Chi cho phep danh gia khi don hang o trang thai [Hoan thanh] (status = 3). Mot don hang chi duoc phep danh gia mot lan."

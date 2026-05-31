@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -76,6 +77,7 @@ public class CategoryController {
     }
 
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Tạo danh mục mới", description = "Thêm một danh mục mới")
     public ResponseEntity<?> createCategory(@Valid @RequestBody CategoryDTO categoryDTO) {
         try {
@@ -92,6 +94,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cập nhật danh mục", description = "Cập nhật thông tin danh mục")
     public ResponseEntity<?> updateCategory(@PathVariable String id, @Valid @RequestBody CategoryDTO categoryDTO) {
         try {
@@ -111,6 +114,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Xóa danh mục", description = "Xóa danh mục khỏi hệ thống")
     public ResponseEntity<?> deleteCategory(@PathVariable String id) {
         try {

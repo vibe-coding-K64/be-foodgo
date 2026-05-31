@@ -36,6 +36,8 @@ public class Order {
     private Double deliveryLat;
     private Double deliveryLng;
 
+    private String note;
+
     public Order() {}
 
     public String getId() { return id; }
@@ -112,4 +114,6 @@ public class Order {
     public void setDeliveryLat(Double deliveryLat) { this.deliveryLat = deliveryLat; }
     public Double getDeliveryLng() { return deliveryLng; }
     public void setDeliveryLng(Double deliveryLng) { this.deliveryLng = deliveryLng; }
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
 }

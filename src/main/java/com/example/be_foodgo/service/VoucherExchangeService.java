@@ -1,6 +1,6 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.SystemVoucherResponse;
+import com.example.be_foodgo.dto.VoucherResponse;
 import com.example.be_foodgo.dto.VoucherExchangeRequest;
 import com.example.be_foodgo.dto.VoucherExchangeResponse;
 import com.example.be_foodgo.exception.BusinessException;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -27,12 +28,12 @@ public class VoucherExchangeService {
     @Autowired
     private VoucherRepository voucherRepository;
 
-    public List<SystemVoucherResponse> getAllSystemVouchers(String userId) {
+    public List<VoucherResponse> getAllSystemVouchers(String userId) {
         try {
-            List<Voucher> vouchers = voucherRepository.getAllSystemVouchers();
+            List<Voucher> vouchers = voucherRepository.getExchangeableVouchers();
             Integer diemHienTai = layDiemHienTai(userId);
 
-            List<SystemVoucherResponse> result = new ArrayList<>();
+            List<VoucherResponse> result = new ArrayList<>();
             for (Voucher v : vouchers) {
                 boolean coTheDoi = diemHienTai != null && diemHienTai >= v.getPointsRequired();
                 String message = null;
@@ -44,7 +45,7 @@ public class VoucherExchangeService {
                     message = "Can them " + (v.getPointsRequired() - diemHienTai) + " diem de doi.";
                 }
 
-                result.add(SystemVoucherResponse.builder()
+                result.add(VoucherResponse.builder()
                         .id(v.getId())
                         .title(v.getTitle())
                         .subtitle(v.getSubtitle())
@@ -81,6 +82,14 @@ public class VoucherExchangeService {
                 throw BusinessException.voucherDaHetSoLuong(voucherId);
             }
 
+            if (systemVoucher.getPointsRequired() <= 0) {
+                throw BusinessException.voucherKhongTheDoiDiem(voucherId);
+            }
+
+            if (systemVoucher.getExpiryDate() != null && Instant.now().isAfter(systemVoucher.getExpiryDate().toInstant())) {
+                throw BusinessException.voucherDaHetHan(voucherId);
+            }
+
             Integer diemHienTai = layDiemHienTai(userId);
             if (diemHienTai == null) {
                 throw BusinessException.diemKhongTimThay();
@@ -99,20 +108,27 @@ public class VoucherExchangeService {
             voucherRepository.truLoyaltyPoints(userId, pointsRequired);
 
             String myVoucherId = "mv_" + UUID.randomUUID().toString().substring(0, 8);
-            int validityDays = 30;
-            Instant expiryDate = ChronoUnit.DAYS.addTo(Instant.now(), validityDays);
+            int validityDays = systemVoucher.getValidityDays() > 0 ? systemVoucher.getValidityDays() : 30;
+            Instant expiryInstant = ChronoUnit.DAYS.addTo(Instant.now(), validityDays);
+            Date expiryDate = Date.from(expiryInstant);
 
             MyVoucher myVoucher = MyVoucher.builder()
                     .id(myVoucherId)
                     .name(systemVoucher.getTitle())
+                    .title(systemVoucher.getTitle())
+                    .subtitle(systemVoucher.getSubtitle())
                     .code("SYS-" + voucherId.substring(voucherId.indexOf('_') + 1).toUpperCase())
                     .description(systemVoucher.getSubtitle())
                     .type(systemVoucher.getType())
                     .value(systemVoucher.getValue())
+                    .imageUrl(systemVoucher.getImageUrl())
+                    .terms(systemVoucher.getTerms())
                     .minOrderValue(systemVoucher.getMinOrderValue())
+                    .isActive(true)
+                    .isFreeship(systemVoucher.getIsFreeship())
                     .expiryDate(expiryDate)
-                    .createdAt(Instant.now())
-                    .updatedAt(Instant.now())
+                    .createdAt(new Date())
+                    .updatedAt(new Date())
                     .build();
 
             voucherRepository.luuMyVoucher(userId, myVoucher);
@@ -126,12 +142,18 @@ public class VoucherExchangeService {
             return VoucherExchangeResponse.builder()
                     .myVoucherId(myVoucherId)
                     .name(myVoucher.getName())
+                    .title(myVoucher.getTitle())
+                    .subtitle(myVoucher.getSubtitle())
                     .code(myVoucher.getCode())
                     .description(myVoucher.getDescription())
+                    .imageUrl(myVoucher.getImageUrl())
+                    .terms(myVoucher.getTerms())
                     .type(myVoucher.getType())
                     .value(myVoucher.getValue())
                     .minOrderValue(myVoucher.getMinOrderValue())
                     .expiryDate(expiryDate.toString())
+                    .isActive(myVoucher.isActive())
+                    .isFreeship(myVoucher.isFreeship())
                     .diemDaDung(pointsRequired)
                     .diemConLai(diemConLai)
                     .message("Doi voucher thanh cong!")

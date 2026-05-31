@@ -4,7 +4,6 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
@@ -43,9 +42,7 @@ public class OpenApiConfig {
                         new Tag().name("Cart").description("API quan ly gio hang cho phan he Khach hang")
                 ))
                 .servers(List.of(
-                        new Server().url("http://localhost:8080").description("Moi truong phat trien"),
-                        new Server().url("https://api.foodgo.com").description("Moi truong san xuat")
-                ))
-                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME));
+                        new Server().url("https://be-foodgo.canluaz.io.vn").description("Moi truong production")
+                ));
     }
 }

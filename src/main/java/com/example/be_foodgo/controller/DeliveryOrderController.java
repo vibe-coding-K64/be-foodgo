@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/drivers/orders")
 @Tag(name = "Delivery Orders", description = "API quan ly don hang cua tai xe")
+@SecurityRequirement(name = "bearerAuth")
 public class DeliveryOrderController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(DeliveryOrderController.class);

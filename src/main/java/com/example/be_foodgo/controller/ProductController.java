@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -56,6 +57,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Tạo món ăn mới", description = "Thêm một món ăn mới vào cửa hàng")
     public ResponseEntity<Map<String, Object>> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         try {
@@ -68,6 +70,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cập nhật thông tin món ăn", description = "Cập nhật thông tin món ăn theo ID")
     public ResponseEntity<Map<String, Object>> updateProduct(@PathVariable String id, @Valid @RequestBody ProductDTO productDTO) {
         try {
@@ -83,6 +86,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Xóa món ăn", description = "Xóa một món ăn khỏi hệ thống")
     public ResponseEntity<Map<String, Object>> deleteProduct(@PathVariable String id) {
         try {

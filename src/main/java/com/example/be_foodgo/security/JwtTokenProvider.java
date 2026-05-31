@@ -18,14 +18,17 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
     private final long expirationMs;
+    private final long refreshExpirationMs;
     private final String bearerPrefix;
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expirationMs,
+            @Value("${jwt.refresh-expiration}") long refreshExpirationMs,
             @Value("${jwt.bearer-prefix}") String bearerPrefix) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
+        this.refreshExpirationMs = refreshExpirationMs;
         this.bearerPrefix = bearerPrefix;
     }
 
@@ -35,6 +38,20 @@ public class JwtTokenProvider {
         log.info("Dang tao JWT cho userId: {}", userId);
         return Jwts.builder()
                 .subject(userId)
+                .claim("type", "ACCESS_TOKEN")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String taoRefreshTokenValue(String userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
+        log.info("Dang tao Refresh Token cho userId: {}", userId);
+        return Jwts.builder()
+                .subject(userId)
+                .claim("type", "REFRESH_TOKEN")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(secretKey)
@@ -102,5 +119,9 @@ public class JwtTokenProvider {
 
     public long getExpirationMs() {
         return expirationMs;
+    }
+
+    public long getRefreshExpirationMs() {
+        return refreshExpirationMs;
     }
 }

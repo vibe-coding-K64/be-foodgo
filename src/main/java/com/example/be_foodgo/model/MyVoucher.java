@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
+import java.util.Date;
 
 @Data
 @Builder
@@ -15,12 +15,18 @@ public class MyVoucher {
 
     private String id;
     private String name;
+    private String title;
+    private String subtitle;
     private String code;
     private String description;
-    private Instant expiryDate;
-    private Double value;
-    private Integer type;
-    private Double minOrderValue;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private int type; // 1: %, 2: cash (không phần trăm)
+    private double value;
+    private String imageUrl;
+    private String terms;
+    private double minOrderValue;
+    private Date expiryDate;
+    private boolean isActive;
+    private boolean isFreeship;
+    private Date createdAt;
+    private Date updatedAt;
 }

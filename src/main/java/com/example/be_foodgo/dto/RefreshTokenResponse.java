@@ -10,44 +10,39 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Phan hoi dang nhap thanh cong, chua token JWT va refresh token")
-public class AuthResponse {
+@Schema(description = "Phan hoi lam moi access token thanh cong")
+public class RefreshTokenResponse {
 
-    @Schema(description = "Token JWT truy cap", example = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...")
+    @Schema(description = "Access token moi", example = "eyJhbGciOiJIUzI1NiJ9...")
     private String token;
 
     @Schema(description = "Loai token (luon la Bearer)")
     private String tokenType;
 
-    @Schema(description = "Thoi gian het han cua access token (miliseconds)", example = "10800000")
+    @Schema(description = "Thoi gian het han cua access token moi (miliseconds)", example = "10800000")
     private Long expiresIn;
 
-    @Schema(description = "Refresh token de lam moi access token", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @Schema(description = "Refresh token moi (chi tra ve khi refreshToken cu het han)")
     private String refreshToken;
 
     @Schema(description = "Thoi gian het han cua refresh token (miliseconds)", example = "2592000000")
     private Long refreshExpiresIn;
 
-    @Schema(description = "Thong tin nguoi dung")
-    private UserResponse user;
-
-    public static AuthResponse of(String token, Long expiresIn, UserResponse user) {
-        return AuthResponse.builder()
+    public static RefreshTokenResponse of(String token, Long expiresIn) {
+        return RefreshTokenResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
-                .user(user)
                 .build();
     }
 
-    public static AuthResponse of(String token, Long expiresIn, String refreshToken, Long refreshExpiresIn, UserResponse user) {
-        return AuthResponse.builder()
+    public static RefreshTokenResponse of(String token, Long expiresIn, String refreshToken, Long refreshExpiresIn) {
+        return RefreshTokenResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
                 .refreshToken(refreshToken)
                 .refreshExpiresIn(refreshExpiresIn)
-                .user(user)
                 .build();
     }
 }

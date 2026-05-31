@@ -521,6 +521,7 @@ public class DeliveryOrderService {
                 .vehiclePlate((String) data.get("vehiclePlate"))
                 .createdAt(toInstant(data.get("createdAt")))
                 .updatedAt(toInstant(data.get("updatedAt")))
+                .note((String) data.get("note"))
                 .build();
     }
 

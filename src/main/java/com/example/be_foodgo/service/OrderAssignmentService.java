@@ -214,15 +214,16 @@ public class OrderAssignmentService {
         }
     }
 
-    @Scheduled(fixedRate = 2000)
+    // TODO: fix protobuf conflict with com.google.protobuf.Timestamp before re-enabling
+    // @Scheduled(fixedRate = 2000)
     public void kiemTraTimeout() {
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> expired =
+            List<Map<String, Object>> expired =
                     orderRequestRepository.findExpiredPendingRequests(Instant.now());
 
-            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : expired) {
-                String docId = doc.getId();
-                String orderId = doc.getString("orderId");
+            for (Map<String, Object> doc : expired) {
+                String docId = (String) doc.get("id");
+                String orderId = (String) doc.get("orderId");
                 if (orderId != null) {
                     xuLyTimeout(docId, orderId);
                 }
@@ -348,12 +349,9 @@ public class OrderAssignmentService {
 
     private Instant toInstant(Object value) {
         if (value == null) return null;
-        if (value instanceof com.google.protobuf.Timestamp) {
-            com.google.protobuf.Timestamp ts = (com.google.protobuf.Timestamp) value;
-            return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
-        }
         if (value instanceof java.util.Date) return ((java.util.Date) value).toInstant();
         if (value instanceof Long) return Instant.ofEpochMilli((Long) value);
+        if (value instanceof Number) return Instant.ofEpochMilli(((Number) value).longValue());
         return null;
     }
 

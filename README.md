@@ -251,8 +251,7 @@ Hệ thống sử dụng các collection chính sau:
 | `stores`             | Thông tin cửa hàng                                 |
 | `products`           | Sản phẩm / món ăn                                  |
 | `banners`            | Banner quảng cáo trang chủ                         |
-| `vouchers`           | Voucher hệ thống                                   |
-| `system_vouchers`    | Voucher đổi bằng điểm thưởng                       |
+| `vouchers`           | Voucher hệ thống (bao gồm cả voucher đổi điểm: `storeId=null`, `pointsRequired>0`) |
 | `reviews`            | Đánh giá cửa hàng                                  |
 | `orders`             | Đơn hàng                                           |
 | `customer_profiles`  | Profile khách hàng + sub-collections               |

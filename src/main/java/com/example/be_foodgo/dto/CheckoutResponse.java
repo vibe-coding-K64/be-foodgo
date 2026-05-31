@@ -65,6 +65,20 @@ public class CheckoutResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "Thong tin mot tuy chon (topping/size) cua mon an")
+    public static class ItemOption {
+
+        @Schema(description = "Ten tuy chon", example = "Tran chau")
+        private String name;
+
+        @Schema(description = "Gia cua tuy chon (VND)", example = "5000.0")
+        private Double price;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "Thong tin mot mon an trong don")
     public static class OrderItemData {
 
@@ -84,6 +98,6 @@ public class CheckoutResponse {
         private String imageUrl;
 
         @Schema(description = "Cac tuy chon da chon (size, topping)", example = "[{\"name\": \"Tran chau\", \"price\": 5000.0}]")
-        private List<CartRequest.ToppingOption> options;
+        private List<ItemOption> options;
     }
 }

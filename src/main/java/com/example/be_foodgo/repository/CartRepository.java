@@ -200,7 +200,7 @@ public class CartRepository {
                 .updatedAt(toInstant(doc.get("updatedAt")))
                 .build();
 
-        log.info("Tìm thấy món [{}] trong giỏ hàng của người dùng {}", itemId, userId);
+        log.info("Tim thay mon [{}] trong gio hang cua nguoi dung {}", itemId, userId);
         return item;
     }
 
@@ -224,6 +224,59 @@ public class CartRepository {
         }
 
         log.info("Đã cập nhật số lượng món [{}] thành {} trong giỏ hàng người dùng {}", itemId, quantity, userId);
+    }
+
+    public void capNhatCartItem(String userId, CartItem item) {
+        log.info("Cap nhat cart item {} trong gio hang nguoi dung {} - so luong: {}, gia: {}",
+                item.getId(), userId, item.getQuantity(), item.getPrice());
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(item.getId());
+
+        try {
+            FirestoreExecutor executor = new FirestoreExecutor(docRef);
+            executor.add("quantity", item.getQuantity());
+            executor.add("price", item.getPrice());
+            executor.add("sizePrice", item.getSizePrice() != null ? item.getSizePrice() : 0.0);
+            executor.add("size", item.getSize() != null ? item.getSize() : "");
+            executor.add("note", item.getNote() != null ? item.getNote() : "");
+            executor.add("updatedAt", FieldValue.serverTimestamp());
+
+            if (item.getToppings() != null && !item.getToppings().isEmpty()) {
+                List<Map<String, Object>> toppingMaps = item.getToppings().stream()
+                        .map(t -> Map.<String, Object>of("name", t.getName(), "price", t.getPrice()))
+                        .toList();
+                executor.add("toppings", toppingMaps);
+            } else {
+                executor.add("toppings", null);
+            }
+
+            executor.commit().get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Loi khi cap nhat cart item [{}]: {}", item.getId(), e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("Da cap nhat cart item [{}] trong gio hang nguoi dung {}", item.getId(), userId);
+    }
+
+    private static class FirestoreExecutor {
+        private final DocumentReference docRef;
+        private final Map<String, Object> updates = new java.util.HashMap<>();
+
+        FirestoreExecutor(DocumentReference docRef) {
+            this.docRef = docRef;
+        }
+
+        void add(String field, Object value) {
+            updates.put(field, value);
+        }
+
+        ApiFuture<WriteResult> commit() {
+            return docRef.update(updates);
+        }
     }
 
     public void capNhatSoLuongVaGia(String userId, String itemId, Integer quantity, Double price) {
