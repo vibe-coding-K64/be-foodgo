@@ -16,9 +16,19 @@ public class Store {
     private Integer reviewCount;
     private String avtUrl;
     private String backUrl;
+    private boolean isOpen;
+
     @PropertyName("isOpen")
     @JsonProperty("isOpen")
-    private boolean open;
+    public boolean getIsOpen() {
+        return isOpen;
+    }
+
+    @PropertyName("isOpen")
+    @JsonProperty("isOpen")
+    public void setIsOpen(boolean isOpen) {
+        this.isOpen = isOpen;
+    }
     private String deliveryTime;
     private Double deliveryFee;
     private List<String> categoryIds;

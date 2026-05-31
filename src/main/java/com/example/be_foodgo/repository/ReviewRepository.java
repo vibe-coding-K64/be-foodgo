@@ -88,4 +88,11 @@ public class ReviewRepository {
         log.info("Da cap nhat rating cua store [{}]: rating={}, reviewCount={}, luc [{}]",
                 storeId, rating, reviewCount, result.getUpdateTime());
     }
+
+    public void updateReview(Review review) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(review.getId());
+        ApiFuture<WriteResult> future = docRef.set(review);
+        WriteResult result = future.get();
+        log.info("Da cap nhat review [{}] luc [{}]", review.getId(), result.getUpdateTime());
+    }
 }
