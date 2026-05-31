@@ -18,4 +18,6 @@ public class Review {
     private List<String> imageUrls;
     private Date createdAt;
     private Date updatedAt;
+    private String replyComment;
+    private Date repliedAt;
 }

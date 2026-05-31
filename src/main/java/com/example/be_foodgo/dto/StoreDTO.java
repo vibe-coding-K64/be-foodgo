@@ -16,8 +16,17 @@ public class StoreDTO {
     private Integer reviewCount;
     private String avtUrl;
     private String backUrl;
-    @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
     private boolean isOpen;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
+    public boolean getIsOpen() {
+        return isOpen;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
+    public void setIsOpen(boolean isOpen) {
+        this.isOpen = isOpen;
+    }
     private String deliveryTime;
     private Double deliveryFee;
     private java.util.List<String> categoryIds;

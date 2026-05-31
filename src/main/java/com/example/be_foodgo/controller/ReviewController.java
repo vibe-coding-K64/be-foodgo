@@ -87,4 +87,14 @@ public class ReviewController {
         List<ReviewDTO> reviews = reviewService.layDanhSachDanhGiaCuaHang(storeId);
         return ResponseEntity.ok(ApiResponse.thatSuccess(reviews, "Lay danh sach danh gia thanh cong."));
     }
+
+    @PutMapping("/{id}/reply")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Phản hồi đánh giá", description = "Cho phép chủ gian hàng phản hồi đánh giá của khách hàng")
+    public ResponseEntity<ApiResponse<ReviewDTO>> replyReview(
+            @PathVariable String id,
+            @Valid @RequestBody com.example.be_foodgo.dto.ReviewReplyRequest request) throws Exception {
+        ReviewDTO reviewDTO = reviewService.replyReview(id, request.getReplyComment());
+        return ResponseEntity.ok(ApiResponse.thatSuccess(reviewDTO, "Đã phản hồi đánh giá."));
+    }
 }

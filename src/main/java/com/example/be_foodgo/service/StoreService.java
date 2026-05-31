@@ -48,7 +48,7 @@ public class StoreService {
         store.setReviewCount(storeDTO.getReviewCount() != null ? storeDTO.getReviewCount() : 0);
         store.setAvtUrl(storeDTO.getAvtUrl());
         store.setBackUrl(storeDTO.getBackUrl());
-        store.setOpen(true);
+        store.setIsOpen(false);
         store.setDeliveryTime(storeDTO.getDeliveryTime() != null ? storeDTO.getDeliveryTime() : "20-30 phút");
         store.setDeliveryFee(storeDTO.getDeliveryFee() != null ? storeDTO.getDeliveryFee() : 15000.0);
         store.setCategoryIds(storeDTO.getCategoryIds() != null ? storeDTO.getCategoryIds() : new java.util.ArrayList<>());
@@ -94,7 +94,7 @@ public class StoreService {
             store = new Store();
             store.setId(id);
             store.setName("Cửa hàng mới");
-            store.setOpen(true);
+            store.setIsOpen(true);
             storeRepository.saveStore(store);
         }
         return mapToDTO(store);
@@ -113,7 +113,7 @@ public class StoreService {
         store.setReviewCount(storeDTO.getReviewCount());
         store.setAvtUrl(storeDTO.getAvtUrl());
         store.setBackUrl(storeDTO.getBackUrl());
-        store.setOpen(storeDTO.isOpen());
+        store.setIsOpen(storeDTO.getIsOpen());
         store.setDeliveryTime(storeDTO.getDeliveryTime());
         store.setDeliveryFee(storeDTO.getDeliveryFee());
         store.setCategoryIds(storeDTO.getCategoryIds());
@@ -136,7 +136,7 @@ public class StoreService {
         dto.setReviewCount(store.getReviewCount());
         dto.setAvtUrl(store.getAvtUrl());
         dto.setBackUrl(store.getBackUrl());
-        dto.setOpen(store.isOpen());
+        dto.setIsOpen(store.getIsOpen());
         dto.setDeliveryTime(store.getDeliveryTime());
         dto.setDeliveryFee(store.getDeliveryFee());
         dto.setCategoryIds(store.getCategoryIds());
@@ -182,7 +182,7 @@ public class StoreService {
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
                         .distance(Math.round(distance * 10.0) / 10.0)
-                        .isOpen(store.isOpen())
+                        .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build());
             }
@@ -249,7 +249,7 @@ public class StoreService {
                         .backUrl(store.getBackUrl())
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
-                        .isOpen(store.isOpen())
+                        .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build()
         ).collect(Collectors.toList());

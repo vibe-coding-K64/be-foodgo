@@ -125,6 +125,20 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    public ReviewDTO replyReview(String reviewId, String replyComment) throws Exception {
+        Review review = reviewRepository.findById(reviewId);
+        if (review == null) {
+            log.warn("Không tìm thấy đánh giá [{}]", reviewId);
+            throw new Exception("Không tìm thấy đánh giá");
+        }
+        review.setReplyComment(replyComment);
+        review.setRepliedAt(new Date());
+        review.setUpdatedAt(new Date());
+        reviewRepository.updateReview(review);
+        log.info("Đã phản hồi đánh giá [{}]", reviewId);
+        return convertToDTO(review);
+    }
+
     private ReviewDTO convertToDTO(Review review) {
         ReviewDTO dto = new ReviewDTO();
         dto.setId(review.getId());
@@ -138,6 +152,8 @@ public class ReviewService {
         dto.setImageUrls(review.getImageUrls());
         dto.setCreatedAt(review.getCreatedAt());
         dto.setUpdatedAt(review.getUpdatedAt());
+        dto.setReplyComment(review.getReplyComment());
+        dto.setRepliedAt(review.getRepliedAt());
         return dto;
     }
 }
