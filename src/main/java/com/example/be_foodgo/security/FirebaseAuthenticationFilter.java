@@ -51,7 +51,6 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(internalUserId, null, authorities);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    return;
                 } else {
                     log.warn("Firebase token khong hop le tu header: {}", FIREBASE_TOKEN_HEADER);
                 }

@@ -33,6 +33,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final Firestore firestore;
     private final RefreshTokenService refreshTokenService;
+    private final StoreService storeService;
 
     private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
 
@@ -40,12 +41,14 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
                        Firestore firestore,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService,
+                       StoreService storeService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.firestore = firestore;
         this.refreshTokenService = refreshTokenService;
+        this.storeService = storeService;
     }
 
     public AuthResponse register(RegisterRequest request) throws Exception {
@@ -274,7 +277,9 @@ public class AuthService {
             throw new IllegalArgumentException("So dien thoai da duoc su dung. Vui long su dung so dien thoai khac.");
         }
 
-        String newId = userRepository.sinhNextUserId();
+        String newId = (request.getFirebaseUid() != null && !request.getFirebaseUid().isBlank())
+                ? request.getFirebaseUid()
+                : userRepository.sinhNextUserId();
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
         User user = User.builder()
@@ -289,10 +294,22 @@ public class AuthService {
                 .build();
 
         userRepository.taoUser(user);
-        log.info("Dang ky tai khoan nguoi ban thanh cong - UserId: {}, Roles: {}", newId, user.getRoles());
+        
+        // Tự động tạo gian hàng mặc định cho người bán
+        StoreDTO defaultStore = new StoreDTO();
+        defaultStore.setName("Gian hàng của " + request.getFullName());
+        defaultStore.setAddress("Chưa cập nhật địa chỉ");
+        defaultStore.setAvtUrl("https://placehold.co/150x150/FF6B35/FFFFFF?text=Store");
+        defaultStore.setBackUrl("https://placehold.co/800x400/FF6B35/FFFFFF?text=Cover");
+        defaultStore.setDeliveryTime("20-30 phút");
+        defaultStore.setDeliveryFee(15000.0);
+        defaultStore.setIsOpen(false);
+        storeService.createMerchantStore(newId, defaultStore);
+
+        log.info("Dang ky tai khoan nguoi ban va tao gian hang thanh cong - UserId: {}, Roles: {}", newId, user.getRoles());
 
         Map<String, Object> result = new HashMap<>();
-        result.put("message", "Dang ky tai khoan nguoi ban thanh cong");
+        result.put("message", "Dang ky tai khoan nguoi ban va tao gian hang thanh cong");
         result.put("uid", newId);
         return result;
     }
