@@ -174,7 +174,7 @@ public class ProductService {
                     .storeAvtUrl(store != null ? store.getAvtUrl() : null)
                     .rating(store != null ? store.getRating() : null)
                     .reviewCount(store != null ? store.getReviewCount() : null)
-                    .isOpen(store != null ? store.isOpen() : null)
+                    .isOpen(store != null ? store.getIsOpen() : null)
                     .deliveryTime(store != null ? store.getDeliveryTime() : null)
                     .deliveryFee(store != null ? store.getDeliveryFee() : null)
                     .address(store != null ? store.getAddress() : null)
