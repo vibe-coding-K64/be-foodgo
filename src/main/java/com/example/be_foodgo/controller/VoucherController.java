@@ -64,6 +64,19 @@ public class VoucherController {
         }
     }
 
+    @GetMapping("/store/{storeId}")
+    @Operation(summary = "Lấy danh sách voucher của gian hàng", description = "Lấy danh sách voucher theo storeId")
+    public ResponseEntity<ApiResponse<java.util.List<Voucher>>> getVouchersByStore(
+            @PathVariable String storeId) {
+        try {
+            java.util.List<Voucher> data = voucherService.getAllVouchers(storeId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(data, "Lấy danh sách voucher thành công"));
+        } catch (ExecutionException | InterruptedException e) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.thatError(500, "Lỗi khi lấy danh sách voucher: " + e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cập nhật mã giảm giá", description = "Cập nhật thông tin mã giảm giá")
