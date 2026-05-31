@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -51,6 +52,7 @@ public class StoreController {
 
     // Cập nhật thông tin quán
     @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cập nhật thông tin cửa hàng", description = "Cập nhật các thông tin cơ bản của cửa hàng")
     public ResponseEntity<?> updateStore(@PathVariable String id, @Valid @RequestBody StoreDTO storeDTO) {
         try {
@@ -68,6 +70,7 @@ public class StoreController {
     }
 
     @PostMapping("/merchant/{uid}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Tạo cửa hàng mới cho merchant", description = "Tạo một cửa hàng mới và gán cho tài khoản merchant")
     public ResponseEntity<?> createStoreForMerchant(@PathVariable String uid, @RequestBody StoreDTO storeDTO) {
         try {
@@ -110,6 +113,7 @@ public class StoreController {
     }
 
     @PostMapping("/{storeId}/orders/{orderId}/confirm")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Xác nhận đơn hàng", description = "Cửa hàng xác nhận đơn hàng và hệ thống tìm tài xế")
     public ResponseEntity<?> confirmOrder(
             @PathVariable String storeId,

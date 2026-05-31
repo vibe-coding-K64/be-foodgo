@@ -1,16 +1,18 @@
 package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.VoucherDTO;
+import com.example.be_foodgo.dto.VoucherListResponse;
+import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.model.Voucher;
 import com.example.be_foodgo.service.VoucherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -23,6 +25,7 @@ public class VoucherController {
     private VoucherService voucherService;
 
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Tạo mã giảm giá mới", description = "Thêm một mã giảm giá mới vào hệ thống")
     public ResponseEntity<String> createVoucher(@RequestBody VoucherDTO voucherDTO) {
         try {
@@ -48,17 +51,21 @@ public class VoucherController {
     }
 
     @GetMapping
-    @Operation(summary = "Lấy danh sách mã giảm giá", description = "Lấy tất cả các mã giảm giá hiện có")
-    public ResponseEntity<List<Voucher>> getAllVouchers(@RequestParam(required = false) String storeId) {
+    @Operation(summary = "Lấy danh sách voucher", description = "Lấy danh sách voucher theo userId và storeId")
+    public ResponseEntity<ApiResponse<VoucherListResponse>> getVouchers(
+            @RequestParam String userId,
+            @RequestParam(required = false) String storeId) {
         try {
-            List<Voucher> vouchers = voucherService.getAllVouchers(storeId);
-            return ResponseEntity.ok(vouchers);
+            VoucherListResponse data = voucherService.getAvailableVouchers(userId, storeId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(data, "Lấy danh sách voucher thành công"));
         } catch (ExecutionException | InterruptedException e) {
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.thatError(500, "Lỗi khi lấy danh sách voucher: " + e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cập nhật mã giảm giá", description = "Cập nhật thông tin mã giảm giá")
     public ResponseEntity<String> updateVoucher(@PathVariable String id, @RequestBody VoucherDTO voucherDTO) {
         try {
@@ -70,6 +77,7 @@ public class VoucherController {
     }
 
     @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Xóa mã giảm giá", description = "Xóa mã giảm giá khỏi hệ thống")
     public ResponseEntity<String> deleteVoucher(@PathVariable String id) {
         String result = voucherService.deleteVoucher(id);

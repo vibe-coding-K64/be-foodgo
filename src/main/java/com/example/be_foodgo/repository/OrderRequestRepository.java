@@ -2,6 +2,7 @@ package com.example.be_foodgo.repository;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import com.google.protobuf.Timestamp;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -22,15 +23,17 @@ public class OrderRequestRepository {
     }
 
     public String save(Map<String, Object> data) throws ExecutionException, InterruptedException {
-        ApiFuture<DocumentReference> ref = firestore.collection(COLLECTION_ORDER_REQUESTS).add(data);
+        Map<String, Object> dataToSave = convertInstants(data);
+        ApiFuture<DocumentReference> ref = firestore.collection(COLLECTION_ORDER_REQUESTS).add(dataToSave);
         return ref.get().getId();
     }
 
     public void updateFields(String orderId, Map<String, Object> fields) throws ExecutionException, InterruptedException {
         if (fields == null || fields.isEmpty()) return;
+        Map<String, Object> converted = convertInstants(fields);
         firestore.collection(COLLECTION_ORDER_REQUESTS)
                 .document(orderId)
-                .update(fields)
+                .update(converted)
                 .get();
     }
 
@@ -48,28 +51,79 @@ public class OrderRequestRepository {
         return data;
     }
 
-    public List<QueryDocumentSnapshot> findExpiredPendingRequests(Instant now) throws ExecutionException, InterruptedException {
-        return firestore.collection(COLLECTION_ORDER_REQUESTS)
+    public List<Map<String, Object>> findExpiredPendingRequests(Instant now) throws ExecutionException, InterruptedException {
+        Timestamp ts = Timestamp.newBuilder()
+                .setSeconds(now.getEpochSecond())
+                .setNanos(now.getNano())
+                .build();
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_ORDER_REQUESTS)
                 .whereEqualTo("status", "pending")
-                .whereLessThan("expiresAt", now)
+                .whereLessThan("expiresAt", ts)
                 .get()
                 .get()
                 .getDocuments();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            result.add(convertDocData(doc.getData(), doc.getId()));
+        }
+        return result;
     }
 
-    public List<QueryDocumentSnapshot> findPendingRequests() throws ExecutionException, InterruptedException {
-        return firestore.collection(COLLECTION_ORDER_REQUESTS)
+    public List<Map<String, Object>> findPendingRequests() throws ExecutionException, InterruptedException {
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_ORDER_REQUESTS)
                 .whereEqualTo("status", "pending")
                 .get()
                 .get()
                 .getDocuments();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            result.add(convertDocData(doc.getData(), doc.getId()));
+        }
+        return result;
+    }
+
+    private Map<String, Object> convertDocData(Map<String, Object> data, String docId) {
+        if (data == null) return null;
+        Map<String, Object> result = new HashMap<>(data);
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Timestamp) {
+                Timestamp ts = (Timestamp) value;
+                result.put(entry.getKey(), Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()));
+            } else if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nested = (Map<String, Object>) value;
+                result.put(entry.getKey(), convertDocData(nested, null));
+            } else if (value instanceof List) {
+                result.put(entry.getKey(), convertListData((List<?>) value));
+            }
+        }
+        result.put("id", docId);
+        return result;
+    }
+
+    private List<Object> convertListData(List<?> list) {
+        List<Object> result = new java.util.ArrayList<>(list);
+        for (int i = 0; i < list.size(); i++) {
+            Object value = list.get(i);
+            if (value instanceof Timestamp) {
+                Timestamp ts = (Timestamp) value;
+                result.set(i, Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()));
+            } else if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nested = (Map<String, Object>) value;
+                result.set(i, convertDocData(nested, null));
+            }
+        }
+        return result;
     }
 
     public void updateFieldsByDocId(String docId, Map<String, Object> fields) throws ExecutionException, InterruptedException {
         if (fields == null || fields.isEmpty()) return;
+        Map<String, Object> converted = convertInstants(fields);
         firestore.collection(COLLECTION_ORDER_REQUESTS)
                 .document(docId)
-                .update(fields)
+                .update(converted)
                 .get();
     }
 
@@ -81,5 +135,45 @@ public class OrderRequestRepository {
         for (DocumentSnapshot doc : snapshot.getDocuments()) {
             doc.getReference().delete().get();
         }
+    }
+
+    private Map<String, Object> convertInstants(Map<String, Object> original) {
+        Map<String, Object> result = new HashMap<>(original);
+        for (Map.Entry<String, Object> entry : original.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Instant instant) {
+                result.put(entry.getKey(), Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build());
+            } else if (value instanceof Map<?, ?> nestedMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nested = (Map<String, Object>) nestedMap;
+                result.put(entry.getKey(), convertInstants(nested));
+            } else if (value instanceof List<?> nestedList) {
+                @SuppressWarnings("unchecked")
+                List<Object> list = (List<Object>) nestedList;
+                result.put(entry.getKey(), convertInstantsInList(list));
+            }
+        }
+        return result;
+    }
+
+    private List<Object> convertInstantsInList(List<Object> original) {
+        List<Object> result = new java.util.ArrayList<>(original);
+        for (int i = 0; i < original.size(); i++) {
+            Object value = original.get(i);
+            if (value instanceof Instant instant) {
+                result.set(i, Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build());
+            } else if (value instanceof Map<?, ?> nestedMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nested = (Map<String, Object>) nestedMap;
+                result.set(i, convertInstants(nested));
+            }
+        }
+        return result;
     }
 }

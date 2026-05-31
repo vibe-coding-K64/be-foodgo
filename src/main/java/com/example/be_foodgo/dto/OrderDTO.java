@@ -34,6 +34,8 @@ public class OrderDTO {
     private Double deliveryLat;
     private Double deliveryLng;
 
+    private String note;
+
     public OrderDTO() {}
 
     public String getId() { return id; }
@@ -82,4 +84,6 @@ public class OrderDTO {
     public void setDeliveryLat(Double deliveryLat) { this.deliveryLat = deliveryLat; }
     public Double getDeliveryLng() { return deliveryLng; }
     public void setDeliveryLng(Double deliveryLng) { this.deliveryLng = deliveryLng; }
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
 }

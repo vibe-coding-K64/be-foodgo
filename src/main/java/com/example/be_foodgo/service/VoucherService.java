@@ -1,6 +1,8 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.VoucherDTO;
+import com.example.be_foodgo.dto.VoucherListResponse;
+import com.example.be_foodgo.model.MyVoucher;
 import com.example.be_foodgo.model.Voucher;
 import com.example.be_foodgo.repository.VoucherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,19 @@ public class VoucherService {
         return voucherRepository.getAllVouchers(storeId);
     }
 
+    public VoucherListResponse getAvailableVouchers(String userId, String storeId)
+            throws ExecutionException, InterruptedException {
+        List<MyVoucher> myVouchers = voucherRepository.getAllMyVouchers(userId);
+        List<Voucher> vouchers = voucherRepository.getVouchersByStoreId(storeId);
+        List<Voucher> freeshipVouchers = voucherRepository.getFreeshipVouchersByStoreId(storeId);
+
+        return VoucherListResponse.builder()
+                .myVouchers(myVouchers)
+                .vouchers(vouchers)
+                .freeshipVouchers(freeshipVouchers)
+                .build();
+    }
+
     public String updateVoucher(String id, VoucherDTO voucherDTO) throws ExecutionException, InterruptedException {
         Voucher existingVoucher = voucherRepository.getVoucher(id);
         if (existingVoucher != null) {
@@ -66,8 +81,7 @@ public class VoucherService {
 
     private void mapDTOToEntity(VoucherDTO dto, Voucher entity) {
         if (dto.getStoreId() != null) entity.setStoreId(dto.getStoreId());
-        if (dto.getTitle() != null) entity.setTitle(dto.getTitle());
-        if (dto.getSubtitle() != null) entity.setSubtitle(dto.getSubtitle());
+        if (dto.getName() != null) entity.setName(dto.getName());
         if (dto.getCode() != null) entity.setCode(dto.getCode());
         entity.setType(dto.getType());
         entity.setValue(dto.getValue());
@@ -76,5 +90,10 @@ public class VoucherService {
         entity.setRemaining(dto.getRemaining());
         if (dto.getTerms() != null) entity.setTerms(dto.getTerms());
         entity.setMinOrderValue(dto.getMinOrderValue());
+        entity.setLimitCount(dto.getLimitCount());
+        entity.setUsedCount(dto.getUsedCount());
+        if (dto.getExpiryDate() != null) entity.setExpiryDate(dto.getExpiryDate());
+        entity.setIsActive(dto.getIsActive());
+        entity.setIsFreeship(dto.getIsFreeship());
     }
 }

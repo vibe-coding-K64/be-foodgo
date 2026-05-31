@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/drivers")
 @Tag(name = "Wallet", description = "API quan ly vi tien cua tai xe")
+@SecurityRequirement(name = "bearerAuth")
 public class WalletController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(WalletController.class);

@@ -135,6 +135,7 @@ public class OrderService {
         dto.setStatus(entity.getStatus());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
+        dto.setNote(entity.getNote());
 
         if (entity.getItems() != null) {
             List<OrderItemDTO> itemDTOs = new ArrayList<>();
@@ -171,6 +172,7 @@ public class OrderService {
         entity.setStatus(dto.getStatus());
         entity.setCreatedAt(dto.getCreatedAt());
         entity.setUpdatedAt(dto.getUpdatedAt());
+        entity.setNote(dto.getNote());
 
         if (dto.getItems() != null) {
             List<OrderItem> items = new ArrayList<>();

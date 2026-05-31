@@ -79,6 +79,9 @@ public class DeliveryOrderDTO {
     @Schema(description = "Thoi diem cap nhat gan nhat")
     private Instant updatedAt;
 
+    @Schema(description = "Ghi chu don hang", example = "Giao gap")
+    private String note;
+
     @Data
     @Builder
     @NoArgsConstructor

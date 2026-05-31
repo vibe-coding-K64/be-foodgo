@@ -33,6 +33,7 @@ public class StoreRepository {
             Store store = document.toObject(Store.class);
             if (store != null) {
                 store.setId(document.getId());
+                store.setOpen(document.getBoolean("isOpen") != null && document.getBoolean("isOpen"));
             }
             return store;
         }
@@ -65,6 +66,7 @@ public class StoreRepository {
             Store store = doc.toObject(Store.class);
             if (store != null) {
                 store.setId(doc.getId());
+                store.setOpen(doc.getBoolean("isOpen") != null && doc.getBoolean("isOpen"));
                 stores.add(store);
             }
         }
@@ -80,6 +82,7 @@ public class StoreRepository {
             Store store = doc.toObject(Store.class);
             if (store != null) {
                 store.setId(doc.getId());
+                store.setOpen(doc.getBoolean("isOpen") != null && doc.getBoolean("isOpen"));
                 stores.add(store);
             }
         }

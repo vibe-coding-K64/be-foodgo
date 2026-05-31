@@ -6,16 +6,23 @@ public class Voucher {
 
     private String id;
     private String storeId;
+    private String name;
     private String title;
     private String subtitle;
     private String code;
-    private int type; 
+    private int type;
     private double value;
     private int pointsRequired;
     private String imageUrl;
     private int remaining;
     private String terms;
     private double minOrderValue;
+    private int limitCount;
+    private int usedCount;
+    private Date expiryDate;
+    private boolean isActive;
+    private int validityDays;
+    private boolean isFreeship;
     private Date createdAt;
     private Date updatedAt;
 
@@ -27,6 +34,9 @@ public class Voucher {
 
     public String getStoreId() { return storeId; }
     public void setStoreId(String storeId) { this.storeId = storeId; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -57,6 +67,24 @@ public class Voucher {
 
     public double getMinOrderValue() { return minOrderValue; }
     public void setMinOrderValue(double minOrderValue) { this.minOrderValue = minOrderValue; }
+
+    public int getLimitCount() { return limitCount; }
+    public void setLimitCount(int limitCount) { this.limitCount = limitCount; }
+
+    public int getUsedCount() { return usedCount; }
+    public void setUsedCount(int usedCount) { this.usedCount = usedCount; }
+
+    public Date getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(Date expiryDate) { this.expiryDate = expiryDate; }
+
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
+
+    public int getValidityDays() { return validityDays; }
+    public void setValidityDays(int validityDays) { this.validityDays = validityDays; }
+
+    public boolean getIsFreeship() { return isFreeship; }
+    public void setIsFreeship(boolean isFreeship) { this.isFreeship = isFreeship; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

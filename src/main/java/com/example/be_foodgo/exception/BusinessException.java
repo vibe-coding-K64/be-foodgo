@@ -305,6 +305,14 @@ public class BusinessException extends RuntimeException {
         );
     }
 
+    public static BusinessException voucherKhongTheDoiDiem(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_CANNOT_EXCHANGE",
+                "Voucher [" + voucherId + "] không hỗ trợ đổi điểm. Voucher này chỉ sử dụng trực tiếp khi đặt hàng."
+        );
+    }
+
     public static BusinessException vuotGioiHanRutTien(String message) {
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,

@@ -1,5 +1,7 @@
 package com.example.be_foodgo.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.cloud.firestore.annotation.PropertyName;
 import lombok.Data;
 
 import java.util.List;
@@ -14,8 +16,9 @@ public class Store {
     private Integer reviewCount;
     private String avtUrl;
     private String backUrl;
-    @com.google.cloud.firestore.annotation.PropertyName("isOpen")
-    private boolean isOpen;
+    @PropertyName("isOpen")
+    @JsonProperty("isOpen")
+    private boolean open;
     private String deliveryTime;
     private Double deliveryFee;
     private List<String> categoryIds;

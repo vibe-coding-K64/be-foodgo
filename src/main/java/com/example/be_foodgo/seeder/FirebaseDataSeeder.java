@@ -7,22 +7,25 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.*;
 
 //comment nó lại đi
-//@Component
+@Component
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);
 
     private final Firestore firestore;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public FirebaseDataSeeder(Firestore firestore) {
+    public FirebaseDataSeeder(Firestore firestore, PasswordEncoder passwordEncoder) {
         this.firestore = firestore;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -40,7 +43,6 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         seedProducts();
         seedBanners();
         seedVouchers();
-        seedSystemVouchers();
         seedReviews();
         seedOrders();
         seedCustomerProfiles();
@@ -63,12 +65,16 @@ public class FirebaseDataSeeder implements ApplicationRunner {
             WriteBatch batch = firestore.batch();
             for (Map<String, Object> doc : documents) {
                 String docId = (String) doc.get("id");
+                if (docId == null) {
+                    log.warn("Document trong collection [{}] khong co truong 'id', bo qua.", collectionName);
+                    continue;
+                }
                 batch.set(firestore.collection(collectionName).document(docId), doc);
             }
-            batch.commit();
-            log.info("Da seed {} document vao collection [{}].", documents.size(), collectionName);
+            List<WriteResult> results = batch.commit().get();
+            log.info("Da seed {} document vao collection [{}]. WriteResults: {}", documents.size(), collectionName, results);
         } catch (Exception e) {
-            log.error("Loi khi seed collection [{}]: {}", collectionName, e.getMessage());
+            log.error("Loi khi seed collection [{}]: {}", collectionName, e.getMessage(), e);
         }
     }
 
@@ -213,7 +219,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "user_001"),
                         Map.entry("email", "khachhang@gmail.com"),
-                        Map.entry("password", "password123"),
+                        Map.entry("password", passwordEncoder.encode("password123")),
                         Map.entry("fullName", "Khoi"),
                         Map.entry("phoneNumber", "0123456789"),
                         Map.entry("photoUrl", "https://example.com/avatar/user001.jpg"),
@@ -224,7 +230,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "user_002"),
                         Map.entry("email", "admin@foodgo.com"),
-                        Map.entry("password", "admin123"),
+                        Map.entry("password", passwordEncoder.encode("admin123")),
                         Map.entry("fullName", "Quan Tri Vien"),
                         Map.entry("phoneNumber", "0987654321"),
                         Map.entry("photoUrl", "https://example.com/avatar/admin.jpg"),
@@ -235,7 +241,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "user_003"),
                         Map.entry("email", "taixe@gmail.com"),
-                        Map.entry("password", "driver123"),
+                        Map.entry("password", passwordEncoder.encode("driver123")),
                         Map.entry("fullName", "Le Van B"),
                         Map.entry("phoneNumber", "0912345678"),
                         Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
@@ -246,7 +252,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "user_004"),
                         Map.entry("email", "taixe2@gmail.com"),
-                        Map.entry("password", "driver456"),
+                        Map.entry("password", passwordEncoder.encode("driver456")),
                         Map.entry("fullName", "Nguyen Van C"),
                         Map.entry("phoneNumber", "0923456789"),
                         Map.entry("photoUrl", "https://example.com/avatar/driver002.jpg"),
@@ -257,7 +263,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "user_005"),
                         Map.entry("email", "taixe3@gmail.com"),
-                        Map.entry("password", "driver789"),
+                        Map.entry("password", passwordEncoder.encode("driver789")),
                         Map.entry("fullName", "Tran Van D"),
                         Map.entry("phoneNumber", "0934567890"),
                         Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
@@ -740,93 +746,41 @@ public class FirebaseDataSeeder implements ApplicationRunner {
     private void seedVouchers() {
         String collectionName = "vouchers";
         List<Map<String, Object>> vouchers = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "voucher_001"),
-                        Map.entry("title", "Giam 20K cho don tu 100K"),
-                        Map.entry("subtitle", "Danh cho khach hang moi"),
-                        Map.entry("code", "GIAM20K"),
-                        Map.entry("type", 2),
-                        Map.entry("value", 20000.0),
-                        Map.entry("pointsRequired", 200),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 100),
-                        Map.entry("isActive", true),
-                        Map.entry("terms", "Ap dung cho tat ca quan an."),
-                        Map.entry("minOrderValue", 100000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "voucher_002"),
-                        Map.entry("title", "Freeship 0 dong"),
-                        Map.entry("subtitle", "Mien phi giao hang"),
-                        Map.entry("code", "FREESHIP0"),
-                        Map.entry("type", 2),
-                        Map.entry("value", 15000.0),
-                        Map.entry("pointsRequired", 300),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"),
-                        Map.entry("remaining", 50),
-                        Map.entry("terms", "Ap dung cho don tu 50K tro len."),
-                        Map.entry("minOrderValue", 50000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "voucher_003"),
-                        Map.entry("title", "Giam 10% cho don tu 200K"),
-                        Map.entry("subtitle", "Khuyen mai dac biet cuoi tuan"),
-                        Map.entry("code", "SAVE10P"),
-                        Map.entry("type", 1),
-                        Map.entry("value", 10.0),
-                        Map.entry("pointsRequired", 500),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 30),
-                        Map.entry("terms", "Giam toi da 50K. Ap dung cuoi tuan."),
-                        Map.entry("minOrderValue", 200000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
+                createVoucherMap("voucher_001", "Giam 20K cho don tu 100K", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "GIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 0, 0),
+                createVoucherMap("voucher_002", "Freeship Quan ABC", "Freeship Quan ABC", "Chi ap dung tai Quan ABC.", "store_001", "ABC15K", 2, 15000.0, false, 50, "Chi ap dung tai Quan ABC.", 80000.0, "2026-06-01T23:59:59Z", 0, 0),
+                createVoucherMap("fs_001", "Mien phi giao hang", "Mien phi giao hang", "Ap dung cho don tu 50K.", null, "FREESHIP", 2, 15000.0, true, 200, "Ap dung cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 0, 0),
+                createVoucherMap("fs_002", "Freeship Quan XYZ", "Freeship Quan XYZ", "Chi ap dung tai Quan XYZ.", "store_002", "XYZSHIP", 2, 15000.0, true, 30, "Chi ap dung tai Quan XYZ.", 30000.0, "2026-06-10T23:59:59Z", 0, 0),
+                createVoucherMap("sys_voucher_001", "Giam 20K cho don tu 100K", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "SYSGIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 400, 30),
+                createVoucherMap("sys_voucher_002", "Giam 15% cho don tu 150K", "Giam 15% cho don tu 150K", "Giam toi da 40K. Ap dung toan he thong.", null, "SYSGIAM15P", 1, 15.0, false, 75, "Giam toi da 40K. Ap dung toan he thong.", 150000.0, "2026-06-30T23:59:59Z", 500, 30),
+                createVoucherMap("sys_fs_001", "Mien phi giao hang", "Mien phi giao hang", "Mien phi giao hang cho don tu 50K.", null, "SYSFREESHIP", 2, 15000.0, true, 200, "Mien phi giao hang cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 300, 30)
         );
         kiemTraVaSeed(collectionName, vouchers);
     }
 
-    private void seedSystemVouchers() {
-        String collectionName = "system_vouchers";
-        List<Map<String, Object>> systemVouchers = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "sys_voucher_001"),
-                        Map.entry("title", "Giam 20K cho don tu 100K"),
-                        Map.entry("subtitle", "Danh cho khach hang moi"),
-                        Map.entry("type", 2),
-                        Map.entry("value", 20000.0),
-                        Map.entry("pointsRequired", 200),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 100),
-                        Map.entry("isActive", true),
-                        Map.entry("validityDays", 30),
-                        Map.entry("terms", "Ap dung cho tat ca quan an."),
-                        Map.entry("minOrderValue", 100000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "sys_voucher_002"),
-                        Map.entry("title", "Giam 15% cho don tu 150K"),
-                        Map.entry("subtitle", "Khuyen mai he thong"),
-                        Map.entry("type", 1),
-                        Map.entry("value", 15.0),
-                        Map.entry("pointsRequired", 400),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"),
-                        Map.entry("remaining", 75),
-                        Map.entry("isActive", true),
-                        Map.entry("validityDays", 30),
-                        Map.entry("terms", "Giam toi da 40K. Ap dung toan he thong."),
-                        Map.entry("minOrderValue", 150000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
-        );
-        kiemTraVaSeed(collectionName, systemVouchers);
+    private Map<String, Object> createVoucherMap(String id, String name, String title, String subtitle, String storeId, String code,
+            int type, double value, boolean isFreeship, int remaining, String terms,
+            double minOrderValue, String expiryDate, int pointsRequired, int validityDays) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("name", name);
+        map.put("title", title);
+        map.put("subtitle", subtitle);
+        map.put("storeId", storeId);
+        map.put("code", code);
+        map.put("type", type);
+        map.put("value", value);
+        map.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80");
+        map.put("remaining", remaining);
+        map.put("isActive", true);
+        map.put("isFreeship", isFreeship);
+        map.put("terms", terms);
+        map.put("minOrderValue", minOrderValue);
+        map.put("expiryDate", expiryDate);
+        map.put("pointsRequired", pointsRequired);
+        map.put("validityDays", validityDays);
+        map.put("createdAt", FieldValue.serverTimestamp());
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        return map;
     }
 
     private void seedReviews() {
@@ -971,6 +925,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order1.put("vehiclePlate", "59A-123.45");
         order1.put("createdAt", FieldValue.serverTimestamp());
         order1.put("updatedAt", FieldValue.serverTimestamp());
+        order1.put("note", "Giao gap");
         orders.add(order1);
 
         List<Map<String, Object>> order2Items = new ArrayList<>();
@@ -1004,6 +959,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order2.put("vehiclePlate", "59A-123.45");
         order2.put("createdAt", FieldValue.serverTimestamp());
         order2.put("updatedAt", FieldValue.serverTimestamp());
+        order2.put("note", "Khong banh chan");
         orders.add(order2);
 
         List<Map<String, Object>> order3Items = new ArrayList<>();
@@ -1038,6 +994,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order3.put("vehiclePlate", null);
         order3.put("createdAt", FieldValue.serverTimestamp());
         order3.put("updatedAt", FieldValue.serverTimestamp());
+        order3.put("note", "");
         orders.add(order3);
 
         List<Map<String, Object>> order4Items = new ArrayList<>();
@@ -1065,6 +1022,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order4.put("vehiclePlate", null);
         order4.put("createdAt", FieldValue.serverTimestamp());
         order4.put("updatedAt", FieldValue.serverTimestamp());
+        order4.put("note", "Giao sau 30 phut");
         orders.add(order4);
 
         List<Map<String, Object>> order5Items = new ArrayList<>();
@@ -1092,6 +1050,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order5.put("vehiclePlate", null);
         order5.put("createdAt", FieldValue.serverTimestamp());
         order5.put("updatedAt", FieldValue.serverTimestamp());
+        order5.put("note", "Bo qua nuoc mam");
         orders.add(order5);
 
         List<Map<String, Object>> order6Items = new ArrayList<>();
@@ -1126,6 +1085,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order6.put("vehiclePlate", "59A-123.45");
         order6.put("createdAt", FieldValue.serverTimestamp());
         order6.put("updatedAt", FieldValue.serverTimestamp());
+        order6.put("note", "");
         orders.add(order6);
 
         List<Map<String, Object>> order7Items = new ArrayList<>();
@@ -1153,6 +1113,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order7.put("vehiclePlate", "59A-123.45");
         order7.put("createdAt", FieldValue.serverTimestamp());
         order7.put("updatedAt", FieldValue.serverTimestamp());
+        order7.put("note", "Giao nhanh");
         orders.add(order7);
 
         kiemTraVaSeed(collectionName, orders);
@@ -1338,24 +1299,36 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 Map.ofEntries(
                         Map.entry("id", "mv_001"),
                         Map.entry("name", "Giam 20K phi giao hang"),
+                        Map.entry("title", "Giam 20K phi giao hang"),
+                        Map.entry("subtitle", "Ap dung cho don tu 50K."),
                         Map.entry("code", "FREESHIP20"),
                         Map.entry("description", "Ap dung cho don tu 100K"),
                         Map.entry("expiryDate", java.time.Instant.parse("2027-12-31T23:59:59Z")),
                         Map.entry("type", 2),
                         Map.entry("value", 20000.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
+                        Map.entry("terms", "Ap dung cho don tu 50K."),
                         Map.entry("minOrderValue", 50000.0),
+                        Map.entry("isActive", true),
+                        Map.entry("isFreeship", true),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "mv_002"),
                         Map.entry("name", "Giam 10% cho don hang"),
+                        Map.entry("title", "Giam 10% cho don hang"),
+                        Map.entry("subtitle", "Giam 10% cho moi don hang."),
                         Map.entry("code", "SAVE10"),
                         Map.entry("description", "Giam 10% cho moi don hang"),
                         Map.entry("expiryDate", java.time.Instant.parse("2027-12-31T23:59:59Z")),
                         Map.entry("type", 1),
                         Map.entry("value", 10.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
+                        Map.entry("terms", "Giam 10% cho moi don hang."),
                         Map.entry("minOrderValue", 50000.0),
+                        Map.entry("isActive", true),
+                        Map.entry("isFreeship", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )

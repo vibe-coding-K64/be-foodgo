@@ -195,10 +195,8 @@ Phân hệ nắm quyền kiểm soát toàn cục, cấu hình hệ thống và 
 |---|---|---|
 | Quản lý danh mục trang chủ | `categories` | CRUD danh mục hiển thị trên app (Cơm, Phở/Bún, Trà sữa...), sắp xếp theo `order` |
 | Quản lý banner quảng cáo | `banners` | Tạo, sửa, xóa banner, gán cho quán cụ thể (`storeId`) hoặc banner chung |
-| Phát hành voucher hệ thống | `system_vouchers` | Tạo voucher cho toàn hệ thống (`title`, `pointsRequired`, `remaining`, `minOrderValue`) |
+| Phát hành voucher hệ thống | `vouchers` | Tạo voucher cho toàn hệ thống (`storeId=null`, `pointsRequired>0`) |
 | Quản lý voucher công khai | `vouchers` | CRUD voucher hiển thị tại trang Ưu đãi |
-
-**Lưu ý:** Hiện tại `system_vouchers` chưa có dữ liệu seed. Cần bổ sung seeder cho collection này khi phát triển chức năng Admin quản lý voucher.
 
 ### 4.3. Quản lý kiểm duyệt
 
@@ -244,7 +242,7 @@ Phân hệ nắm quyền kiểm soát toàn cục, cấu hình hệ thống và 
 | `banners` | Xem banner | — | — | Quản lý banner |
 | `reviews` | Viết/đọc review | — | — | Kiểm duyệt review |
 | `orders` | Đặt hàng, theo dõi | Xử lý đơn | Nhận/giao đơn | Can thiệp đơn |
-| `vouchers` / `system_vouchers` | Xem/đổi voucher | — | — | Phát hành voucher |
+| `vouchers` | Xem/đổi voucher | — | — | Phát hành voucher |
 | `customer_profiles/{userId}/addresses` | Quản lý địa chỉ | — | — | — |
 | `customer_profiles/{userId}/payment_methods` | Quản lý thanh toán | — | — | — |
 | `customer_profiles/{userId}/cart` | Giỏ hàng | — | — | — |
