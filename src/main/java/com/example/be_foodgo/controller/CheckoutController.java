@@ -1,6 +1,6 @@
 package com.example.be_foodgo.controller;
 
-import com.example.be_foodgo.dto.CheckoutRequest;
+import com.example.be_foodgo.dto.CheckoutRequestV2;
 import com.example.be_foodgo.dto.CheckoutResponse;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.service.CheckoutService;
@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/orders")
 @Tag(name = "Checkout", description = "API dat hang (Checkout) cho phan he Khach hang")
+@SecurityRequirement(name = "bearerAuth")
 public class CheckoutController {
 
     private static final Logger log = LoggerFactory.getLogger(CheckoutController.class);
@@ -66,11 +68,12 @@ public class CheckoutController {
             @Valid
             @RequestBody
             @Parameter(description = "Thong tin dat hang")
-            CheckoutRequest request
+            CheckoutRequestV2 request
     ) {
-        log.info("Nhan yeu cau dat hang - userId: {}, addressId: {}, paymentMethod: {}, voucherId: {}",
-                request.getUserId(), request.getAddressId(), request.getPaymentMethod(),
-                request.getVoucherId() != null ? request.getVoucherId() : "khong co");
+        log.info("Nhan yeu cau dat hang - userId: {}, addressId: {}, paymentMethod: {}, storeId: {}, discountVoucher: {}, shopVoucher: {}, freeshpVoucher: {}, itemCount: {}",
+                request.getUserId(), request.getAddressId(), request.getPaymentMethod(), request.getStoreId(),
+                request.getDiscountVoucherId(), request.getShopVoucherId(), request.getFreeshpVoucherId(),
+                request.getItems() != null ? request.getItems().size() : 0);
 
         CheckoutResponse response = checkoutService.thucHienDatHang(request);
 

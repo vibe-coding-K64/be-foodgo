@@ -1,16 +1,15 @@
 package com.example.be_foodgo.service;
 
-import com.example.be_foodgo.dto.CartRequest;
-import com.example.be_foodgo.dto.CheckoutRequest;
+import com.example.be_foodgo.dto.CheckoutRequestV2;
 import com.example.be_foodgo.dto.CheckoutResponse;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.model.Address;
-import com.example.be_foodgo.model.CartItem;
 import com.example.be_foodgo.model.MyVoucher;
+import com.example.be_foodgo.model.PaymentMethod;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.model.Voucher;
 import com.example.be_foodgo.repository.AddressRepository;
-import com.example.be_foodgo.repository.CartRepository;
+import com.example.be_foodgo.repository.PaymentRepository;
 import com.example.be_foodgo.repository.ProductRepository;
 import com.example.be_foodgo.repository.StoreRepository;
 import com.example.be_foodgo.repository.VoucherRepository;
@@ -22,7 +21,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,51 +38,43 @@ public class CheckoutService {
     private static final double GIOI_HAN_KHOANG_CACH_KM = 10.0;
     private static final double PHI_SHIP_CO_BAN = 15000.0;
 
-    private final CartRepository cartRepository;
     private final AddressRepository addressRepository;
+    private final PaymentRepository paymentRepository;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final VoucherRepository voucherRepository;
     private final Firestore firestore;
 
     public CheckoutService(
-            CartRepository cartRepository,
             AddressRepository addressRepository,
+            PaymentRepository paymentRepository,
             ProductRepository productRepository,
             StoreRepository storeRepository,
             VoucherRepository voucherRepository,
             Firestore firestore
     ) {
-        this.cartRepository = cartRepository;
         this.addressRepository = addressRepository;
+        this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
         this.voucherRepository = voucherRepository;
         this.firestore = firestore;
     }
 
-    public CheckoutResponse thucHienDatHang(CheckoutRequest request) {
+    public CheckoutResponse thucHienDatHang(CheckoutRequestV2 request) {
         String userId = request.getUserId();
         String addressId = request.getAddressId();
-        log.info("Bat dau xu ly dat hang - userId: {}, addressId: {}, voucherId: {}, paymentMethod: {}",
-                userId, addressId, request.getVoucherId(), request.getPaymentMethod());
+        String storeId = request.getStoreId();
+        log.info("Bat dau xu ly dat hang - userId: {}, addressId: {}, storeId: {}, paymentMethod: {}, discountVoucher: {}, shopVoucher: {}, freeshpVoucher: {}",
+                userId, addressId, storeId, request.getPaymentMethod(),
+                request.getDiscountVoucherId(), request.getShopVoucherId(), request.getFreeshpVoucherId());
 
-        List<CartItem> gioHang;
-        try {
-            gioHang = cartRepository.layTatCaMonTrongGio(userId);
-        } catch (Exception e) {
-            log.error("Loi khi truy van gio hang cua nguoi dung [{}]: {}", userId, e.getMessage());
-            throw BusinessException.loiHeThong("Khong the truy van gio hang.");
-        }
-
-        if (gioHang.isEmpty()) {
-            log.warn("Gio hang cua nguoi dung [{}] dang rong.", userId);
+        List<CheckoutRequestV2.CheckoutItem> requestItems = request.getItems();
+        if (requestItems == null || requestItems.isEmpty()) {
+            log.warn("Danh sach items cua nguoi dung [{}] dang rong.", userId);
             throw BusinessException.gioHangRong();
         }
-        log.info("Tim thay {} mon trong gio hang cua nguoi dung [{}].", gioHang.size(), userId);
-
-        String storeId = gioHang.get(0).getStoreId();
-        log.info("Cua hang cua gio hang: [{}].", storeId);
+        log.info("Tong so {} mon trong yeu cau checkout cua nguoi dung [{}].", requestItems.size(), userId);
 
         Address diaChi;
         try {
@@ -113,9 +107,9 @@ public class CheckoutService {
 
         kiemTraKhoangCach(cuaHang, diaChi);
 
-        List<String> foodIds = gioHang.stream().map(CartItem::getFoodId).toList();
+        List<String> foodIds = requestItems.stream().map(CheckoutRequestV2.CheckoutItem::getFoodId).toList();
         Map<String, Boolean> trangThaiTonKho = kiemTraTonKhoSanPham(foodIds);
-        for (CartItem item : gioHang) {
+        for (CheckoutRequestV2.CheckoutItem item : requestItems) {
             Boolean conHang = trangThaiTonKho.get(item.getFoodId());
             if (conHang == null || conHang) {
                 log.info("San pham [{}] con hang trong he thong, kiem tra thanh cong.", item.getFoodId());
@@ -125,16 +119,30 @@ public class CheckoutService {
             }
         }
 
-        double tongTienHang = tinhTongTienHang(gioHang);
+        double tongTienHang = tinhTongTienTuItems(requestItems);
         double phiShip = PHI_SHIP_CO_BAN;
         double soTienGiam = 0.0;
-        VoucherInfo voucherInfo = null;
+        List<VoucherInfo> voucherInfos = new ArrayList<>();
 
-        if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
-            voucherInfo = kiemTraVaXuLyVoucher(userId, request.getVoucherId(), tongTienHang);
-            soTienGiam = tinhSoTienGiam(voucherInfo, tongTienHang);
-            log.info("Ap dung voucher [{}] - giam {} VND.", request.getVoucherId(), soTienGiam);
+        if (request.getDiscountVoucherId() != null && !request.getDiscountVoucherId().isBlank()) {
+            VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getDiscountVoucherId(), tongTienHang);
+            voucherInfos.add(info);
+            log.info("Ap dung discount voucher [{}].", request.getDiscountVoucherId());
         }
+
+        if (request.getShopVoucherId() != null && !request.getShopVoucherId().isBlank()) {
+            VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getShopVoucherId(), tongTienHang);
+            voucherInfos.add(info);
+            log.info("Ap dung shop voucher [{}].", request.getShopVoucherId());
+        }
+
+        if (request.getFreeshpVoucherId() != null && !request.getFreeshpVoucherId().isBlank()) {
+            VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getFreeshpVoucherId(), tongTienHang);
+            voucherInfos.add(info);
+            log.info("Ap dung freeshp voucher [{}].", request.getFreeshpVoucherId());
+        }
+
+        soTienGiam = tinhTongSoTienGiam(voucherInfos, tongTienHang, phiShip);
 
         double tongThanhToan = tongTienHang + phiShip - soTienGiam;
         if (tongThanhToan < 0) {
@@ -144,14 +152,26 @@ public class CheckoutService {
         log.info("Tinh toan chi phi - Tong tien hang: {}, Phi ship: {}, Giam gia: {}, Tong phai tra: {}.",
                 tongTienHang, phiShip, soTienGiam, tongThanhToan);
 
-        CheckoutResponse.OrderItemData[] orderItems = chuanBiOrderItems(gioHang);
+        CheckoutResponse.OrderItemData[] orderItems = chuanBiOrderItems(requestItems);
         String orderId = taoDonHangAtomic(
                 userId, storeId, cuaHang.getName(), diaChi, request,
                 orderItems, tongTienHang, phiShip, soTienGiam, tongThanhToan,
-                voucherInfo
+                voucherInfos
         );
 
-        String orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : orderId.toUpperCase();
+        String orderCode = String.format("FG-%s-%s",
+                LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
+                orderId.substring(orderId.length() - 3).toUpperCase());
+
+        String paymentMethodName = request.getPaymentMethod();
+        try {
+            PaymentMethod pm = paymentRepository.layMotPhuongThuc(userId, request.getPaymentMethod());
+            if (pm != null && pm.getType() != null) {
+                paymentMethodName = pm.getType();
+            }
+        } catch (Exception e) {
+            log.warn("Khong the lay payment method [{}] tu Firestore, tra ve ID goc", request.getPaymentMethod());
+        }
 
         log.info("Dat hang thanh cong - orderId: [{}], orderCode: [{}].", orderId, orderCode);
 
@@ -166,7 +186,7 @@ public class CheckoutService {
                 .deliveryFee(phiShip)
                 .discountAmount(soTienGiam)
                 .finalAmount(tongThanhToan)
-                .paymentMethod(request.getPaymentMethod())
+                .paymentMethod(paymentMethodName)
                 .deliveryAddress(diaChi.getAddress())
                 .status(0)
                 .createdAt(Instant.now())
@@ -223,14 +243,6 @@ public class CheckoutService {
             }
         }
         return ketQua;
-    }
-
-    private double tinhTongTienHang(List<CartItem> gioHang) {
-        double tong = 0.0;
-        for (CartItem item : gioHang) {
-            tong += item.getPrice() * item.getQuantity();
-        }
-        return tong;
     }
 
     private VoucherInfo kiemTraVaXuLyVoucher(String userId, String voucherId, double tongTienHang) {
@@ -296,15 +308,20 @@ public class CheckoutService {
     }
 
     private void kiemTraVoucherCaNhan(MyVoucher voucher, String voucherId, double tongTienHang) {
+        if (!voucher.isActive()) {
+            log.warn("Voucher ca nhan [{}] chua duoc kich hoat (isActive: false).", voucherId);
+            throw BusinessException.voucherInactive(voucherId);
+        }
+
         if (voucher.getExpiryDate() != null) {
-            Instant now = Instant.now();
-            if (now.isAfter(voucher.getExpiryDate())) {
+            Date now = new Date();
+            if (now.after(voucher.getExpiryDate())) {
                 log.warn("Voucher ca nhan [{}] da het han (ngay het han: {}).", voucherId, voucher.getExpiryDate());
                 throw BusinessException.voucherDaHetHan(voucherId);
             }
         }
 
-        double minOrderValue = voucher.getMinOrderValue() != null ? voucher.getMinOrderValue() : 0.0;
+        double minOrderValue = voucher.getMinOrderValue();
         if (minOrderValue > 0 && tongTienHang < minOrderValue) {
             log.warn("Voucher [{}] yeu cau don hang toi thieu {} VND, nhung gia tri hien tai la {} VND.",
                     voucherId, minOrderValue, tongTienHang);
@@ -327,13 +344,19 @@ public class CheckoutService {
         return minOrderValue;
     }
 
-    private double tinhSoTienGiam(VoucherInfo info, double tongTienHang) {
+    private double tinhSoTienGiam(VoucherInfo info, double tongTienHang, double phiShip) {
         if (info.getLoaiVoucher() == LoaiVoucher.SYSTEM) {
             Voucher v = info.getSystemVoucher();
             int type = v.getType();
             double voucherValue = v.getValue();
-            log.info("Tinh giam voucher he thong - type: {}, value: {}, tongTienHang: {}", type, voucherValue, tongTienHang);
+            boolean isFreeship = v.getIsFreeship();
+            log.info("Tinh giam voucher he thong - type: {}, value: {}, isFreeship: {}, tongTienHang: {}, phiShip: {}", type, voucherValue, isFreeship, tongTienHang, phiShip);
 
+            if (isFreeship) {
+                double soTienGiam = phiShip;
+                log.info("Voucher he thong freeship - giam {} VND.", soTienGiam);
+                return soTienGiam;
+            }
             if (type == 1) {
                 double soTienGiam = tongTienHang * (voucherValue / 100.0);
                 log.info("Voucher he thong phan tram - giam {}% tuong duong {} VND.", voucherValue, soTienGiam);
@@ -348,9 +371,16 @@ public class CheckoutService {
             }
         } else {
             MyVoucher v = info.getMyVoucher();
-            Integer type = v.getType() != null ? v.getType() : 2;
-            Double voucherValue = v.getValue() != null ? v.getValue() : 0.0;
+            int type = v.getType();
+            double voucherValue = v.getValue();
+            boolean isFreeship = v.isFreeship();
+            log.info("Tinh giam voucher ca nhan - type: {}, value: {}, isFreeship: {}, tongTienHang: {}, phiShip: {}", type, voucherValue, isFreeship, tongTienHang, phiShip);
 
+            if (isFreeship) {
+                double soTienGiam = phiShip;
+                log.info("Voucher ca nhan freeship - giam {} VND.", soTienGiam);
+                return soTienGiam;
+            }
             if (type == 1) {
                 double soTienGiam = tongTienHang * (voucherValue / 100.0);
                 log.info("Voucher ca nhan phan tram - giam {}% tuong duong {} VND.", voucherValue, soTienGiam);
@@ -366,24 +396,50 @@ public class CheckoutService {
         }
     }
 
-    private CheckoutResponse.OrderItemData[] chuanBiOrderItems(List<CartItem> gioHang) {
+    private double tinhTongSoTienGiam(List<VoucherInfo> voucherInfos, double tongTienHang, double phiShip) {
+        double tongSoTienGiam = 0.0;
+        double phiShipConLai = phiShip;
+
+        for (VoucherInfo info : voucherInfos) {
+            double soTienGiam = tinhSoTienGiam(info, tongTienHang, phiShipConLai);
+            tongSoTienGiam += soTienGiam;
+
+            if (info.getLoaiVoucher() == LoaiVoucher.SYSTEM) {
+                Voucher v = info.getSystemVoucher();
+                if (v.getIsFreeship()) {
+                    phiShipConLai = 0.0;
+                }
+            } else {
+                MyVoucher v = info.getMyVoucher();
+                if (v.isFreeship()) {
+                    phiShipConLai = 0.0;
+                }
+            }
+        }
+
+        return tongSoTienGiam;
+    }
+
+    private CheckoutResponse.OrderItemData[] chuanBiOrderItems(List<CheckoutRequestV2.CheckoutItem> requestItems) {
         List<CheckoutResponse.OrderItemData> items = new ArrayList<>();
-        for (CartItem cartItem : gioHang) {
-            List<CartRequest.ToppingOption> toppingOptions = null;
-            if (cartItem.getToppings() != null && !cartItem.getToppings().isEmpty()) {
+        for (CheckoutRequestV2.CheckoutItem cartItem : requestItems) {
+            List<CheckoutResponse.ItemOption> toppingOptions = null;
+            if (cartItem.getOptions() != null && !cartItem.getOptions().isEmpty()) {
                 toppingOptions = new ArrayList<>();
-                for (CartItem.ToppingItem t : cartItem.getToppings()) {
-                    toppingOptions.add(CartRequest.ToppingOption.builder()
+                for (CheckoutRequestV2.ItemOption t : cartItem.getOptions()) {
+                    toppingOptions.add(CheckoutResponse.ItemOption.builder()
                             .name(t.getName())
                             .price(t.getPrice())
                             .build());
                 }
             }
 
+            double donGia = tinhDonGiaMotMon(cartItem);
+
             items.add(CheckoutResponse.OrderItemData.builder()
                     .foodId(cartItem.getFoodId())
                     .name(cartItem.getName())
-                    .price(tinhDonGiaDonMon(cartItem))
+                    .price(donGia)
                     .quantity(cartItem.getQuantity())
                     .imageUrl(cartItem.getImageUrl())
                     .options(toppingOptions)
@@ -392,9 +448,33 @@ public class CheckoutService {
         return items.toArray(new CheckoutResponse.OrderItemData[0]);
     }
 
-    private Double tinhDonGiaDonMon(CartItem item) {
-        Double donGia = item.getPrice() / item.getQuantity();
-        return donGia;
+    private double tinhDonGiaMotMon(CheckoutRequestV2.CheckoutItem item) {
+        double tongDonGia = 0.0;
+        try {
+            var product = productRepository.findById(item.getFoodId());
+            if (product != null && product.getBasePrice() > 0) {
+                tongDonGia = product.getBasePrice();
+            }
+        } catch (Exception e) {
+            log.warn("Khong the lay gia san pham [{}] tu repository, su dung 0", item.getFoodId());
+        }
+        if (item.getOptions() != null) {
+            for (CheckoutRequestV2.ItemOption opt : item.getOptions()) {
+                if (opt.getPrice() != null) {
+                    tongDonGia += opt.getPrice();
+                }
+            }
+        }
+        return tongDonGia;
+    }
+
+    private double tinhTongTienTuItems(List<CheckoutRequestV2.CheckoutItem> requestItems) {
+        double tong = 0.0;
+        for (CheckoutRequestV2.CheckoutItem item : requestItems) {
+            double donGia = tinhDonGiaMotMon(item);
+            tong += donGia * item.getQuantity();
+        }
+        return tong;
     }
 
     private String taoDonHangAtomic(
@@ -402,13 +482,13 @@ public class CheckoutService {
             String storeId,
             String storeName,
             Address diaChi,
-            CheckoutRequest request,
+            CheckoutRequestV2 request,
             CheckoutResponse.OrderItemData[] orderItems,
             double tongTienHang,
             double phiShip,
             double soTienGiam,
             double tongThanhToan,
-            VoucherInfo voucherInfo
+            List<VoucherInfo> voucherInfos
     ) {
         WriteBatch batch = firestore.batch();
         log.info("Bat dau tao don hang atomi cho nguoi dung [{}].", userId);
@@ -427,7 +507,7 @@ public class CheckoutService {
             itemMap.put("imageUrl", item.getImageUrl() != null ? item.getImageUrl() : "");
             if (item.getOptions() != null) {
                 List<Map<String, Object>> toppingMaps = new ArrayList<>();
-                for (CartRequest.ToppingOption t : item.getOptions()) {
+                for (CheckoutResponse.ItemOption t : item.getOptions()) {
                     toppingMaps.add(Map.of("name", t.getName() != null ? t.getName() : "",
                             "price", t.getPrice() != null ? t.getPrice() : 0.0));
                 }
@@ -463,36 +543,23 @@ public class CheckoutService {
         batch.set(orderDocRef, orderData);
         log.info("Them thao tac tao document don hang [{}] vao WriteBatch.", orderId);
 
-        try {
-            List<CartItem> gioHang = cartRepository.layTatCaMonTrongGio(userId);
-            for (CartItem cartItem : gioHang) {
-                DocumentReference cartDocRef = firestore
-                        .collection("customer_profiles")
-                        .document(userId)
-                        .collection("cart")
-                        .document(cartItem.getId());
-                batch.delete(cartDocRef);
-            }
-            log.info("Them {} thao tac xoa gio hang vao WriteBatch.", gioHang.size());
-        } catch (Exception e) {
-            log.error("Loi khi lay gio hang de xoa: {}", e.getMessage());
-        }
-
-        if (voucherInfo != null) {
-            String voucherId = voucherInfo.getVoucherId();
-            if (voucherInfo.getLoaiVoucher() == LoaiVoucher.SYSTEM) {
-                DocumentReference voucherDocRef = firestore.collection("vouchers").document(voucherId);
-                batch.update(voucherDocRef, "remaining",
-                        com.google.cloud.firestore.FieldValue.increment(-1));
-                log.info("Them thao tac giam remaining voucher he thong [{}] vao WriteBatch.", voucherId);
-            } else {
-                DocumentReference myVoucherDocRef = firestore
-                        .collection("customer_profiles")
-                        .document(userId)
-                        .collection("my_vouchers")
-                        .document(voucherId);
-                batch.delete(myVoucherDocRef);
-                log.info("Them thao tac xoa voucher ca nhan [{}] khoi my_vouchers vao WriteBatch.", voucherId);
+        if (voucherInfos != null && !voucherInfos.isEmpty()) {
+            for (VoucherInfo voucherInfo : voucherInfos) {
+                String voucherId = voucherInfo.getVoucherId();
+                if (voucherInfo.getLoaiVoucher() == LoaiVoucher.SYSTEM) {
+                    DocumentReference voucherDocRef = firestore.collection("vouchers").document(voucherId);
+                    batch.update(voucherDocRef, "remaining",
+                            com.google.cloud.firestore.FieldValue.increment(-1));
+                    log.info("Them thao tac giam remaining voucher he thong [{}] vao WriteBatch.", voucherId);
+                } else {
+                    DocumentReference myVoucherDocRef = firestore
+                            .collection("customer_profiles")
+                            .document(userId)
+                            .collection("my_vouchers")
+                            .document(voucherId);
+                    batch.delete(myVoucherDocRef);
+                    log.info("Them thao tac xoa voucher ca nhan [{}] khoi my_vouchers vao WriteBatch.", voucherId);
+                }
             }
         }
 
