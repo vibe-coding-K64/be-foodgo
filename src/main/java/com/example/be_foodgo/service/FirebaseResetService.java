@@ -246,7 +246,8 @@ public class FirebaseResetService {
                         Map.entry("photoUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("roles", Arrays.asList(1, 2, 3)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_002"), Map.entry("email", "admin@foodgo.com"),
@@ -255,7 +256,8 @@ public class FirebaseResetService {
                         Map.entry("photoUrl", "https://example.com/avatar/admin.jpg"),
                         Map.entry("roles", Arrays.asList(4)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_003"), Map.entry("email", "taixe@gmail.com"),
@@ -264,7 +266,8 @@ public class FirebaseResetService {
                         Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_004"), Map.entry("email", "taixe2@gmail.com"),
@@ -273,7 +276,8 @@ public class FirebaseResetService {
                         Map.entry("photoUrl", "https://example.com/avatar/driver002.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_005"), Map.entry("email", "taixe3@gmail.com"),
@@ -282,7 +286,8 @@ public class FirebaseResetService {
                         Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 )
         );
         seedDirect("users", users);

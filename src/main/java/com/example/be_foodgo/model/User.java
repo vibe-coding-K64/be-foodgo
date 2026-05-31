@@ -22,4 +22,5 @@ public class User {
     private List<Integer> roles;
     private String createdAt;
     private String updatedAt;
+    private Boolean isEmailVerified;
 }

@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.*;
 
 //comment nó lại đi
-@Component
+// @Component
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);
@@ -225,7 +225,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("roles", Arrays.asList(1, 2, 3)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_002"),
@@ -236,7 +237,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/admin.jpg"),
                         Map.entry("roles", Arrays.asList(4)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_003"),
@@ -247,7 +249,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_004"),
@@ -258,7 +261,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/driver002.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_005"),
@@ -269,7 +273,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 )
         );
         kiemTraVaSeed(collectionName, users);

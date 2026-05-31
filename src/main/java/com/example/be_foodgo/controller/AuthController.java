@@ -26,7 +26,7 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(
             summary = "Dang ky tai khoan khach hang moi",
-            description = "Tao tai khoan khach hang moi voi email, mat khau (ma hoa BCrypt), ho ten va so dien thoai. Mac dinh roles = [1] (Khach hang)."
+            description = "Tao tai khoan khach hang moi voi email, mat khau (ma hoa BCrypt), ho ten va so dien thoai. Mac dinh roles = [1] (Khach hang). Email chua duoc xac thuc (isEmailVerified = false)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dang ky thanh cong, tra ve JWT token",
@@ -37,6 +37,49 @@ public class AuthController {
         try {
             AuthResponse response = authService.register(request);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/send-verify-email-otp")
+    @Operation(
+            summary = "Gui ma OTP xac thuc email",
+            description = "Gui ma OTP 6 chu so den email de xac thuc. Sau khi xac thuc thanh cong, nguoi dung co the dang nhap. Chi ap dung cho tai khoan chua xac thuc email."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ma OTP da duoc gui",
+                    content = @Content(schema = @Schema(implementation = OtpSendResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Email da xac thuc hoac khong ton tai")
+    })
+    public ResponseEntity<?> sendVerifyEmailOtp(@Valid @RequestBody VerifyEmailRequest request) {
+        try {
+            OtpSendResponse response = authService.guiOtpXacThucEmail(request.getEmail());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(
+            summary = "Xac thuc email bang OTP",
+            description = "Xac thuc email bang ma OTP nhan duoc. Sau khi xac thuc thanh cong, isEmailVerified = true va nguoi dung co the dang nhap."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Xac thuc email thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Ma OTP khong dung hoac da het han")
+    })
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailOtpRequest request) {
+        try {
+            authService.xacThucEmail(request.getEmail(), request.getOtpCode());
+            return ResponseEntity.ok(
+                    com.example.be_foodgo.exception.ApiResponse.thatSuccess(
+                            null, "Xac thuc email thanh cong. Ban co the dang nhap."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     com.example.be_foodgo.exception.ApiResponse.thatError(

@@ -33,6 +33,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final Firestore firestore;
     private final RefreshTokenService refreshTokenService;
+    private final EmailService emailService;
 
     private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
 
@@ -40,12 +41,14 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
                        Firestore firestore,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.firestore = firestore;
         this.refreshTokenService = refreshTokenService;
+        this.emailService = emailService;
     }
 
     public AuthResponse register(RegisterRequest request) throws Exception {
@@ -73,6 +76,7 @@ public class AuthService {
                 .photoUrl(null)
                 .roles(List.of(1))
                 .createdAt(Instant.now().toString())
+                .isEmailVerified(false)
                 .build();
 
         userRepository.taoUser(user);
@@ -98,6 +102,11 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.warn("Mat khau khong dung cho email: {}", request.getEmail());
             throw new IllegalArgumentException("Email hoac mat khau khong dung.");
+        }
+
+        if (Boolean.FALSE.equals(user.getIsEmailVerified())) {
+            log.warn("Email chua duoc xac thuc cho: {}", request.getEmail());
+            throw new IllegalArgumentException("Email chua duoc xac thuc. Vui long xac thuc email truoc khi dang nhap.");
         }
 
         log.info("Dang nhap thanh cong - UserId: {}", user.getId());
@@ -136,6 +145,10 @@ public class AuthService {
         System.out.println("Ma OTP: " + otp);
         System.out.println("Het han sau: " + OTP_TTL_SECONDS + " giay");
         System.out.println("======================================");
+
+        if (emailOrPhone.contains("@")) {
+            emailService.guiEmailQuenMatKhau(emailOrPhone, otp);
+        }
 
         return OtpSendResponse.builder()
                 .emailOrPhone(emailOrPhone)
@@ -184,6 +197,66 @@ public class AuthService {
         log.info("Xac thuc OTP thanh cong - UserId: {}", userId);
 
         return OtpVerifyResponse.of(tempToken, TEMP_TOKEN_TTL_MS);
+    }
+
+    public OtpSendResponse guiOtpXacThucEmail(String email) throws Exception {
+        log.info("Bat dau gui OTP xac thuc email: {}", email);
+
+        User user = userRepository.timTheoEmail(email);
+        if (user == null) {
+            log.warn("Khong tim thay tai khoan voi email: {}", email);
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi email nay.");
+        }
+
+        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            log.warn("Email da duoc xac thuc: {}", email);
+            throw new IllegalArgumentException("Email nay da duoc xac thuc.");
+        }
+
+        String otp = sinhMaOtp();
+        otpStore.put("verify:" + email, new OtpEntry(otp, user.getId(), System.currentTimeMillis() + OTP_TTL_SECONDS * 1000));
+        log.info("Ma OTP xac thuc email cho {}: {} (hieu luc {} giay)", email, otp, OTP_TTL_SECONDS);
+        System.out.println("========== [DEV MODE] OTP XAC THUC EMAIL ==========");
+        System.out.println("Den: " + email);
+        System.out.println("Ma OTP: " + otp);
+        System.out.println("Het han sau: " + OTP_TTL_SECONDS + " giay");
+        System.out.println("===================================================");
+
+        emailService.guiEmailXacThuc(email, otp);
+
+        return OtpSendResponse.builder()
+                .emailOrPhone(email)
+                .message("Ma OTP xac thuc email da duoc gui. Vui long kiem tra email.")
+                .otpCode(otp)
+                .expiresInSeconds((int) OTP_TTL_SECONDS)
+                .build();
+    }
+
+    public void xacThucEmail(String email, String otpCode) throws Exception {
+        String key = "verify:" + email;
+        log.info("Bat dau xac thuc email: {}", email);
+
+        OtpEntry entry = otpStore.get(key);
+        if (entry == null) {
+            log.warn("Khong co ma OTP xac thuc email cho: {}", email);
+            throw new IllegalArgumentException("Ma OTP khong hop le hoac da het han. Vui long gui lai ma OTP.");
+        }
+
+        if (System.currentTimeMillis() > entry.expiresAtMs) {
+            log.warn("Ma OTP xac thuc email da het han cho: {}", email);
+            otpStore.remove(key);
+            throw new IllegalArgumentException("Ma OTP da het han. Vui long gui lai ma OTP.");
+        }
+
+        if (!entry.otp.equals(otpCode)) {
+            log.warn("Ma OTP xac thuc email khong dung cho: {}", email);
+            throw new IllegalArgumentException("Ma OTP khong dung. Vui long thu lai.");
+        }
+
+        String userId = entry.userId;
+        userRepository.xacThucEmail(userId);
+        otpStore.remove(key);
+        log.info("Xac thuc email thanh cong - UserId: {}", userId);
     }
 
     public void datLaiMatKhau(ResetPasswordRequest request) throws Exception {
@@ -433,6 +506,7 @@ public class AuthService {
                 .phoneNumber(user.getPhoneNumber())
                 .photoUrl(user.getPhotoUrl())
                 .roles(user.getRoles())
+                .isEmailVerified(user.getIsEmailVerified())
                 .build();
     }
 

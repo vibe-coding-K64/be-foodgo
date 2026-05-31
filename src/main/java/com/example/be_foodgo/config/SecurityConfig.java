@@ -53,7 +53,9 @@ public class SecurityConfig {
                                 "/api/auth/register-merchant",
                                 "/api/auth/refresh-token",
                                 "/api/auth/logout",
-                                "/api/auth/firebase/link"
+                                "/api/auth/firebase/link",
+                                "/api/auth/send-verify-email-otp",
+                                "/api/auth/verify-email"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/stores/{id}",
