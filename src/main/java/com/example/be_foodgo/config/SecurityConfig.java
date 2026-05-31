@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/api/auth/verify-otp",
                                 "/api/auth/reset-password",
                                 "/api/auth/register-merchant",
+                                "/api/auth/check-merchant",
                                 "/api/auth/refresh-token",
                                 "/api/auth/logout",
                                 "/api/auth/firebase/link",

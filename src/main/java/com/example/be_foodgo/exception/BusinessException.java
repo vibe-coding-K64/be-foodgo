@@ -247,7 +247,7 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,
                 "INSUFFICIENT_BALANCE",
-                String.format("So du hien tai %.0f VND khong du de rut %.0f VND.", soDu, soTienRut)
+                String.format("Số dư hiện tại %.0f VND không đủ để rút %.0f VND.", soDu, soTienRut)
         );
     }
 
