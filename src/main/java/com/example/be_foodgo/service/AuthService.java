@@ -33,11 +33,8 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final Firestore firestore;
     private final RefreshTokenService refreshTokenService;
-<<<<<<< HEAD
     private final EmailService emailService;
-=======
     private final StoreService storeService;
->>>>>>> d691b68bea0610e991b8f97b77e19b88cdebe08d
 
     private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
 
@@ -46,21 +43,15 @@ public class AuthService {
                        JwtTokenProvider jwtTokenProvider,
                        Firestore firestore,
                        RefreshTokenService refreshTokenService,
-<<<<<<< HEAD
-                       EmailService emailService) {
-=======
+                       EmailService emailService,
                        StoreService storeService) {
->>>>>>> d691b68bea0610e991b8f97b77e19b88cdebe08d
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.firestore = firestore;
         this.refreshTokenService = refreshTokenService;
-<<<<<<< HEAD
         this.emailService = emailService;
-=======
         this.storeService = storeService;
->>>>>>> d691b68bea0610e991b8f97b77e19b88cdebe08d
     }
 
     public AuthResponse register(RegisterRequest request) throws Exception {
