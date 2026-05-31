@@ -55,7 +55,7 @@ public class VoucherExchangeService {
                         .pointsRequired(v.getPointsRequired())
                         .remaining(v.getRemaining())
                         .minOrderValue(v.getMinOrderValue())
-                        .isActive(v.getIsActive())
+                        .isActive(true)
                         .coTheDoi(coTheDoi)
                         .message(message)
                         .build());
@@ -77,16 +77,8 @@ public class VoucherExchangeService {
                 throw BusinessException.voucherKhongTimThay(voucherId);
             }
 
-            if (!systemVoucher.getIsActive()) {
-                throw BusinessException.voucherInactive(voucherId);
-            }
-
             if (systemVoucher.getRemaining() <= 0) {
                 throw BusinessException.voucherDaHetSoLuong(voucherId);
-            }
-
-            if (systemVoucher.getExpiryDate() != null && Instant.now().isAfter(systemVoucher.getExpiryDate().toInstant())) {
-                throw BusinessException.voucherDaHetHan(voucherId);
             }
 
             Integer diemHienTai = layDiemHienTai(userId);
@@ -107,7 +99,7 @@ public class VoucherExchangeService {
             voucherRepository.truLoyaltyPoints(userId, pointsRequired);
 
             String myVoucherId = "mv_" + UUID.randomUUID().toString().substring(0, 8);
-            int validityDays = systemVoucher.getValidityDays() > 0 ? systemVoucher.getValidityDays() : 30;
+            int validityDays = 30;
             Instant expiryDate = ChronoUnit.DAYS.addTo(Instant.now(), validityDays);
 
             MyVoucher myVoucher = MyVoucher.builder()
