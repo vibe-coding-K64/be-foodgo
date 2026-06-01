@@ -44,6 +44,47 @@ public class ProfileController {
         return jwtTokenProvider.layUserIdTuToken(token);
     }
 
+    @GetMapping("/profile")
+    @Operation(
+            summary = "Lay thong tin ho so",
+            description = "Lay thong tin ho so cua tai khoan dang nhap hien tai."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lay ho so thanh cong",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Chua xac thuc - Token khong hop le hoac chua dang nhap"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Khong tim thay tai khoan")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<?> getProfile(HttpServletRequest httpRequest) {
+        try {
+            String userId = trichXuatUserIdTuHeader(httpRequest);
+            if (userId == null) {
+                log.warn("Token xac thuc khong hop le hoac khong co token");
+                return ResponseEntity.status(401).body(
+                        ApiResponse.thatError(401, "Chua xac thuc. Vui long dang nhap de tiep tuc."));
+            }
+
+            log.info("Yeu cau lay ho so tu userId: {}", userId);
+            UserResponse user = profileService.getProfile(userId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(user, "Lay ho so thanh cong."));
+        } catch (IllegalArgumentException e) {
+            log.warn("Loi khi lay ho so: {}", e.getMessage());
+            return ResponseEntity.status(404).body(
+                    ApiResponse.thatError(404, e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi he thong khi lay ho so: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
     @PutMapping("/profile")
     @Operation(
             summary = "Cap nhat thong tin ho so",

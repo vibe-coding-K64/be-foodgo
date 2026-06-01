@@ -1,18 +1,24 @@
 package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.StoreDTO;
+import com.example.be_foodgo.exception.ApiResponse;
+import com.example.be_foodgo.security.JwtTokenProvider;
 import com.example.be_foodgo.service.OrderAssignmentService;
 import com.example.be_foodgo.service.StoreService;
 import com.example.be_foodgo.model.Address;
 import com.example.be_foodgo.repository.AddressRepository;
 import com.example.be_foodgo.repository.OrderRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +31,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Store Management", description = "Quản lý thông tin cửa hàng")
 public class StoreController {
 
+    private static final Logger log = LoggerFactory.getLogger(StoreController.class);
+
     @Autowired
     private StoreService storeService;
 
@@ -36,6 +44,18 @@ public class StoreController {
 
     @Autowired
     private OrderAssignmentService orderAssignmentService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    private String trichXuatUserIdTuHeader(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authHeader.substring(7);
+        return jwtTokenProvider.layUserIdTuToken(token);
+    }
 
     // Lấy thông tin quán theo id
     @GetMapping("/{id}")
@@ -112,13 +132,26 @@ public class StoreController {
         }
     }
 
-    @PostMapping("/{storeId}/orders/{orderId}/confirm")
+    @PostMapping("/orders/{orderId}/confirm")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Xác nhận đơn hàng", description = "Cửa hàng xác nhận đơn hàng và hệ thống tìm tài xế")
+    @Operation(summary = "Xác nhận đơn hàng", description = "Merchant xác nhận đơn hàng của cửa hàng thông qua token")
     public ResponseEntity<?> confirmOrder(
-            @PathVariable String storeId,
+            HttpServletRequest httpRequest,
             @PathVariable String orderId) {
         try {
+            String userId = trichXuatUserIdTuHeader(httpRequest);
+            if (userId == null) {
+                log.warn("Token xac thuc khong hop le hoac khong co token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("success", false, "message", "Chua xac thuc. Vui long dang nhap de tiep tuc."));
+            }
+
+            List<String> storeIds = storeService.getStoreIdsByMerchantId(userId);
+            if (storeIds.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "message", "Tai khoan nay chua co cua hang nao."));
+            }
+
             var orderData = orderRepository.findById(orderId);
             if (orderData == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -126,9 +159,9 @@ public class StoreController {
             }
 
             String orderStoreId = orderData.getStoreId();
-            if (orderStoreId == null || !orderStoreId.equals(storeId)) {
+            if (orderStoreId == null || !storeIds.contains(orderStoreId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("success", false, "message", "Don hang nay khong thuoc ve cua hang nay."));
+                        .body(Map.of("success", false, "message", "Don hang nay khong thuoc ve cua hang cua ban."));
             }
 
             int statusValue = orderData.getStatusValue();
@@ -138,47 +171,18 @@ public class StoreController {
                                 "Khong the xac nhan don hang. Trang thai hien tai: " + statusValue));
             }
 
-            var store = storeService.getStoreById(storeId);
-            if (store == null || store.getLat() == null || store.getLng() == null) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "Thong tin cua hang khong co toa do."));
-            }
-
-            Double deliveryLat = orderData.getDeliveryLat();
-            Double deliveryLng = orderData.getDeliveryLng();
-            if (deliveryLat == null || deliveryLng == null) {
-                Address addr = addressRepository.layMotDiaChi(orderData.getUserId(), orderData.getAddressId());
-                if (addr != null) {
-                    deliveryLat = addr.getLat();
-                    deliveryLng = addr.getLng();
-                }
-            }
-
-            Double deliveryHeading = null;
-            if (deliveryLat != null && deliveryLng != null) {
-                deliveryHeading = tinhHeading(store.getLat(), store.getLng(), deliveryLat, deliveryLng);
-            }
-
             Map<String, Object> updates = new HashMap<>();
             updates.put("status", 1);
-            updates.put("deliveryHeading", deliveryHeading);
-            updates.put("deliveryLat", deliveryLat != null ? deliveryLat : 0.0);
-            updates.put("deliveryLng", deliveryLng != null ? deliveryLng : 0.0);
             updates.put("updatedAt", new java.util.Date());
             orderRepository.updateFields(orderId, updates);
 
-            orderAssignmentService.batDauGánDon(
-                    orderId,
-                    store.getLat(),
-                    store.getLng(),
-                    deliveryLat,
-                    deliveryLng,
-                    deliveryHeading
-            );
-
+            log.info("Merchant {} xac nhan don hang {} thanh cong. Store: {}", userId, orderId, orderStoreId);
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Xac nhan don hang thanh cong. Dang tim tai xe..."
+                    "message", "Xac nhan don hang thanh cong.",
+                    "orderId", orderId,
+                    "storeId", orderStoreId,
+                    "status", 1
             ));
         } catch (Exception e) {
             e.printStackTrace();

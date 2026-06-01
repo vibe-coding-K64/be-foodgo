@@ -58,8 +58,8 @@ public class DeliveryOrderDTO {
     @Schema(description = "Kinh do dia chi giao hang", example = "106.7939")
     private Double deliveryLng;
 
-    @Schema(description = "Phuong thuc thanh toan (cash, momo, zalo, card)", example = "momo")
-    private String paymentMethod;
+    @Schema(description = "Phuong thuc thanh toan (1=Cash, 2=MoMo, 3=Zalo, 4=VNPay)", example = "2")
+    private int paymentMethod;
 
     @Schema(description = "ID tai xe nhan don", example = "user_001")
     private String driverId;

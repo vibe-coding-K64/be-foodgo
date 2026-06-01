@@ -81,7 +81,7 @@ public class PaymentRepository {
 
         Map<String, Object> data = new HashMap<>();
         data.put("name", paymentMethod.getName() != null ? paymentMethod.getName() : "");
-        data.put("type", paymentMethod.getType() != null ? paymentMethod.getType() : "");
+        data.put("type", paymentMethod.getType());
         data.put("details", paymentMethod.getDetails() != null ? paymentMethod.getDetails() : "");
         data.put("isDefault", paymentMethod.getIsDefault() != null ? paymentMethod.getIsDefault() : false);
         data.put("cardBrand", paymentMethod.getCardBrand() != null ? paymentMethod.getCardBrand() : null);
@@ -104,7 +104,7 @@ public class PaymentRepository {
 
         Map<String, Object> data = new HashMap<>();
         data.put("name", paymentMethod.getName() != null ? paymentMethod.getName() : "");
-        data.put("type", paymentMethod.getType() != null ? paymentMethod.getType() : "");
+        data.put("type", paymentMethod.getType());
         data.put("details", paymentMethod.getDetails() != null ? paymentMethod.getDetails() : "");
         data.put("isDefault", paymentMethod.getIsDefault() != null ? paymentMethod.getIsDefault() : false);
         data.put("cardBrand", paymentMethod.getCardBrand() != null ? paymentMethod.getCardBrand() : null);
@@ -178,7 +178,7 @@ public class PaymentRepository {
         return PaymentMethod.builder()
                 .id(paymentMethodId)
                 .name(doc.getString("name"))
-                .type(doc.getString("type"))
+                .type(toInt(doc.get("type")))
                 .details(doc.getString("details"))
                 .isDefault(toBoolean(doc.get("isDefault")))
                 .cardBrand(doc.getString("cardBrand"))
@@ -194,6 +194,16 @@ public class PaymentRepository {
         if (value == null) return false;
         if (value instanceof Boolean) return (Boolean) value;
         return false;
+    }
+
+    private int toInt(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private Instant toInstant(Object value) {

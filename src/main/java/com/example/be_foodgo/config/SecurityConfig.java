@@ -46,6 +46,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/register",
+                                "/api/auth/register/verify-email",
+                                "/api/auth/register/complete",
+                                "/api/auth/register-driver/send-otp",
+                                "/api/auth/register-driver/complete",
                                 "/api/auth/login",
                                 "/api/auth/send-otp",
                                 "/api/auth/verify-otp",
@@ -71,7 +75,9 @@ public class SecurityConfig {
                                 "/api/categories/store",
                                 "/api/search",
                                 "/api/vouchers/available",
-                                "/api/reviews"
+                                "/api/reviews",
+                                "/api/firebase/reset",
+                                "/api/firebase/data"
                         ).permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",

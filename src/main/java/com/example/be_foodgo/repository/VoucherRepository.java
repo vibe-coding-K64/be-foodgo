@@ -29,7 +29,11 @@ public class VoucherRepository {
 
     public String saveVoucher(Voucher voucher) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
-        ApiFuture<WriteResult> collectionsApiFuture = docRef.set(voucher);
+        Map<String, Object> map = voucherToMap(voucher);
+        map.put("expiryDate", FieldValue.serverTimestamp());
+        map.put("createdAt", FieldValue.serverTimestamp());
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
         return collectionsApiFuture.get().getUpdateTime().toString();
     }
 
@@ -124,7 +128,12 @@ public class VoucherRepository {
 
     public String updateVoucher(Voucher voucher) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
-        ApiFuture<WriteResult> collectionsApiFuture = docRef.set(voucher);
+        Map<String, Object> map = voucherToMap(voucher);
+        map.put("expiryDate", voucher.getExpiryDate() != null
+                ? FieldValue.serverTimestamp()
+                : null);
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
         return collectionsApiFuture.get().getUpdateTime().toString();
     }
 
@@ -151,7 +160,6 @@ public class VoucherRepository {
         }
         MyVoucher mv = MyVoucher.builder()
                 .id(doc.getId())
-                .name(doc.getString("name"))
                 .title(doc.getString("title"))
                 .subtitle(doc.getString("subtitle"))
                 .code(doc.getString("code"))
@@ -167,8 +175,8 @@ public class VoucherRepository {
                 .createdAt(toDate(doc.get("createdAt")))
                 .updatedAt(toDate(doc.get("updatedAt")))
                 .build();
-        log.info("Da doc voucher ca nhan [{}] - name: {}, type: {}, value: {}",
-                voucherId, mv.getName(), mv.getType(), mv.getValue());
+        log.info("Da doc voucher ca nhan [{}] - title: {}, type: {}, value: {}",
+                voucherId, mv.getTitle(), mv.getType(), mv.getValue());
         return mv;
     }
 
@@ -217,7 +225,6 @@ public class VoucherRepository {
         Voucher v = new Voucher();
         v.setId(doc.getId());
         v.setStoreId(doc.getString("storeId"));
-        v.setName(doc.getString("name"));
         v.setTitle(doc.getString("title"));
         v.setSubtitle(doc.getString("subtitle"));
         v.setCode(doc.getString("code"));
@@ -253,6 +260,11 @@ public class VoucherRepository {
             log.warn("Voucher [{}] khong ton tai.", voucherId);
             return null;
         }
+        String storeId = doc.getString("storeId");
+        if (storeId != null) {
+            log.warn("Voucher [{}] la voucher cua hang, khong phai voucher he thong.", voucherId);
+            return null;
+        }
         Voucher voucher = parseVoucherFromDoc(doc);
         if (voucher != null) {
             voucher.setId(doc.getId());
@@ -265,7 +277,9 @@ public class VoucherRepository {
     }
 
     public List<Voucher> getAllSystemVouchers() throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
+        CollectionReference vouchersRef = firestore.collection(COLLECTION_NAME);
+        Query query = vouchersRef.whereEqualTo("storeId", null);
+        ApiFuture<QuerySnapshot> future = query.get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Voucher> list = new ArrayList<>();
         for (QueryDocumentSnapshot doc : documents) {
@@ -277,14 +291,17 @@ public class VoucherRepository {
 
     public List<Voucher> getExchangeableVouchers() throws ExecutionException, InterruptedException {
         CollectionReference vouchersRef = firestore.collection(COLLECTION_NAME);
-        Query query = vouchersRef.whereGreaterThan("pointsRequired", 0);
+        Query query = vouchersRef
+                .whereGreaterThan("pointsRequired", 0);
         ApiFuture<QuerySnapshot> future = query.get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Voucher> list = new ArrayList<>();
         for (QueryDocumentSnapshot doc : documents) {
             Voucher v = parseVoucherFromDoc(doc);
             v.setId(doc.getId());
-            list.add(v);
+            if (v.getStoreId() == null) {
+                list.add(v);
+            }
         }
         return list;
     }
@@ -298,12 +315,11 @@ public class VoucherRepository {
                 .document(myVoucher.getId());
         Map<String, Object> data = new HashMap<>();
         data.put("id", myVoucher.getId());
-        data.put("name", myVoucher.getName());
         data.put("title", myVoucher.getTitle());
         data.put("subtitle", myVoucher.getSubtitle());
         data.put("code", myVoucher.getCode());
         data.put("description", myVoucher.getDescription());
-        data.put("expiryDate", myVoucher.getExpiryDate() != null ? myVoucher.getExpiryDate().toString() : null);
+        data.put("expiryDate", myVoucher.getExpiryDate() != null ? FieldValue.serverTimestamp() : null);
         data.put("type", myVoucher.getType());
         data.put("value", myVoucher.getValue());
         data.put("imageUrl", myVoucher.getImageUrl());
@@ -311,8 +327,8 @@ public class VoucherRepository {
         data.put("minOrderValue", myVoucher.getMinOrderValue());
         data.put("isActive", myVoucher.isActive());
         data.put("isFreeship", myVoucher.isFreeship());
-        data.put("createdAt", myVoucher.getCreatedAt() != null ? myVoucher.getCreatedAt().toString() : null);
-        data.put("updatedAt", myVoucher.getUpdatedAt() != null ? myVoucher.getUpdatedAt().toString() : null);
+        data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("updatedAt", FieldValue.serverTimestamp());
         ApiFuture<WriteResult> future = docRef.set(data);
         future.get();
         log.info("Da luu my_voucher [{}] tai [{}]", myVoucher.getId(), path);
@@ -371,7 +387,6 @@ public class VoucherRepository {
         for (QueryDocumentSnapshot doc : documents) {
             MyVoucher mv = MyVoucher.builder()
                     .id(doc.getId())
-                    .name(doc.getString("name"))
                     .title(doc.getString("title"))
                     .subtitle(doc.getString("subtitle"))
                     .code(doc.getString("code"))
@@ -390,5 +405,28 @@ public class VoucherRepository {
             list.add(mv);
         }
         return list;
+    }
+
+    private Map<String, Object> voucherToMap(Voucher v) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", v.getId());
+        map.put("storeId", v.getStoreId());
+        map.put("title", v.getTitle());
+        map.put("subtitle", v.getSubtitle());
+        map.put("code", v.getCode());
+        map.put("type", v.getType());
+        map.put("value", v.getValue());
+        map.put("pointsRequired", v.getPointsRequired());
+        map.put("imageUrl", v.getImageUrl());
+        map.put("remaining", v.getRemaining());
+        map.put("terms", v.getTerms());
+        map.put("minOrderValue", v.getMinOrderValue());
+        map.put("limitCount", v.getLimitCount());
+        map.put("usedCount", v.getUsedCount());
+        map.put("isActive", v.getIsActive());
+        map.put("validityDays", v.getValidityDays());
+        map.put("isFreeship", v.getIsFreeship());
+        map.put("createdAt", v.getCreatedAt());
+        return map;
     }
 }

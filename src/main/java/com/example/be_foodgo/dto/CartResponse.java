@@ -1,6 +1,7 @@
 package com.example.be_foodgo.dto;
 
-import com.example.be_foodgo.model.CartItem;
+import com.example.be_foodgo.dto.CartRequest.SelectedOptionGroup;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Phản hồi giỏ hàng của người dùng")
 public class CartResponse {
 
     private List<CartItemResponse> items;
@@ -24,6 +26,7 @@ public class CartResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "Chi tiết một món trong giỏ hàng")
     public static class CartItemResponse {
 
         private String id;
@@ -35,12 +38,12 @@ public class CartResponse {
         private String name;
         private Double price;
         private Integer quantity;
-        private String size;
-        private Double sizePrice;
-        private List<CartItem.ToppingItem> toppings;
-        private String note;
         private String imageUrl;
+        private String note;
         private Instant createdAt;
         private Instant updatedAt;
+
+        @Schema(description = "Các tùy chọn đã chọn cho món này (VD: Kich thuoc, Topping)")
+        private List<CartRequest.SelectedOptionGroup> selectedOptions;
     }
 }

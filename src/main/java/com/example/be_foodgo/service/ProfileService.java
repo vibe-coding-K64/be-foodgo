@@ -39,6 +39,19 @@ public class ProfileService {
         return mapToUserResponse(userCapNhat);
     }
 
+    public UserResponse getProfile(String userId) throws Exception {
+        log.info("Bat dau lay ho so cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            log.warn("Khong tim thay tai khoan voi userId: {}", userId);
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        log.info("Lay ho so thanh cong cho userId: {}", userId);
+        return mapToUserResponse(user);
+    }
+
     public void changePassword(String userId, ChangePasswordRequest request) throws Exception {
         log.info("Bat dau doi mat khau cho userId: {}", userId);
 

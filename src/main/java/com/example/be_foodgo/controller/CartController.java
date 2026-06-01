@@ -66,11 +66,12 @@ public class CartController {
     @Schema(name = "CartResponseSchema", description = "Schema cho CartResponse trong phản hồi thành công")
     public static class CartResponseSchema extends CartResponse {
     }
+
     @PostMapping("/add")
     @Operation(
             summary = "Thêm món vào giỏ hàng",
             description = "Thêm một món ăn vào giỏ hàng của khách hàng. " +
-                    "Giá tiền được tính toán từ phía server dựa trên basePrice, size và toppings từ collection products."
+                    "Giá tiền được tính toán từ phía server dựa trên basePrice và selectedOptions từ collection products."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

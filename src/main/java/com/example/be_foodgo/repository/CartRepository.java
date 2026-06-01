@@ -1,5 +1,7 @@
 package com.example.be_foodgo.repository;
 
+import com.example.be_foodgo.dto.CartRequest.SelectedOption;
+import com.example.be_foodgo.dto.CartRequest.SelectedOptionGroup;
 import com.example.be_foodgo.model.CartItem;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
@@ -45,11 +47,9 @@ public class CartRepository {
                     .name(doc.getString("name"))
                     .price(doc.getDouble("price"))
                     .quantity(doc.getLong("quantity") != null ? doc.getLong("quantity").intValue() : 1)
-                    .size(doc.getString("size"))
-                    .sizePrice(doc.getDouble("sizePrice"))
                     .note(doc.getString("note"))
                     .imageUrl(doc.getString("imageUrl"))
-                    .toppings(toToppingItemList(doc.get("toppings")))
+                    .selectedOptions(toSelectedOptionGroups(doc.get("selectedOptions")))
                     .createdAt(toInstant(doc.get("createdAt")))
                     .updatedAt(toInstant(doc.get("updatedAt")))
                     .build();
@@ -61,22 +61,35 @@ public class CartRepository {
     }
 
     @SuppressWarnings("unchecked")
-    private List<CartItem.ToppingItem> toToppingItemList(Object toppingsObj) {
-        if (toppingsObj == null) {
+    private List<SelectedOptionGroup> toSelectedOptionGroups(Object selectedOptionsObj) {
+        if (selectedOptionsObj == null) {
             return null;
         }
-        List<?> toppingsRaw = (List<?>) toppingsObj;
-        List<CartItem.ToppingItem> toppings = new ArrayList<>();
-        for (Object t : toppingsRaw) {
-            if (t instanceof Map) {
-                Map<String, Object> tMap = (Map<String, Object>) t;
-                toppings.add(CartItem.ToppingItem.builder()
-                        .name((String) tMap.get("name"))
-                        .price(toDouble(tMap.get("price")))
-                        .build());
+        List<?> rawList = (List<?>) selectedOptionsObj;
+        List<SelectedOptionGroup> groups = new ArrayList<>();
+        for (Object item : rawList) {
+            if (!(item instanceof Map)) continue;
+            Map<String, Object> groupMap = (Map<String, Object>) item;
+            String groupName = (String) groupMap.get("name");
+            if (groupName == null) continue;
+
+            List<SelectedOption> options = new ArrayList<>();
+            Object optionsObj = groupMap.get("options");
+            if (optionsObj instanceof List) {
+                for (Object opt : (List<?>) optionsObj) {
+                    if (!(opt instanceof Map)) continue;
+                    Map<String, Object> optMap = (Map<String, Object>) opt;
+                    String optName = (String) optMap.get("name");
+                    if (optName == null) continue;
+                    options.add(SelectedOption.builder().name(optName).build());
+                }
             }
+            groups.add(SelectedOptionGroup.builder()
+                    .name(groupName)
+                    .options(options.isEmpty() ? null : options)
+                    .build());
         }
-        return toppings;
+        return groups;
     }
 
     private Double toDouble(Object value) {
@@ -104,9 +117,7 @@ public class CartRepository {
                 .document(userId)
                 .collection("cart");
 
-        String cartItemId = cartRef.document().getId();
-
-        WriteBatch batch = firestore.batch();
+        String cartItemId = item.getId() != null ? item.getId() : cartRef.document().getId();
         DocumentReference newDoc = cartRef.document(cartItemId);
 
         Map<String, Object> data = Map.ofEntries(
@@ -117,19 +128,27 @@ public class CartRepository {
                 Map.entry("quantity", item.getQuantity()),
                 Map.entry("note", item.getNote() != null ? item.getNote() : ""),
                 Map.entry("imageUrl", item.getImageUrl() != null ? item.getImageUrl() : ""),
-                Map.entry("createdAt", FieldValue.serverTimestamp()),
-                Map.entry("updatedAt", FieldValue.serverTimestamp()),
-                Map.entry("size", item.getSize() != null ? item.getSize() : ""),
-                Map.entry("sizePrice", item.getSizePrice() != null ? item.getSizePrice() : 0.0)
+                Map.entry("createdAt", item.getCreatedAt() != null ? item.getCreatedAt() : FieldValue.serverTimestamp()),
+                Map.entry("updatedAt", FieldValue.serverTimestamp())
         );
 
+        WriteBatch batch = firestore.batch();
         batch.set(newDoc, data);
 
-        if (item.getToppings() != null && !item.getToppings().isEmpty()) {
-            List<Map<String, Object>> toppingMaps = item.getToppings().stream()
-                    .map(t -> Map.<String, Object>of("name", t.getName(), "price", t.getPrice()))
+        if (item.getSelectedOptions() != null && !item.getSelectedOptions().isEmpty()) {
+            List<Map<String, Object>> selectedOptionsMaps = item.getSelectedOptions().stream()
+                    .map(g -> {
+                        List<Map<String, String>> options = g.getOptions() == null ? List.of()
+                                : g.getOptions().stream()
+                                        .map(o -> Map.<String, String>of("name", o.getName()))
+                                        .toList();
+                        return (Map<String, Object>) Map.of(
+                                "name", g.getName(),
+                                "options", options
+                        );
+                    })
                     .toList();
-            batch.update(newDoc, "toppings", toppingMaps);
+            batch.update(newDoc, "selectedOptions", selectedOptionsMaps);
         }
 
         try {
@@ -191,11 +210,9 @@ public class CartRepository {
                 .name(doc.getString("name"))
                 .price(doc.getDouble("price"))
                 .quantity(doc.getLong("quantity") != null ? doc.getLong("quantity").intValue() : 1)
-                .size(doc.getString("size"))
-                .sizePrice(doc.getDouble("sizePrice"))
                 .note(doc.getString("note"))
                 .imageUrl(doc.getString("imageUrl"))
-                .toppings(toToppingItemList(doc.get("toppings")))
+                .selectedOptions(toSelectedOptionGroups(doc.get("selectedOptions")))
                 .createdAt(toInstant(doc.get("createdAt")))
                 .updatedAt(toInstant(doc.get("updatedAt")))
                 .build();
@@ -239,18 +256,25 @@ public class CartRepository {
             FirestoreExecutor executor = new FirestoreExecutor(docRef);
             executor.add("quantity", item.getQuantity());
             executor.add("price", item.getPrice());
-            executor.add("sizePrice", item.getSizePrice() != null ? item.getSizePrice() : 0.0);
-            executor.add("size", item.getSize() != null ? item.getSize() : "");
             executor.add("note", item.getNote() != null ? item.getNote() : "");
             executor.add("updatedAt", FieldValue.serverTimestamp());
 
-            if (item.getToppings() != null && !item.getToppings().isEmpty()) {
-                List<Map<String, Object>> toppingMaps = item.getToppings().stream()
-                        .map(t -> Map.<String, Object>of("name", t.getName(), "price", t.getPrice()))
+            if (item.getSelectedOptions() != null && !item.getSelectedOptions().isEmpty()) {
+                List<Map<String, Object>> selectedOptionsMaps = item.getSelectedOptions().stream()
+                        .map(g -> {
+                            List<Map<String, String>> options = g.getOptions() == null ? List.of()
+                                    : g.getOptions().stream()
+                                            .map(o -> Map.<String, String>of("name", o.getName()))
+                                            .toList();
+                            return (Map<String, Object>) Map.of(
+                                    "name", g.getName(),
+                                    "options", options
+                            );
+                        })
                         .toList();
-                executor.add("toppings", toppingMaps);
+                executor.add("selectedOptions", selectedOptionsMaps);
             } else {
-                executor.add("toppings", null);
+                executor.add("selectedOptions", null);
             }
 
             executor.commit().get();

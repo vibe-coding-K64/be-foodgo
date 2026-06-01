@@ -54,6 +54,27 @@ public class FirebaseResetService {
         return result;
     }
 
+    public Map<String, Object> clearAllCollectionsOnly() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        long startTime = System.currentTimeMillis();
+
+        try {
+            result.put("step", "Clearing all collections...");
+            clearAllCollections();
+
+            long endTime = System.currentTimeMillis();
+            result.put("success", true);
+            result.put("message", "All data cleared in " + (endTime - startTime) + " ms");
+            log.info("Firebase data cleared in {} ms", (endTime - startTime));
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "Clear failed: " + e.getMessage());
+            log.error("Firebase clear failed: {}", e.getMessage(), e);
+        }
+
+        return result;
+    }
+
     private void clearAllCollections() throws ExecutionException, InterruptedException {
         Iterable<CollectionReference> topLevelCollections = firestore.listCollections();
         int totalDeleted = 0;
@@ -658,23 +679,22 @@ public class FirebaseResetService {
 
     private void seedVouchers() {
         List<Map<String, Object>> vouchers = Arrays.asList(
-                createVoucherMap("voucher_001", "Giam 20K cho don tu 100K", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "GIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 0, 0),
-                createVoucherMap("voucher_002", "Freeship Quan ABC", "Freeship Quan ABC", "Chi ap dung tai Quan ABC.", "store_001", "ABC15K", 2, 15000.0, false, 50, "Chi ap dung tai Quan ABC.", 80000.0, "2026-06-01T23:59:59Z", 0, 0),
-                createVoucherMap("fs_001", "Mien phi giao hang", "Mien phi giao hang", "Ap dung cho don tu 50K.", null, "FREESHIP", 2, 15000.0, true, 200, "Ap dung cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 0, 0),
-                createVoucherMap("fs_002", "Freeship Quan XYZ", "Freeship Quan XYZ", "Chi ap dung tai Quan XYZ.", "store_002", "XYZSHIP", 2, 15000.0, true, 30, "Chi ap dung tai Quan XYZ.", 30000.0, "2026-06-10T23:59:59Z", 0, 0),
-                createVoucherMap("sys_voucher_001", "Giam 20K cho don tu 100K", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "SYSGIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 400, 30),
-                createVoucherMap("sys_voucher_002", "Giam 15% cho don tu 150K", "Giam 15% cho don tu 150K", "Giam toi da 40K. Ap dung toan he thong.", null, "SYSGIAM15P", 1, 15.0, false, 75, "Giam toi da 40K. Ap dung toan he thong.", 150000.0, "2026-06-30T23:59:59Z", 500, 30),
-                createVoucherMap("sys_fs_001", "Mien phi giao hang", "Mien phi giao hang", "Mien phi giao hang cho don tu 50K.", null, "SYSFREESHIP", 2, 15000.0, true, 200, "Mien phi giao hang cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 300, 30)
+                createVoucherMap("voucher_001", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "GIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 0, 0),
+                createVoucherMap("voucher_002", "Freeship Quan ABC", "Chi ap dung tai Quan ABC.", "store_001", "ABC15K", 2, 15000.0, false, 50, "Chi ap dung tai Quan ABC.", 80000.0, "2026-06-01T23:59:59Z", 0, 0),
+                createVoucherMap("fs_001", "Mien phi giao hang", "Ap dung cho don tu 50K.", null, "FREESHIP", 2, 15000.0, true, 200, "Ap dung cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 0, 0),
+                createVoucherMap("fs_002", "Freeship Quan XYZ", "Chi ap dung tai Quan XYZ.", "store_002", "XYZSHIP", 2, 15000.0, true, 30, "Chi ap dung tai Quan XYZ.", 30000.0, "2026-06-10T23:59:59Z", 0, 0),
+                createVoucherMap("sys_voucher_001", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "SYSGIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 400, 30),
+                createVoucherMap("sys_voucher_002", "Giam 15% cho don tu 150K", "Giam toi da 40K. Ap dung toan he thong.", null, "SYSGIAM15P", 1, 15.0, false, 75, "Giam toi da 40K. Ap dung toan he thong.", 150000.0, "2026-06-30T23:59:59Z", 500, 30),
+                createVoucherMap("sys_fs_001", "Mien phi giao hang", "Mien phi giao hang cho don tu 50K.", null, "SYSFREESHIP", 2, 15000.0, true, 200, "Mien phi giao hang cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 300, 30)
         );
         seedDirect("vouchers", vouchers);
     }
 
-    private Map<String, Object> createVoucherMap(String id, String name, String title, String subtitle, String storeId, String code,
+    private Map<String, Object> createVoucherMap(String id, String title, String subtitle, String storeId, String code,
             int type, double value, boolean isFreeship, int remaining, String terms,
             double minOrderValue, String expiryDate, int pointsRequired, int validityDays) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", id);
-        map.put("name", name);
         map.put("title", title);
         map.put("subtitle", subtitle);
         map.put("storeId", storeId);
@@ -798,10 +818,12 @@ public class FirebaseResetService {
         order1Items.add(order1Item1);
         Map<String, Object> order1 = new HashMap<>();
         order1.put("id", "order_001"); order1.put("userId", "user_001");
-        order1.put("storeId", "store_001"); order1.put("storeName", "Com tam Phuc Loc Tho");
-        order1.put("items", order1Items); order1.put("totalAmount", 140000.0);
-        order1.put("deliveryFee", 15000.0); order1.put("status", 2);
+        order1.put("storeId", "store_001");         order1.put("storeName", "Com tam Phuc Loc Tho");
         order1.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
+        order1.put("receiverName", "Khoi"); order1.put("receiverPhone", "0123456789");
+        order1.put("items", order1Items); order1.put("totalAmount", 140000.0);
+        order1.put("deliveryFee", 15000.0);
+        order1.put("status", 2);
         order1.put("paymentMethod", "momo");
         order1.put("driverId", "user_001"); order1.put("driverName", "Le Van B");
         order1.put("driverPhone", "0912345678"); order1.put("vehiclePlate", "59A-123.45");
@@ -822,10 +844,12 @@ public class FirebaseResetService {
         order2Items.add(order2Item1);
         Map<String, Object> order2 = new HashMap<>();
         order2.put("id", "order_002"); order2.put("userId", "user_001");
-        order2.put("storeId", "store_002"); order2.put("storeName", "Tra sua Tocotoco");
-        order2.put("items", order2Items); order2.put("totalAmount", 79000.0);
-        order2.put("deliveryFee", 12000.0); order2.put("status", 3);
+        order2.put("storeId", "store_002");         order2.put("storeName", "Tra sua Tocotoco");
         order2.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
+        order2.put("receiverName", "Khoi"); order2.put("receiverPhone", "0123456789");
+        order2.put("items", order2Items); order2.put("totalAmount", 79000.0);
+        order2.put("deliveryFee", 12000.0);
+        order2.put("status", 3);
         order2.put("paymentMethod", "cash");
         order2.put("driverId", "user_003"); order2.put("driverName", "Le Van B");
         order2.put("driverPhone", "0912345678"); order2.put("vehiclePlate", "59A-123.45");
@@ -846,10 +870,12 @@ public class FirebaseResetService {
         order3Items.add(order3Item2);
         Map<String, Object> order3 = new HashMap<>();
         order3.put("id", "order_003"); order3.put("userId", "user_002");
-        order3.put("storeId", "store_003"); order3.put("storeName", "Ga ran KFC Nguyen Cuu");
-        order3.put("items", order3Items); order3.put("totalAmount", 93000.0);
-        order3.put("deliveryFee", 18000.0); order3.put("status", 1);
+        order3.put("storeId", "store_003");         order3.put("storeName", "Ga ran KFC Nguyen Cuu");
         order3.put("deliveryAddress", "123 Le Van Viet, TP. Thu Duc");
+        order3.put("receiverName", "Quan Tri Vien"); order3.put("receiverPhone", "0987654321");
+        order3.put("items", order3Items); order3.put("totalAmount", 93000.0);
+        order3.put("deliveryFee", 18000.0);
+        order3.put("status", 1);
         order3.put("paymentMethod", "momo");
         order3.put("driverId", null); order3.put("driverName", null);
         order3.put("driverPhone", null); order3.put("vehiclePlate", null);
@@ -865,10 +891,12 @@ public class FirebaseResetService {
         order4Items.add(order4Item1);
         Map<String, Object> order4 = new HashMap<>();
         order4.put("id", "order_004"); order4.put("userId", "user_002");
-        order4.put("storeId", "store_004"); order4.put("storeName", "Bun bo Hue Ba Le");
-        order4.put("items", order4Items); order4.put("totalAmount", 65000.0);
-        order4.put("deliveryFee", 20000.0); order4.put("status", 0);
+        order4.put("storeId", "store_004");         order4.put("storeName", "Bun bo Hue Ba Le");
         order4.put("deliveryAddress", "456 Nguyen Thi Dinh, TP. Thu Duc");
+        order4.put("receiverName", "Quan Tri Vien"); order4.put("receiverPhone", "0987654321");
+        order4.put("items", order4Items); order4.put("totalAmount", 65000.0);
+        order4.put("deliveryFee", 20000.0);
+        order4.put("status", 0);
         order4.put("paymentMethod", "cash");
         order4.put("driverId", null); order4.put("driverName", null);
         order4.put("driverPhone", null); order4.put("vehiclePlate", null);
@@ -884,10 +912,12 @@ public class FirebaseResetService {
         order5Items.add(order5Item1);
         Map<String, Object> order5 = new HashMap<>();
         order5.put("id", "order_005"); order5.put("userId", "user_001");
-        order5.put("storeId", "store_001"); order5.put("storeName", "Com tam Phuc Loc Tho");
-        order5.put("items", order5Items); order5.put("totalAmount", 65000.0);
-        order5.put("deliveryFee", 15000.0); order5.put("status", 4);
+        order5.put("storeId", "store_001");         order5.put("storeName", "Com tam Phuc Loc Tho");
         order5.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
+        order5.put("receiverName", "Khoi"); order5.put("receiverPhone", "0123456789");
+        order5.put("items", order5Items); order5.put("totalAmount", 65000.0);
+        order5.put("deliveryFee", 15000.0);
+        order5.put("status", 4);
         order5.put("paymentMethod", "zalo");
         order5.put("driverId", null); order5.put("driverName", null);
         order5.put("driverPhone", null); order5.put("vehiclePlate", null);
@@ -908,10 +938,12 @@ public class FirebaseResetService {
         order6Items.add(order6Item2);
         Map<String, Object> order6 = new HashMap<>();
         order6.put("id", "order_006"); order6.put("userId", "user_003");
-        order6.put("storeId", "store_002"); order6.put("storeName", "Tra sua Tocotoco");
-        order6.put("items", order6Items); order6.put("totalAmount", 87000.0);
-        order6.put("deliveryFee", 12000.0); order6.put("status", 2);
+        order6.put("storeId", "store_002");         order6.put("storeName", "Tra sua Tocotoco");
         order6.put("deliveryAddress", "101 Pho Hue, Q.1, TP.HCM");
+        order6.put("receiverName", "Le Van B"); order6.put("receiverPhone", "0912345678");
+        order6.put("items", order6Items); order6.put("totalAmount", 87000.0);
+        order6.put("deliveryFee", 12000.0);
+        order6.put("status", 2);
         order6.put("paymentMethod", "card");
         order6.put("driverId", "user_001"); order6.put("driverName", "Le Van B");
         order6.put("driverPhone", "0912345678"); order6.put("vehiclePlate", "59A-123.45");
@@ -927,10 +959,12 @@ public class FirebaseResetService {
         order7Items.add(order7Item1);
         Map<String, Object> order7 = new HashMap<>();
         order7.put("id", "order_007"); order7.put("userId", "user_002");
-        order7.put("storeId", "store_003"); order7.put("storeName", "Ga ran KFC Nguyen Cuu");
-        order7.put("items", order7Items); order7.put("totalAmount", 88000.0);
-        order7.put("deliveryFee", 18000.0); order7.put("status", 3);
+        order7.put("storeId", "store_003");         order7.put("storeName", "Ga ran KFC Nguyen Cuu");
         order7.put("deliveryAddress", "789 Nguyen Cuu, TP. Thu Duc");
+        order7.put("receiverName", "Quan Tri Vien"); order7.put("receiverPhone", "0987654321");
+        order7.put("items", order7Items); order7.put("totalAmount", 88000.0);
+        order7.put("deliveryFee", 18000.0);
+        order7.put("status", 3);
         order7.put("paymentMethod", "momo");
         order7.put("driverId", "user_003"); order7.put("driverName", "Le Van B");
         order7.put("driverPhone", "0912345678"); order7.put("vehiclePlate", "59A-123.45");
@@ -1059,7 +1093,6 @@ public class FirebaseResetService {
         List<Map<String, Object>> myVouchers = Arrays.asList(
                 Map.ofEntries(
                         Map.entry("id", "mv_001"),
-                        Map.entry("name", "Giam 20K phi giao hang"),
                         Map.entry("title", "Giam 20K phi giao hang"),
                         Map.entry("subtitle", "Ap dung cho don tu 50K."),
                         Map.entry("code", "FREESHIP20"),
@@ -1077,7 +1110,6 @@ public class FirebaseResetService {
                 ),
                 Map.ofEntries(
                         Map.entry("id", "mv_002"),
-                        Map.entry("name", "Giam 10% cho don hang"),
                         Map.entry("title", "Giam 10% cho don hang"),
                         Map.entry("subtitle", "Giam 10% cho moi don hang."),
                         Map.entry("code", "SAVE10"),

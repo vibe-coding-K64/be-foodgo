@@ -129,6 +129,12 @@ Client (HTTP Request)
 | `refactor` | Tái cấu trúc code, không thay đổi chức năng          |
 | `chore` | Cập nhật phụ thuộc, build script                      |
 
+Áp dụng format: `<type>: <short description>`
+
+Ví dụ:
+- `feat: implement JWT authentication`
+- `fix: resolve token validation bug`
+
 ---
 
 ## GITHUB (BẮT BUỘC)

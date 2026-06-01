@@ -6,17 +6,22 @@ import com.example.be_foodgo.dto.PopularStoreResponse;
 import com.example.be_foodgo.dto.StoreDTO;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.repository.StoreRepository;
+import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FieldValue;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class StoreService {
 
@@ -25,6 +30,9 @@ public class StoreService {
 
     @Autowired
     private Firestore firestore;
+
+    @Autowired
+    private WalletRepository walletRepository;
 
     public StoreDTO createMerchantStore(String uid, StoreDTO storeDTO) throws Exception {
         String newStoreId = "store_001";
@@ -264,5 +272,39 @@ public class StoreService {
                 .build());
 
         return result;
+    }
+
+    public void taoDriverProfile(String userId, String fullName, String phoneNumber) throws Exception {
+        Map<String, Object> profileData = new HashMap<>();
+        profileData.put("id", userId);
+        profileData.put("fullName", fullName);
+        profileData.put("phoneNumber", phoneNumber);
+        profileData.put("isActive", true);
+        profileData.put("isAvailable", true);
+        profileData.put("currentOrderId", null);
+        profileData.put("rating", 5.0);
+        profileData.put("totalTrips", 0);
+        profileData.put("driverCommissionPercentage", 80.0);
+        profileData.put("balance", 0.0);
+        profileData.put("createdAt", FieldValue.serverTimestamp());
+        profileData.put("updatedAt", FieldValue.serverTimestamp());
+
+        firestore.collection("driver_profiles").document(userId).set(profileData).get();
+        walletRepository.createDriverWallet(userId);
+
+        log.info("Da tao driver profile va wallet cho tai xe: {}", userId);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getStoreIdsByMerchantId(String merchantId) throws ExecutionException, InterruptedException {
+        com.google.cloud.firestore.DocumentReference merchantRef = firestore.collection("merchant_profiles").document(merchantId);
+        com.google.cloud.firestore.DocumentSnapshot doc = merchantRef.get().get();
+        if (doc.exists()) {
+            Object storeIdsObj = doc.get("storeIds");
+            if (storeIdsObj instanceof List) {
+                return (List<String>) storeIdsObj;
+            }
+        }
+        return new ArrayList<>();
     }
 }
