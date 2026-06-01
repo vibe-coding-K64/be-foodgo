@@ -227,6 +227,22 @@ public class BusinessException extends RuntimeException {
         );
     }
 
+    public static BusinessException userIdKhongKhop(String requestUserId) {
+        return new BusinessException(
+                HttpStatus.FORBIDDEN,
+                "USER_ID_MISMATCH",
+                "UserId trong request [" + requestUserId + "] khong khop voi nguoi dung dang nhap. Ban khong co quyen thuc hien hanh dong nay."
+        );
+    }
+
+    public static BusinessException donHangDaTonTai(String orderId) {
+        return new BusinessException(
+                HttpStatus.CONFLICT,
+                "DUPLICATE_ORDER",
+                "Don hang voi idempotency key nay da ton tai voi ID [" + orderId + "]. Vui long khong dat hang truoc khi don truoc duoc xu ly."
+        );
+    }
+
     public static BusinessException diemKhongTimThay() {
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,

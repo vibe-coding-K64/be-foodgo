@@ -199,7 +199,7 @@ public class DeliveryOrderService {
 
             if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
-                Double deliveryFee = toDouble(orderData.get("shippingFee"));
+                Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
@@ -511,14 +511,10 @@ public class DeliveryOrderService {
                 .storeName((String) data.get("storeName"))
                 .items(orderItems)
                 .totalAmount(toDouble(data.get("totalAmount")))
-                .deliveryFee(toDouble(data.get("shippingFee")))
+                .deliveryFee(toDouble(data.get("deliveryFee") != null ? data.get("deliveryFee") : data.get("shippingFee")))
                 .status(getOrderStatusValueFromMap(data))
                 .deliveryAddress((String) data.get("deliveryAddress"))
-                .paymentMethod((String) data.get("paymentMethod"))
-                .driverId((String) data.get("driverId"))
-                .driverName((String) data.get("driverName"))
-                .driverPhone((String) data.get("driverPhone"))
-                .vehiclePlate((String) data.get("vehiclePlate"))
+                .paymentMethod(toIntPrimitive(data.get("paymentMethod")))
                 .createdAt(toInstant(data.get("createdAt")))
                 .updatedAt(toInstant(data.get("updatedAt")))
                 .note((String) data.get("note"))
@@ -551,6 +547,12 @@ public class DeliveryOrderService {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).intValue();
         return null;
+    }
+
+    private int toIntPrimitive(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return 0;
     }
 
     private Instant toInstant(Object value) {

@@ -6,6 +6,7 @@ import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.model.Address;
 import com.example.be_foodgo.model.MyVoucher;
 import com.example.be_foodgo.model.PaymentMethod;
+import com.example.be_foodgo.model.Product;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.model.Voucher;
 import com.example.be_foodgo.repository.AddressRepository;
@@ -13,8 +14,12 @@ import com.example.be_foodgo.repository.PaymentRepository;
 import com.example.be_foodgo.repository.ProductRepository;
 import com.example.be_foodgo.repository.StoreRepository;
 import com.example.be_foodgo.repository.VoucherRepository;
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,13 +66,27 @@ public class CheckoutService {
         this.firestore = firestore;
     }
 
-    public CheckoutResponse thucHienDatHang(CheckoutRequestV2 request) {
+    public CheckoutResponse thucHienDatHang(CheckoutRequestV2 request, String authenticatedUserId) {
         String userId = request.getUserId();
         String addressId = request.getAddressId();
         String storeId = request.getStoreId();
         log.info("Bat dau xu ly dat hang - userId: {}, addressId: {}, storeId: {}, paymentMethod: {}, discountVoucher: {}, shopVoucher: {}, freeshpVoucher: {}",
                 userId, addressId, storeId, request.getPaymentMethod(),
                 request.getDiscountVoucherId(), request.getShopVoucherId(), request.getFreeshpVoucherId());
+
+        if (authenticatedUserId == null || !authenticatedUserId.equals(userId)) {
+            log.warn("UserId khong khop - request: {}, authenticated: {}", userId, authenticatedUserId);
+            throw BusinessException.userIdKhongKhop(userId);
+        }
+
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            String existingOrderId = kiemTraIdempotencyKey(authenticatedUserId, request.getIdempotencyKey());
+            if (existingOrderId != null) {
+                log.info("Idempotency key [{}] da duoc su dung, tra ve orderId cu: {}",
+                        request.getIdempotencyKey(), existingOrderId);
+                throw BusinessException.donHangDaTonTai(existingOrderId);
+            }
+        }
 
         List<CheckoutRequestV2.CheckoutItem> requestItems = request.getItems();
         if (requestItems == null || requestItems.isEmpty()) {
@@ -94,7 +113,7 @@ public class CheckoutService {
         Store cuaHang;
         try {
             cuaHang = storeRepository.getStoreById(storeId);
-        } catch (Exception e) {
+        } catch (ExecutionException | InterruptedException e) {
             log.error("Loi khi truy van cua hang [{}]: {}", storeId, e.getMessage());
             throw BusinessException.loiHeThong("Khong the truy van thong tin cua hang.");
         }
@@ -121,53 +140,60 @@ public class CheckoutService {
 
         double tongTienHang = tinhTongTienTuItems(requestItems);
         double phiShip = PHI_SHIP_CO_BAN;
-        double soTienGiam = 0.0;
         List<VoucherInfo> voucherInfos = new ArrayList<>();
+
+        double discountAmountVal = 0.0;
+        double shopDiscountAmountVal = 0.0;
+        double freeshipDiscountAmountVal = 0.0;
 
         if (request.getDiscountVoucherId() != null && !request.getDiscountVoucherId().isBlank()) {
             VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getDiscountVoucherId(), tongTienHang);
             voucherInfos.add(info);
-            log.info("Ap dung discount voucher [{}].", request.getDiscountVoucherId());
+            discountAmountVal = tinhSoTienGiam(info, tongTienHang, phiShip);
+            log.info("Ap dung discount voucher [{}] - giam: {}.", request.getDiscountVoucherId(), discountAmountVal);
         }
 
         if (request.getShopVoucherId() != null && !request.getShopVoucherId().isBlank()) {
             VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getShopVoucherId(), tongTienHang);
             voucherInfos.add(info);
-            log.info("Ap dung shop voucher [{}].", request.getShopVoucherId());
+            shopDiscountAmountVal = tinhSoTienGiam(info, tongTienHang, phiShip);
+            log.info("Ap dung shop voucher [{}] - giam: {}.", request.getShopVoucherId(), shopDiscountAmountVal);
         }
 
         if (request.getFreeshpVoucherId() != null && !request.getFreeshpVoucherId().isBlank()) {
             VoucherInfo info = kiemTraVaXuLyVoucher(userId, request.getFreeshpVoucherId(), tongTienHang);
             voucherInfos.add(info);
-            log.info("Ap dung freeshp voucher [{}].", request.getFreeshpVoucherId());
+            freeshipDiscountAmountVal = tinhSoTienGiam(info, tongTienHang, phiShip);
+            log.info("Ap dung freeshp voucher [{}] - giam: {}.", request.getFreeshpVoucherId(), freeshipDiscountAmountVal);
         }
 
-        soTienGiam = tinhTongSoTienGiam(voucherInfos, tongTienHang, phiShip);
-
-        double tongThanhToan = tongTienHang + phiShip - soTienGiam;
+        double tongSoTienGiam = discountAmountVal + shopDiscountAmountVal + freeshipDiscountAmountVal;
+        double tongThanhToan = tongTienHang + phiShip - tongSoTienGiam;
         if (tongThanhToan < 0) {
             tongThanhToan = 0;
         }
 
-        log.info("Tinh toan chi phi - Tong tien hang: {}, Phi ship: {}, Giam gia: {}, Tong phai tra: {}.",
-                tongTienHang, phiShip, soTienGiam, tongThanhToan);
+        log.info("Tinh toan chi phi - Tong tien hang: {}, Phi ship: {}, Giam discount: {}, Giam shop: {}, Giam freeship: {}, Tong giam: {}, Tong phai tra: {}.",
+                tongTienHang, phiShip, discountAmountVal, shopDiscountAmountVal, freeshipDiscountAmountVal, tongSoTienGiam, tongThanhToan);
 
         CheckoutResponse.OrderItemData[] orderItems = chuanBiOrderItems(requestItems);
+        String orderCode = String.format("FG-%s-%s",
+                LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
+                "");  // tạm placeholder, sẽ gán sau khi có orderId
         String orderId = taoDonHangAtomic(
                 userId, storeId, cuaHang.getName(), diaChi, request,
-                orderItems, tongTienHang, phiShip, soTienGiam, tongThanhToan,
-                voucherInfos
+                orderItems, tongTienHang, phiShip, discountAmountVal, shopDiscountAmountVal, freeshipDiscountAmountVal, tongThanhToan,
+                voucherInfos, request.getIdempotencyKey(), orderCode
         );
-
-        String orderCode = String.format("FG-%s-%s",
+        orderCode = String.format("FG-%s-%s",
                 LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
                 orderId.substring(orderId.length() - 3).toUpperCase());
 
         String paymentMethodName = request.getPaymentMethod();
         try {
             PaymentMethod pm = paymentRepository.layMotPhuongThuc(userId, request.getPaymentMethod());
-            if (pm != null && pm.getType() != null) {
-                paymentMethodName = pm.getType();
+            if (pm != null) {
+                paymentMethodName = pm.getName();
             }
         } catch (Exception e) {
             log.warn("Khong the lay payment method [{}] tu Firestore, tra ve ID goc", request.getPaymentMethod());
@@ -184,7 +210,9 @@ public class CheckoutService {
                 .items(java.util.Arrays.asList(orderItems))
                 .totalAmount(tongTienHang)
                 .deliveryFee(phiShip)
-                .discountAmount(soTienGiam)
+                .discountAmount(discountAmountVal)
+                .shopDiscountAmount(shopDiscountAmountVal)
+                .freeshipDiscountAmount(freeshipDiscountAmountVal)
                 .finalAmount(tongThanhToan)
                 .paymentMethod(paymentMethodName)
                 .deliveryAddress(diaChi.getAddress())
@@ -423,18 +451,49 @@ public class CheckoutService {
     private CheckoutResponse.OrderItemData[] chuanBiOrderItems(List<CheckoutRequestV2.CheckoutItem> requestItems) {
         List<CheckoutResponse.OrderItemData> items = new ArrayList<>();
         for (CheckoutRequestV2.CheckoutItem cartItem : requestItems) {
+            Product product = null;
+            try {
+                product = productRepository.findById(cartItem.getFoodId());
+            } catch (Exception e) {
+                log.warn("Khong the lay san pham [{}] khi chuan bi order items", cartItem.getFoodId());
+            }
+
+            String selectedSize = null;
             List<CheckoutResponse.ItemOption> toppingOptions = null;
-            if (cartItem.getOptions() != null && !cartItem.getOptions().isEmpty()) {
-                toppingOptions = new ArrayList<>();
-                for (CheckoutRequestV2.ItemOption t : cartItem.getOptions()) {
-                    toppingOptions.add(CheckoutResponse.ItemOption.builder()
-                            .name(t.getName())
-                            .price(t.getPrice())
-                            .build());
+
+            if (cartItem.getSelectedOptions() != null && !cartItem.getSelectedOptions().isEmpty()) {
+                List<CheckoutResponse.ItemOption> allToppings = new ArrayList<>();
+                for (CheckoutRequestV2.SelectedOptionGroup group : cartItem.getSelectedOptions()) {
+                    if (group.getName() == null) continue;
+                    String groupNameLower = group.getName().toLowerCase();
+
+                    if (groupNameLower.contains("kich") && groupNameLower.contains("thuoc")
+                            || groupNameLower.contains("size")) {
+                        if (group.getOptions() != null && !group.getOptions().isEmpty()) {
+                            CheckoutRequestV2.SelectedOption sizeOpt = group.getOptions().get(0);
+                            selectedSize = sizeOpt.getName();
+                        }
+                    } else {
+                        if (group.getOptions() != null) {
+                            for (CheckoutRequestV2.SelectedOption selOpt : group.getOptions()) {
+                                double toppingPrice = 0.0;
+                                if (product != null) {
+                                    toppingPrice = layGiaOptionTheoTen(product, selOpt.getName());
+                                }
+                                allToppings.add(CheckoutResponse.ItemOption.builder()
+                                        .name(selOpt.getName())
+                                        .price(toppingPrice)
+                                        .build());
+                            }
+                        }
+                    }
+                }
+                if (!allToppings.isEmpty()) {
+                    toppingOptions = allToppings;
                 }
             }
 
-            double donGia = tinhDonGiaMotMon(cartItem);
+            double donGia = tinhDonGiaMotMon(cartItem, product, selectedSize);
 
             items.add(CheckoutResponse.OrderItemData.builder()
                     .foodId(cartItem.getFoodId())
@@ -442,36 +501,86 @@ public class CheckoutService {
                     .price(donGia)
                     .quantity(cartItem.getQuantity())
                     .imageUrl(cartItem.getImageUrl())
+                    .size(selectedSize)
                     .options(toppingOptions)
                     .build());
         }
         return items.toArray(new CheckoutResponse.OrderItemData[0]);
     }
 
-    private double tinhDonGiaMotMon(CheckoutRequestV2.CheckoutItem item) {
+    private double tinhDonGiaMotMon(CheckoutRequestV2.CheckoutItem item, Product product, String selectedSize) {
         double tongDonGia = 0.0;
-        try {
-            var product = productRepository.findById(item.getFoodId());
-            if (product != null && product.getBasePrice() > 0) {
-                tongDonGia = product.getBasePrice();
-            }
-        } catch (Exception e) {
-            log.warn("Khong the lay gia san pham [{}] tu repository, su dung 0", item.getFoodId());
+        if (product != null && product.getBasePrice() > 0) {
+            tongDonGia = product.getBasePrice();
         }
-        if (item.getOptions() != null) {
-            for (CheckoutRequestV2.ItemOption opt : item.getOptions()) {
-                if (opt.getPrice() != null) {
-                    tongDonGia += opt.getPrice();
+
+        if (selectedSize != null && !selectedSize.isBlank() && product != null) {
+            double giaSize = layGiaOptionTheoTen(product, selectedSize);
+            tongDonGia += giaSize;
+            log.info("Gia size [{}] cho san pham [{}]: {}", selectedSize, item.getFoodId(), giaSize);
+        }
+
+        if (item.getSelectedOptions() != null && product != null) {
+            for (CheckoutRequestV2.SelectedOptionGroup group : item.getSelectedOptions()) {
+                if (group.getName() == null) continue;
+                String groupNameLower = group.getName().toLowerCase();
+                boolean isSizeGroup = groupNameLower.contains("kich") && groupNameLower.contains("thuoc")
+                        || groupNameLower.contains("size");
+                if (isSizeGroup) continue;
+
+                if (group.getOptions() != null) {
+                    for (CheckoutRequestV2.SelectedOption selOpt : group.getOptions()) {
+                        double gia = layGiaOptionTheoTen(product, selOpt.getName());
+                        tongDonGia += gia;
+                    }
                 }
             }
         }
         return tongDonGia;
     }
 
+    private double layGiaOptionTheoTen(Product product, String optionName) {
+        if (product.getOptionGroups() == null) {
+            return 0.0;
+        }
+        for (Product.ProductOptionGroup group : product.getOptionGroups()) {
+            if (group.getOptions() == null) continue;
+            for (Product.ProductOption option : group.getOptions()) {
+                if (option.getName() != null && option.getName().equalsIgnoreCase(optionName)) {
+                    log.info("Tim thay option [{}] trong optionGroups voi gia: {}", optionName, option.getPrice());
+                    return option.getPrice();
+                }
+            }
+        }
+        log.warn("Khong tim thay option [{}] trong optionGroups cua san pham [{}], gia = 0",
+                optionName, product.getId());
+        return 0.0;
+    }
+
     private double tinhTongTienTuItems(List<CheckoutRequestV2.CheckoutItem> requestItems) {
         double tong = 0.0;
         for (CheckoutRequestV2.CheckoutItem item : requestItems) {
-            double donGia = tinhDonGiaMotMon(item);
+            Product product = null;
+            String selectedSize = null;
+            try {
+                product = productRepository.findById(item.getFoodId());
+            } catch (Exception e) {
+                log.warn("Khong the lay san pham [{}] khi tinh tong tien", item.getFoodId());
+            }
+
+            if (item.getSelectedOptions() != null && !item.getSelectedOptions().isEmpty()) {
+                for (CheckoutRequestV2.SelectedOptionGroup group : item.getSelectedOptions()) {
+                    if (group.getName() == null) continue;
+                    String groupNameLower = group.getName().toLowerCase();
+                    boolean isSizeGroup = groupNameLower.contains("kich") && groupNameLower.contains("thuoc")
+                            || groupNameLower.contains("size");
+                    if (isSizeGroup && group.getOptions() != null && !group.getOptions().isEmpty()) {
+                        selectedSize = group.getOptions().get(0).getName();
+                    }
+                }
+            }
+
+            double donGia = tinhDonGiaMotMon(item, product, selectedSize);
             tong += donGia * item.getQuantity();
         }
         return tong;
@@ -486,9 +595,13 @@ public class CheckoutService {
             CheckoutResponse.OrderItemData[] orderItems,
             double tongTienHang,
             double phiShip,
-            double soTienGiam,
+            double discountAmount,
+            double shopDiscountAmount,
+            double freeshipDiscountAmount,
             double tongThanhToan,
-            List<VoucherInfo> voucherInfos
+            List<VoucherInfo> voucherInfos,
+            String idempotencyKey,
+            String orderCode
     ) {
         WriteBatch batch = firestore.batch();
         log.info("Bat dau tao don hang atomi cho nguoi dung [{}].", userId);
@@ -505,6 +618,7 @@ public class CheckoutService {
             itemMap.put("price", item.getPrice());
             itemMap.put("quantity", item.getQuantity());
             itemMap.put("imageUrl", item.getImageUrl() != null ? item.getImageUrl() : "");
+            itemMap.put("size", item.getSize() != null ? item.getSize() : "");
             if (item.getOptions() != null) {
                 List<Map<String, Object>> toppingMaps = new ArrayList<>();
                 for (CheckoutResponse.ItemOption t : item.getOptions()) {
@@ -519,13 +633,16 @@ public class CheckoutService {
         }
 
         Map<String, Object> orderData = new HashMap<>();
+        orderData.put("code", orderCode);
         orderData.put("userId", userId);
         orderData.put("storeId", storeId);
         orderData.put("storeName", storeName != null ? storeName : "");
         orderData.put("items", itemsData);
         orderData.put("totalAmount", tongTienHang);
         orderData.put("deliveryFee", phiShip);
-        orderData.put("discountAmount", soTienGiam);
+        orderData.put("discountAmount", discountAmount);
+        orderData.put("shopDiscountAmount", shopDiscountAmount);
+        orderData.put("freeshipDiscountAmount", freeshipDiscountAmount);
         orderData.put("finalAmount", tongThanhToan);
         orderData.put("paymentMethod", request.getPaymentMethod());
         orderData.put("deliveryAddress", diaChi.getAddress());
@@ -539,6 +656,11 @@ public class CheckoutService {
         orderData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
         orderData.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
         orderData.put("deletedAt", null);
+
+        // Luu idempotency key de chan dat hang trung lap
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            orderData.put("idempotencyKey", idempotencyKey);
+        }
 
         batch.set(orderDocRef, orderData);
         log.info("Them thao tac tao document don hang [{}] vao WriteBatch.", orderId);
@@ -563,6 +685,42 @@ public class CheckoutService {
             }
         }
 
+        // Chi xoa nhung cart item trung voi cac mon da dat (cung foodId + cung selectedOptions)
+        CollectionReference cartRef = firestore
+                .collection("customer_profiles")
+                .document(userId)
+                .collection("cart");
+        int cartItemCount = 0;
+        try {
+            ApiFuture<QuerySnapshot> cartQuery = cartRef.get();
+            QuerySnapshot cartSnapshot = cartQuery.get();
+            for (DocumentSnapshot cartDoc : cartSnapshot.getDocuments()) {
+                String cartFoodId = cartDoc.getString("foodId");
+                List<Map<String, Object>> cartSelectedOptions = (List<Map<String, Object>>) cartDoc.get("selectedOptions");
+
+                boolean matchesAnOrderedItem = request.getItems().stream().anyMatch(item -> {
+                    if (!item.getFoodId().equals(cartFoodId)) {
+                        return false;
+                    }
+                    List<CheckoutRequestV2.SelectedOptionGroup> itemOptions = item.getSelectedOptions();
+                    return coCungSelectedOptions(cartSelectedOptions, itemOptions);
+                });
+
+                if (matchesAnOrderedItem) {
+                    batch.delete(cartDoc.getReference());
+                    cartItemCount++;
+                    log.debug("Xoa cart item [{}] - foodId: {} - trung voi item da dat", cartDoc.getId(), cartFoodId);
+                }
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            log.warn("Khong the truy van gio hang de xoa (van tiep tuc tao don): {}", e.getMessage());
+        }
+        if (cartItemCount > 0) {
+            log.info("Them thao tac xoa {} mon da dat khoi gio hang cua nguoi dung [{}] vao WriteBatch.", cartItemCount, userId);
+        } else {
+            log.info("Khong co cart item nao trung voi cac mon da dat trong gio hang cua nguoi dung [{}].", userId);
+        }
+
         try {
             batch.commit();
             log.info("WriteBatch commit thanh cong - orderId: [{}].", orderId);
@@ -572,6 +730,85 @@ public class CheckoutService {
         }
 
         return orderId;
+    }
+
+    private String kiemTraIdempotencyKey(String userId, String idempotencyKey) {
+        try {
+            ApiFuture<QuerySnapshot> future = firestore.collection("orders")
+                    .whereEqualTo("userId", userId)
+                    .whereEqualTo("idempotencyKey", idempotencyKey)
+                    .limit(1)
+                    .get();
+            QuerySnapshot snapshot = future.get();
+            if (!snapshot.isEmpty()) {
+                return snapshot.getDocuments().get(0).getId();
+            }
+        } catch (Exception e) {
+            log.warn("Loi khi kiem tra idempotency key [{}]: {}", idempotencyKey, e.getMessage());
+        }
+        return null;
+    }
+
+    private boolean coCungSelectedOptions(
+            List<Map<String, Object>> cartOptions,
+            List<CheckoutRequestV2.SelectedOptionGroup> itemOptions
+    ) {
+        boolean cartEmpty = cartOptions == null || cartOptions.isEmpty();
+        boolean itemEmpty = itemOptions == null || itemOptions.isEmpty();
+
+        if (cartEmpty && itemEmpty) {
+            return true;
+        }
+        if (cartEmpty || itemEmpty) {
+            return false;
+        }
+
+        if (cartOptions.size() != itemOptions.size()) {
+            return false;
+        }
+
+        for (Map<String, Object> cartGroupMap : cartOptions) {
+            String cartGroupName = (String) cartGroupMap.get("name");
+            CheckoutRequestV2.SelectedOptionGroup matchingItemGroup = itemOptions.stream()
+                    .filter(g -> java.util.Objects.equals(g.getName(), cartGroupName))
+                    .findFirst()
+                    .orElse(null);
+
+            if (matchingItemGroup == null) {
+                return false;
+            }
+
+            List<CheckoutRequestV2.SelectedOption> itemOpts = matchingItemGroup.getOptions();
+            List<Map<String, Object>> cartOpts = (List<Map<String, Object>>) cartGroupMap.get("options");
+
+            boolean cartOptsEmpty = cartOpts == null || cartOpts.isEmpty();
+            boolean itemOptsEmpty = itemOpts == null || itemOpts.isEmpty();
+
+            if (cartOptsEmpty && itemOptsEmpty) {
+                continue;
+            }
+            if (cartOptsEmpty || itemOptsEmpty) {
+                return false;
+            }
+            if (cartOpts.size() != itemOpts.size()) {
+                return false;
+            }
+
+            List<String> cartOptNames = cartOpts.stream()
+                    .map(o -> (String) o.get("name"))
+                    .sorted()
+                    .toList();
+            List<String> itemOptNames = itemOpts.stream()
+                    .map(CheckoutRequestV2.SelectedOption::getName)
+                    .sorted()
+                    .toList();
+
+            if (!cartOptNames.equals(itemOptNames)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private enum LoaiVoucher {

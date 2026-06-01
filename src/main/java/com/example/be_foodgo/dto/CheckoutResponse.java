@@ -40,8 +40,14 @@ public class CheckoutResponse {
     @Schema(description = "Phi giao hang", example = "15000.0")
     private Double deliveryFee;
 
-    @Schema(description = "So tien duoc giam (neu co voucher)", example = "20000.0")
+    @Schema(description = "So tien duoc giam tu voucher he thong (discountVoucher)", example = "20000.0")
     private Double discountAmount;
+
+    @Schema(description = "So tien duoc giam tu voucher cua hang (shopVoucher)", example = "5000.0")
+    private Double shopDiscountAmount;
+
+    @Schema(description = "So tien duoc giam tu voucher freeship (freeshipVoucher)", example = "15000.0")
+    private Double freeshipDiscountAmount;
 
     @Schema(description = "Tong so tien phai thanh toan", example = "85000.0")
     private Double finalAmount;
@@ -96,6 +102,9 @@ public class CheckoutResponse {
 
         @Schema(description = "URL anh mon an", example = "https://images.unsplash.com/photo-xxx")
         private String imageUrl;
+
+        @Schema(description = "Kich thuoc (VD: S, M, L)", example = "M", nullable = true)
+        private String size;
 
         @Schema(description = "Cac tuy chon da chon (size, topping)", example = "[{\"name\": \"Tran chau\", \"price\": 5000.0}]")
         private List<ItemOption> options;

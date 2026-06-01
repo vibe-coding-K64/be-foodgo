@@ -1,5 +1,6 @@
 package com.example.be_foodgo.service;
 
+import com.example.be_foodgo.dto.CancelOrderResponse;
 import com.example.be_foodgo.dto.OrderDTO;
 import com.example.be_foodgo.dto.OrderItemDTO;
 import com.example.be_foodgo.exception.BusinessException;
@@ -63,7 +64,7 @@ public class OrderService {
         return null;
     }
 
-    public OrderDTO cancelOrder(String orderId, String userId) throws ExecutionException, InterruptedException {
+    public CancelOrderResponse cancelOrder(String orderId, String userId, String reason) throws ExecutionException, InterruptedException {
         Order order = orderRepository.findById(orderId);
 
         if (order == null) {
@@ -83,12 +84,19 @@ public class OrderService {
         order.setStatus(4);
         order.setUpdatedAt(new java.util.Date());
 
+        if (reason != null && !reason.trim().isEmpty()) {
+            order.setNote(reason);
+        }
+
         Map<String, Object> fields = new HashMap<>();
         fields.put("status", 4);
         fields.put("updatedAt", order.getUpdatedAt());
-        orderRepository.updateFields(orderId, fields);
+        if (reason != null && !reason.trim().isEmpty()) {
+            fields.put("note", reason);
+        }
+        String updatedAtStr = orderRepository.updateFields(orderId, fields);
 
-        return convertToDTO(order);
+        return new CancelOrderResponse(orderId, 4, updatedAtStr);
     }
 
     private OrderDTO convertToDTO(Order entity) throws ExecutionException, InterruptedException {
@@ -118,21 +126,19 @@ public class OrderService {
         }
         dto.setCode(code);
 
-        String cusName = entity.getCustomerName();
-        if (cusName == null || cusName.trim().isEmpty()) {
-            cusName = "Khách hàng";
-        }
-        dto.setCustomerName(cusName);
-        dto.setCustomerPhone(entity.getCustomerPhone());
         dto.setDeliveryAddress(entity.getDeliveryAddress());
+        dto.setReceiverName(entity.getReceiverName());
+        dto.setReceiverPhone(entity.getReceiverPhone());
+        dto.setDeliveryFee(entity.getDeliveryFee());
         dto.setDriverName(entity.getDriverName());
         dto.setDriverPhone(entity.getDriverPhone());
         dto.setTotalAmount(entity.getTotalAmount());
-        dto.setShippingFee(entity.getShippingFee());
         dto.setDiscountAmount(entity.getDiscountAmount());
+        dto.setShopDiscountAmount(entity.getShopDiscountAmount());
+        dto.setFreeshipDiscountAmount(entity.getFreeshipDiscountAmount());
         dto.setFinalAmount(entity.getFinalAmount());
         dto.setPaymentMethod(entity.getPaymentMethod());
-        dto.setStatus(entity.getStatus());
+        dto.setStatus(entity.getStatusValue());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
         dto.setNote(entity.getNote());
@@ -141,6 +147,8 @@ public class OrderService {
             List<OrderItemDTO> itemDTOs = new ArrayList<>();
             for (OrderItem item : entity.getItems()) {
                 OrderItemDTO idto = new OrderItemDTO();
+                idto.setFoodId(item.getFoodId());
+                idto.setImageUrl(item.getImageUrl());
                 idto.setName(item.getName());
                 idto.setOptions(item.getOptions());
                 idto.setQuantity(item.getQuantity());
@@ -159,14 +167,16 @@ public class OrderService {
         entity.setStoreId(dto.getStoreId());
         entity.setStoreName(dto.getStoreName());
         entity.setCode(dto.getCode());
-        entity.setCustomerName(dto.getCustomerName());
-        entity.setCustomerPhone(dto.getCustomerPhone());
         entity.setDeliveryAddress(dto.getDeliveryAddress());
+        entity.setReceiverName(dto.getReceiverName());
+        entity.setReceiverPhone(dto.getReceiverPhone());
+        entity.setDeliveryFee(dto.getDeliveryFee());
         entity.setDriverName(dto.getDriverName());
         entity.setDriverPhone(dto.getDriverPhone());
         entity.setTotalAmount(dto.getTotalAmount());
-        entity.setShippingFee(dto.getShippingFee());
         entity.setDiscountAmount(dto.getDiscountAmount());
+        entity.setShopDiscountAmount(dto.getShopDiscountAmount());
+        entity.setFreeshipDiscountAmount(dto.getFreeshipDiscountAmount());
         entity.setFinalAmount(dto.getFinalAmount());
         entity.setPaymentMethod(dto.getPaymentMethod());
         entity.setStatus(dto.getStatus());
@@ -178,6 +188,8 @@ public class OrderService {
             List<OrderItem> items = new ArrayList<>();
             for (OrderItemDTO itemDTO : dto.getItems()) {
                 OrderItem item = new OrderItem();
+                item.setFoodId(itemDTO.getFoodId());
+                item.setImageUrl(itemDTO.getImageUrl());
                 item.setName(itemDTO.getName());
                 item.setOptions(itemDTO.getOptions());
                 item.setQuantity(itemDTO.getQuantity());

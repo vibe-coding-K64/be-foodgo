@@ -74,6 +74,14 @@ public class UserRepository {
         docRef.update(updates).get();
     }
 
+    public void xacThucEmail(String userId) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isEmailVerified", true);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
     public void capNhatThongTinHoSo(String userId, String fullName, String photoUrl) throws ExecutionException, InterruptedException {
         DocumentReference docRef = getCollection().document(userId);
         Map<String, Object> updates = new HashMap<>();
@@ -132,6 +140,7 @@ public class UserRepository {
                 .roles(roles)
                 .createdAt(objectToString(data.get("createdAt")))
                 .updatedAt(objectToString(data.get("updatedAt")))
+                .isEmailVerified(data.get("isEmailVerified") != null ? (Boolean) data.get("isEmailVerified") : false)
                 .build();
     }
 
@@ -146,6 +155,7 @@ public class UserRepository {
         map.put("roles", user.getRoles());
         map.put("createdAt", user.getCreatedAt());
         map.put("updatedAt", user.getUpdatedAt());
+        map.put("isEmailVerified", user.getIsEmailVerified() != null ? user.getIsEmailVerified() : false);
         return map;
     }
 

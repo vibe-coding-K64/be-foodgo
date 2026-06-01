@@ -24,6 +24,12 @@ public class Store {
         return isOpen;
     }
 
+    @PropertyName("name")
+    @JsonProperty("name")
+    public String getName() {
+        return name;
+    }
+
     @PropertyName("isOpen")
     @JsonProperty("isOpen")
     public void setIsOpen(boolean isOpen) {

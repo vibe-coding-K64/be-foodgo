@@ -6,7 +6,6 @@ public class Voucher {
 
     private String id;
     private String storeId;
-    private String name;
     private String title;
     private String subtitle;
     private String code;
@@ -34,9 +33,6 @@ public class Voucher {
 
     public String getStoreId() { return storeId; }
     public void setStoreId(String storeId) { this.storeId = storeId; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

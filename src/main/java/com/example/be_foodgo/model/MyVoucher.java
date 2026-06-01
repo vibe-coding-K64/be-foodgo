@@ -14,7 +14,6 @@ import java.util.Date;
 public class MyVoucher {
 
     private String id;
-    private String name;
     private String title;
     private String subtitle;
     private String code;

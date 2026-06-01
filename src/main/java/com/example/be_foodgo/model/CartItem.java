@@ -1,5 +1,7 @@
 package com.example.be_foodgo.model;
 
+import com.example.be_foodgo.dto.CartRequest.SelectedOption;
+import com.example.be_foodgo.dto.CartRequest.SelectedOptionGroup;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,14 +28,23 @@ public class CartItem {
     private String name;
     private Double price;
     private Integer quantity;
-    private String size;
-    private Double sizePrice;
-    private List<ToppingItem> toppings;
     private String note;
     private String imageUrl;
     private Instant createdAt;
     private Instant updatedAt;
 
+    @Deprecated
+    private String size;
+
+    @Deprecated
+    private Double sizePrice;
+
+    @Deprecated
+    private List<ToppingItem> toppings;
+
+    private List<SelectedOptionGroup> selectedOptions;
+
+    @Deprecated
     @Data
     @Builder
     @NoArgsConstructor
@@ -52,54 +63,84 @@ public class CartItem {
     }
 
     public boolean coCungTopping(List<ToppingItem> other) {
-        log.debug("[coCungTopping] this.toppings={}, other={}",
-                this.toppings, other);
+        if (other == null) {
+            return selectedOptions == null || selectedOptions.isEmpty();
+        }
+        return coCungSelectedOptions(convertToSelectedOptions(other));
+    }
 
-        boolean thisEmpty = this.toppings == null || this.toppings.isEmpty();
+    public boolean coCungSelectedOptions(List<SelectedOptionGroup> other) {
+        log.debug("[coCungSelectedOptions] this.selectedOptions={}, other={}", this.selectedOptions, other);
+
+        boolean thisEmpty = selectedOptions == null || selectedOptions.isEmpty();
         boolean otherEmpty = other == null || other.isEmpty();
 
-        log.debug("[coCungTopping] thisEmpty={}, otherEmpty={}", thisEmpty, otherEmpty);
-
         if (thisEmpty && otherEmpty) {
-            log.debug("[coCungTopping] Ca hai deu rong -> TRUE (trung)");
+            log.debug("[coCungSelectedOptions] Ca hai deu rong -> TRUE (trung)");
             return true;
         }
         if (thisEmpty || otherEmpty) {
-            log.debug("[coCungTopping] Mot ben rong, mot ben co -> FALSE (khong trung)");
-            return false;
-        }
-        if (this.toppings.size() != other.size()) {
-            log.debug("[coCungTopping] So luong topping khac nhau: {} vs {} -> FALSE (khong trung)",
-                    this.toppings.size(), other.size());
+            log.debug("[coCungSelectedOptions] Mot ben rong, mot ben co -> FALSE (khong trung)");
             return false;
         }
 
-        List<String> thisNames = this.toppings.stream().map(ToppingItem::getName).sorted().toList();
-        List<String> otherNames = other.stream().map(ToppingItem::getName).sorted().toList();
-        log.debug("[coCungTopping] thisNames={}, otherNames={}", thisNames, otherNames);
-
-        if (!thisNames.equals(otherNames)) {
-            log.debug("[coCungTopping] Ten topping khac nhau -> FALSE (khong trung)");
+        if (this.selectedOptions.size() != other.size()) {
+            log.debug("[coCungSelectedOptions] So luong nhom khac nhau: {} vs {} -> FALSE",
+                    this.selectedOptions.size(), other.size());
             return false;
         }
 
-        for (ToppingItem thisTopping : this.toppings) {
-            ToppingItem otherTopping = other.stream()
-                    .filter(t -> Objects.equals(t.getName(), thisTopping.getName()))
+        for (SelectedOptionGroup thisGroup : this.selectedOptions) {
+            SelectedOptionGroup otherGroup = other.stream()
+                    .filter(g -> Objects.equals(g.getName(), thisGroup.getName()))
                     .findFirst()
                     .orElse(null);
-            if (otherTopping == null) {
-                log.debug("[coCungTopping] Topping '{}' khong tim thay ben other -> FALSE (khong trung)",
-                        thisTopping.getName());
+            if (otherGroup == null) {
+                log.debug("[coCungSelectedOptions] Nhom '{}' khong ton tai ben other -> FALSE",
+                        thisGroup.getName());
                 return false;
             }
-            if (!Objects.equals(thisTopping.getPrice(), otherTopping.getPrice())) {
-                log.debug("[coCungTopping] Topping '{}' gia khac nhau: {} vs {} -> FALSE (khong trung)",
-                        thisTopping.getName(), thisTopping.getPrice(), otherTopping.getPrice());
+            if (!cungOptionTrongGroup(thisGroup, otherGroup)) {
                 return false;
             }
         }
-        log.debug("[coCungTopping] Tat ca deu trung -> TRUE (trung)");
+
+        log.debug("[coCungSelectedOptions] Tat ca deu trung -> TRUE");
         return true;
+    }
+
+    private boolean cungOptionTrongGroup(SelectedOptionGroup a, SelectedOptionGroup b) {
+        List<String> thisNames = a.getOptions() == null
+                ? List.of()
+                : a.getOptions().stream().map(SelectedOption::getName).sorted().toList();
+        List<String> otherNames = b.getOptions() == null
+                ? List.of()
+                : b.getOptions().stream().map(SelectedOption::getName).sorted().toList();
+
+        if (thisNames.size() != otherNames.size()) {
+            log.debug("[coCungSelectedOptions] Group '{}' - so luong option khac: {} vs {} -> FALSE",
+                    a.getName(), thisNames.size(), otherNames.size());
+            return false;
+        }
+        if (!thisNames.equals(otherNames)) {
+            log.debug("[coCungSelectedOptions] Group '{}' - ten option khac nhau -> FALSE", a.getName());
+            return false;
+        }
+        return true;
+    }
+
+    private List<SelectedOptionGroup> convertToSelectedOptions(List<ToppingItem> toppings) {
+        if (toppings == null || toppings.isEmpty()) {
+            return null;
+        }
+        List<SelectedOption> options = toppings.stream()
+                .map(t -> SelectedOption.builder().name(t.getName()).build())
+                .toList();
+        return List.of(
+                SelectedOptionGroup.builder()
+                        .name("Topping")
+                        .options(options)
+                        .build()
+        );
     }
 }

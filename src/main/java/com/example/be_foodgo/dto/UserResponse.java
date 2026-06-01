@@ -32,4 +32,7 @@ public class UserResponse {
 
     @Schema(description = "Danh sach quyen: 1=Khach hang, 2=Tai xe, 3=Nguoi ban, 4=Admin")
     private List<Integer> roles;
+
+    @Schema(description = "Email da duoc xac thuc chua", example = "false")
+    private Boolean isEmailVerified;
 }

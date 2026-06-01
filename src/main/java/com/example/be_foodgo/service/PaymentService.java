@@ -130,7 +130,7 @@ public class PaymentService {
 
                 PaymentMethod newMethod = PaymentMethod.builder()
                         .name(request.getName())
-                        .type(request.getType())
+                        .type(typeStringToInt(request.getType()))
                         .details(request.getDetails() != null ? request.getDetails() : "")
                         .isDefault(true)
                         .cardBrand(finalCardBrand)
@@ -149,7 +149,7 @@ public class PaymentService {
             } else {
                 PaymentMethod newMethod = PaymentMethod.builder()
                         .name(request.getName())
-                        .type(request.getType())
+                        .type(typeStringToInt(request.getType()))
                         .details(request.getDetails() != null ? request.getDetails() : "")
                         .isDefault(false)
                         .cardBrand(finalCardBrand)
@@ -262,7 +262,7 @@ public class PaymentService {
         return PaymentResponse.builder()
                 .id(pm.getId())
                 .name(pm.getName())
-                .type(pm.getType())
+                .type(typeIntToString(pm.getType()))
                 .details(pm.getDetails())
                 .isDefault(pm.getIsDefault())
                 .cardBrand(pm.getCardBrand())
@@ -272,5 +272,26 @@ public class PaymentService {
                 .createdAt(pm.getCreatedAt())
                 .updatedAt(pm.getUpdatedAt())
                 .build();
+    }
+
+    private int typeStringToInt(String type) {
+        if (type == null) return 1;
+        return switch (type.toLowerCase()) {
+            case "cash" -> 1;
+            case "momo" -> 2;
+            case "zalo", "zaloapp" -> 3;
+            case "vnpay", "card" -> 4;
+            default -> 1;
+        };
+    }
+
+    private String typeIntToString(int type) {
+        return switch (type) {
+            case 1 -> "cash";
+            case 2 -> "momo";
+            case 3 -> "zalo";
+            case 4 -> "vnpay";
+            default -> "cash";
+        };
     }
 }

@@ -10,11 +10,13 @@ public class Order {
     private String storeId;
     private String storeName;
     private String code;
-    
-    private String customerName;
-    private String customerPhone;
+
     private String deliveryAddress;
     private String addressId;
+
+    private String receiverName;
+    private String receiverPhone;
+    private double deliveryFee;
 
     private String driverName;
     private String driverPhone;
@@ -22,10 +24,11 @@ public class Order {
     private List<OrderItem> items;
     
     private double totalAmount;
-    private double shippingFee;
     private double discountAmount;
+    private double shopDiscountAmount;
+    private double freeshipDiscountAmount;
     private double finalAmount;
-    private String paymentMethod;
+    private Object paymentMethod;
     
     private Object status; // 0=Chờ xác nhận, 1=Đang chuẩn bị, 2=Đang giao, 3=Hoàn thành, 4=Đã hủy
     private Date createdAt;
@@ -50,14 +53,16 @@ public class Order {
     public void setStoreName(String storeName) { this.storeName = storeName; }
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
-    public String getCustomerPhone() { return customerPhone; }
-    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
     public String getDeliveryAddress() { return deliveryAddress; }
     public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
     public String getAddressId() { return addressId; }
     public void setAddressId(String addressId) { this.addressId = addressId; }
+    public String getReceiverName() { return receiverName; }
+    public void setReceiverName(String receiverName) { this.receiverName = receiverName; }
+    public String getReceiverPhone() { return receiverPhone; }
+    public void setReceiverPhone(String receiverPhone) { this.receiverPhone = receiverPhone; }
+    public double getDeliveryFee() { return deliveryFee; }
+    public void setDeliveryFee(double deliveryFee) { this.deliveryFee = deliveryFee; }
     public String getDriverName() { return driverName; }
     public void setDriverName(String driverName) { this.driverName = driverName; }
     public String getDriverPhone() { return driverPhone; }
@@ -66,14 +71,27 @@ public class Order {
     public void setItems(List<OrderItem> items) { this.items = items; }
     public double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
-    public double getShippingFee() { return shippingFee; }
-    public void setShippingFee(double shippingFee) { this.shippingFee = shippingFee; }
     public double getDiscountAmount() { return discountAmount; }
     public void setDiscountAmount(double discountAmount) { this.discountAmount = discountAmount; }
+    public double getShopDiscountAmount() { return shopDiscountAmount; }
+    public void setShopDiscountAmount(double shopDiscountAmount) { this.shopDiscountAmount = shopDiscountAmount; }
+    public double getFreeshipDiscountAmount() { return freeshipDiscountAmount; }
+    public void setFreeshipDiscountAmount(double freeshipDiscountAmount) { this.freeshipDiscountAmount = freeshipDiscountAmount; }
     public double getFinalAmount() { return finalAmount; }
     public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
-    public String getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public int getPaymentMethod() {
+        if (paymentMethod instanceof Number) {
+            return ((Number) paymentMethod).intValue();
+        } else if (paymentMethod instanceof String) {
+            try {
+                return Integer.parseInt((String) paymentMethod);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+    public void setPaymentMethod(int paymentMethod) { this.paymentMethod = paymentMethod; }
     public String getStatus() {
         if (status instanceof Number) {
             long val = ((Number) status).longValue();

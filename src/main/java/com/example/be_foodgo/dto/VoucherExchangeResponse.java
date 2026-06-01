@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class VoucherExchangeResponse {
 
     private String myVoucherId;
-    private String name;
     private String title;
     private String subtitle;
     private String code;

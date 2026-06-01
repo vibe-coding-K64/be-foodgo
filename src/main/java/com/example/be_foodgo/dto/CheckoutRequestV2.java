@@ -1,7 +1,9 @@
 package com.example.be_foodgo.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
@@ -49,7 +51,11 @@ public class CheckoutRequestV2 {
     private String shopVoucherId;
 
     @Schema(description = "ID voucher freeship", example = "mv_001", nullable = true)
+    @JsonProperty("freeshipVoucherId")
     private String freeshpVoucherId;
+
+    @Schema(description = "Idempotency key de chong dat hang trung lap. Neu gui cung key 2 lan, request thu 2 se tra ve 409 Conflict. Vi du: UUID", example = "550e8400-e29b-41d4-a716-446655440000", nullable = true)
+    private String idempotencyKey;
 
     @Data
     @Builder
@@ -65,14 +71,15 @@ public class CheckoutRequestV2 {
         @Schema(description = "Ten mon an", example = "Tra Sua Tran Chau Duong")
         private String name;
 
+        @Min(value = 1, message = "So luong phai lon hon 0")
         @Schema(description = "So luong", example = "2")
         private Integer quantity;
 
         @Schema(description = "URL anh mon an", example = "https://picsum.photos/seed/milktea1/200")
         private String imageUrl;
 
-        @Schema(description = "Cac tuy chon da chon (topping)", nullable = true)
-        private List<ItemOption> options;
+        @Schema(description = "Cac nhom tuy chon da chon (size, topping)", nullable = true)
+        private List<SelectedOptionGroup> selectedOptions;
 
         @Schema(description = "Ghi chu cho mon nay", example = "It duong", nullable = true)
         private String note;
@@ -82,13 +89,24 @@ public class CheckoutRequestV2 {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Tuy chon cua mon an (VD: topping)")
-    public static class ItemOption {
+    @Schema(description = "Nhom tuy chon da chon (VD: Kich thuoc, Topping)")
+    public static class SelectedOptionGroup {
+
+        @Schema(description = "Ten nhom tuy chon", example = "Kich thuoc")
+        private String name;
+
+        @Schema(description = "Danh sach cac tuy chon da chon trong nhom nay", nullable = true)
+        private List<SelectedOption> options;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "Mot tuy chon da chon (VD: Lon, Tran Chau)")
+    public static class SelectedOption {
 
         @Schema(description = "Ten tuy chon", example = "Tran Chau")
         private String name;
-
-        @Schema(description = "Gia tuy chon (VND)", example = "5000.0")
-        private Double price;
     }
 }

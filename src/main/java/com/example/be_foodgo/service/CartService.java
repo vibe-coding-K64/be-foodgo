@@ -1,6 +1,8 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.CartRequest;
+import com.example.be_foodgo.dto.CartRequest.SelectedOption;
+import com.example.be_foodgo.dto.CartRequest.SelectedOptionGroup;
 import com.example.be_foodgo.dto.CartResponse;
 import com.example.be_foodgo.dto.CartResponse.CartItemResponse;
 import com.example.be_foodgo.exception.BusinessException;
@@ -50,21 +52,9 @@ public class CartService {
         }
 
         Double basePrice = toDouble(sanPhamDoc.get("basePrice"));
-        Double sizePrice = tinhGiaSize(request.getFoodId(), request.getSize(), sanPhamDoc);
-        Double toppingPrice = tinhTongGiaTopping(request.getToppings());
+        Double optionsPrice = tinhGiaTatCaOptions(request.getSelectedOptions(), sanPhamDoc);
 
-        Double donGia = basePrice + sizePrice + toppingPrice;
-
-        List<CartItem.ToppingItem> toppingItems = new ArrayList<>();
-        if (request.getToppings() != null) {
-            for (CartRequest.ToppingOption t : request.getToppings()) {
-                toppingItems.add(CartItem.ToppingItem.builder()
-                        .name(t.getName())
-                        .price(t.getPrice())
-                        .build());
-            }
-        }
-        final List<CartItem.ToppingItem> toppingItemsFinal = toppingItems;
+        Double donGia = basePrice + optionsPrice;
 
         List<CartItem> gioHienTai;
         try {
@@ -74,20 +64,20 @@ public class CartService {
             throw BusinessException.loiHeThong("Khong the lay thong tin gio hang.");
         }
 
-        CartItem.ToppingItem[] toppingItemsArr = toppingItems.toArray(new CartItem.ToppingItem[0]);
-        CartItem itemTrung = timItemTrung(gioHienTai, request.getFoodId(), request.getSize(), toppingItemsArr);
+        List<SelectedOptionGroup> selectedOptionsForCompare = request.getSelectedOptions() == null
+                ? null : new ArrayList<>(request.getSelectedOptions());
+        CartItem itemTrung = timItemTrung(gioHienTai, request.getFoodId(), selectedOptionsForCompare);
 
         log.info("=== [themMonVaoGio] Ket qua timItemTrung: {} ===",
                 itemTrung != null ? "TIM THAY (se GOP)" : "KHONG TIM THAY (se TAO DONG MOI)");
 
         if (itemTrung != null) {
-            List<CartItem.ToppingItem> mergedToppings = toppingItemsFinal.isEmpty() ? null : toppingItemsFinal;
+            List<SelectedOptionGroup> mergedOptions = (selectedOptionsForCompare == null || selectedOptionsForCompare.isEmpty()) ? null : selectedOptionsForCompare;
             Integer soLuongMoi = itemTrung.getQuantity() + request.getQuantity();
             Double giaMoi = donGia * soLuongMoi;
             itemTrung.setQuantity(soLuongMoi);
             itemTrung.setPrice(giaMoi);
-            itemTrung.setSizePrice(sizePrice);
-            itemTrung.setToppings(mergedToppings);
+            itemTrung.setSelectedOptions(mergedOptions);
             cartRepository.capNhatCartItem(request.getUserId(), itemTrung);
             log.info("Tang so luong mon [{}] tu {} len {} - Gia moi: {}",
                     request.getFoodId(), itemTrung.getQuantity() - request.getQuantity(), soLuongMoi, giaMoi);
@@ -96,15 +86,14 @@ public class CartService {
 
         log.info("=== [themMonVaoGio] Tao dong moi trong gio hang ===");
         Double tongGia = donGia * request.getQuantity();
+
         CartItem item = CartItem.builder()
                 .storeId(request.getStoreId())
                 .foodId(request.getFoodId())
                 .name((String) sanPhamDoc.get("name"))
                 .price(tongGia)
                 .quantity(request.getQuantity())
-                .size(request.getSize())
-                .sizePrice(sizePrice)
-                .toppings(toppingItemsFinal.isEmpty() ? null : toppingItemsFinal)
+                .selectedOptions((selectedOptionsForCompare == null || selectedOptionsForCompare.isEmpty()) ? null : selectedOptionsForCompare)
                 .note(request.getNote())
                 .imageUrl((String) sanPhamDoc.get("imageUrl"))
                 .build();
@@ -116,39 +105,25 @@ public class CartService {
         return item;
     }
 
-    private CartItem timItemTrung(List<CartItem> gioHienTai, String foodId, String size, CartItem.ToppingItem[] toppingItems) {
+    private CartItem timItemTrung(List<CartItem> gioHienTai, String foodId, List<SelectedOptionGroup> selectedOptions) {
         log.info("=== [timItemTrung] Bat dau tim kiem trung lap ===");
-        log.info("[timItemTrung] Can tim: foodId={}, size={}, toppings={}",
-                foodId, size,
-                toppingItems != null
-                        ? java.util.Arrays.stream(toppingItems).map(t -> t.getName() + "(" + t.getPrice() + ")").toList()
-                        : null);
+        log.info("[timItemTrung] Can tim: foodId={}, selectedOptions={}", foodId, selectedOptions);
 
         for (int i = 0; i < gioHienTai.size(); i++) {
             CartItem item = gioHienTai.get(i);
-            log.info("[timItemTrung] Kiem tra item[{}]: foodId={}, size={}, toppings={}",
-                    i, item.getFoodId(), item.getSize(),
-                    item.getToppings() != null
-                            ? item.getToppings().stream().map(t -> t.getName() + "(" + t.getPrice() + ")").toList()
-                            : null);
+            log.info("[timItemTrung] Kiem tra item[{}]: foodId={}, selectedOptions={}",
+                    i, item.getFoodId(), item.getSelectedOptions());
 
             if (!item.getFoodId().equals(foodId)) {
                 log.info("[timItemTrung]   -> foodId khac '{}' != '{}' -> CONTINUE", item.getFoodId(), foodId);
                 continue;
             }
-            if (!java.util.Objects.equals(size, item.getSize())) {
-                log.info("[timItemTrung]   -> size khac '{}' != '{}' -> CONTINUE",
-                        item.getSize(), size);
-                continue;
-            }
 
-            List<CartItem.ToppingItem> toppingList = toppingItems == null || toppingItems.length == 0
-                    ? null : java.util.Arrays.asList(toppingItems);
-            boolean cungTopping = item.coCungTopping(toppingList);
-            log.info("[timItemTrung]   -> foodId OK, size OK, coCungTopping={} -> {}",
-                    cungTopping, cungTopping ? "TIM THAY TRUNG!" : "toppings khac -> CONTINUE");
+            boolean cungOptions = item.coCungSelectedOptions(selectedOptions);
+            log.info("[timItemTrung]   -> foodId OK, coCungSelectedOptions={} -> {}",
+                    cungOptions, cungOptions ? "TIM THAY TRUNG!" : "options khac -> CONTINUE");
 
-            if (cungTopping) {
+            if (cungOptions) {
                 log.info("[timItemTrung] === TIM THAY ITEM TRUNG: id={} ===", item.getId());
                 return item;
             }
@@ -207,9 +182,7 @@ public class CartService {
                         .name(item.getName())
                         .price(item.getPrice())
                         .quantity(item.getQuantity())
-                        .size(item.getSize())
-                        .sizePrice(item.getSizePrice())
-                        .toppings(item.getToppings())
+                        .selectedOptions(item.getSelectedOptions())
                         .note(item.getNote())
                         .imageUrl(item.getImageUrl())
                         .createdAt(item.getCreatedAt())
@@ -281,9 +254,10 @@ public class CartService {
         }
     }
 
-    private Double tinhGiaSize(String foodId, String size, FirestoreDocument sanPhamDoc) {
-        if (size == null || size.isBlank()) {
-            log.info("San pham [{}] khong chon size, gia size = 0", foodId);
+    @SuppressWarnings("unchecked")
+    private Double tinhGiaTatCaOptions(List<SelectedOptionGroup> selectedOptions, FirestoreDocument sanPhamDoc) {
+        if (selectedOptions == null || selectedOptions.isEmpty()) {
+            log.info("Khong co selectedOptions, gia options = 0");
             return 0.0;
         }
 
@@ -296,49 +270,67 @@ public class CartService {
         try {
             optionGroups = (List<?>) optionGroupsObj;
         } catch (Exception e) {
-            log.warn("Khong the parse optionGroups cua san pham [{}]: {}", foodId, e.getMessage());
+            log.warn("Khong the parse optionGroups cua san pham [{}]: {}", sanPhamDoc.get("id"), e.getMessage());
             return 0.0;
         }
 
-        for (Object group : optionGroups) {
-            if (!(group instanceof Map)) continue;
-            @SuppressWarnings("unchecked")
-            Map<String, Object> groupMap = (Map<String, Object>) group;
-            String groupName = (String) groupMap.get("name");
-            if (groupName == null) continue;
+        Double tongGia = 0.0;
 
-            if (groupName.equalsIgnoreCase("Kich thuoc") || groupName.equalsIgnoreCase("Size")) {
-                Object optionsObj = groupMap.get("options");
-                if (optionsObj instanceof List) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> options = (List<Map<String, Object>>) optionsObj;
-                    for (Map<String, Object> option : options) {
-                        String optName = (String) option.get("name");
-                        if (optName != null && optName.equalsIgnoreCase(size)) {
-                            Double gia = toDouble(option.get("price"));
-                            log.info("Tim thay size [{}] voi gia: {}", size, gia);
-                            return gia;
-                        }
-                    }
+        for (SelectedOptionGroup selGroup : selectedOptions) {
+            if (selGroup == null || selGroup.getName() == null || selGroup.getOptions() == null) {
+                continue;
+            }
+
+            Map<String, Object> groupMap = timGroupTrongFirestore(optionGroups, selGroup.getName());
+            if (groupMap == null) {
+                log.info("Nhom '{}' khong ton tai trong cau hinh san pham", selGroup.getName());
+                continue;
+            }
+
+            Object optionsObj = groupMap.get("options");
+            if (!(optionsObj instanceof List)) {
+                continue;
+            }
+
+            List<Map<String, Object>> firestoreOptions = (List<Map<String, Object>>) optionsObj;
+
+            for (SelectedOption selOpt : selGroup.getOptions()) {
+                Double gia = timGiaOptionTrongGroup(firestoreOptions, selOpt.getName());
+                if (gia != null) {
+                    tongGia += gia;
+                    log.info("Tim thay option '{}' trong nhom '{}' voi gia: {}", selOpt.getName(), selGroup.getName(), gia);
+                } else {
+                    log.warn("Option '{}' trong nhom '{}' khong tim thay trong Firestore, bo qua",
+                            selOpt.getName(), selGroup.getName());
                 }
             }
         }
 
-        log.info("Size [{}] khong ton tai trong cau hinh san pham [{}], gia = 0", size, foodId);
-        return 0.0;
+        log.info("Tong gia cua selectedOptions: {}", tongGia);
+        return tongGia;
     }
 
-    private Double tinhTongGiaTopping(List<CartRequest.ToppingOption> toppings) {
-        if (toppings == null || toppings.isEmpty()) {
-            return 0.0;
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> timGroupTrongFirestore(List<?> optionGroups, String groupName) {
+        for (Object group : optionGroups) {
+            if (!(group instanceof Map)) continue;
+            Map<String, Object> groupMap = (Map<String, Object>) group;
+            String name = (String) groupMap.get("name");
+            if (name != null && name.equalsIgnoreCase(groupName)) {
+                return groupMap;
+            }
         }
-        Double tong = 0.0;
-        for (CartRequest.ToppingOption t : toppings) {
-            Double gia = t.getPrice() != null ? t.getPrice() : 0.0;
-            tong += gia;
+        return null;
+    }
+
+    private Double timGiaOptionTrongGroup(List<Map<String, Object>> options, String optionName) {
+        for (Map<String, Object> option : options) {
+            String name = (String) option.get("name");
+            if (name != null && name.equalsIgnoreCase(optionName)) {
+                return toDouble(option.get("price"));
+            }
         }
-        log.info("Tong gia {} topping: {}", toppings.size(), tong);
-        return tong;
+        return null;
     }
 
     private Double toDouble(Object value) {

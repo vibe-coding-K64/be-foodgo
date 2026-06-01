@@ -114,7 +114,6 @@ public class VoucherExchangeService {
 
             MyVoucher myVoucher = MyVoucher.builder()
                     .id(myVoucherId)
-                    .name(systemVoucher.getTitle())
                     .title(systemVoucher.getTitle())
                     .subtitle(systemVoucher.getSubtitle())
                     .code("SYS-" + voucherId.substring(voucherId.indexOf('_') + 1).toUpperCase())
@@ -141,7 +140,6 @@ public class VoucherExchangeService {
 
             return VoucherExchangeResponse.builder()
                     .myVoucherId(myVoucherId)
-                    .name(myVoucher.getName())
                     .title(myVoucher.getTitle())
                     .subtitle(myVoucher.getSubtitle())
                     .code(myVoucher.getCode())

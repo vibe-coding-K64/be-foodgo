@@ -23,20 +23,87 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
+    @PostMapping("/register/verify-email")
     @Operation(
-            summary = "Dang ky tai khoan khach hang moi",
-            description = "Tao tai khoan khach hang moi voi email, mat khau (ma hoa BCrypt), ho ten va so dien thoai. Mac dinh roles = [1] (Khach hang)."
+            summary = "Gui OTP xac thuc email de dang ky (buoc 1)",
+            description = "Gui ma OTP 6 chu so den email de xac thuc. Sau khi xac thuc thanh cong, tai khoan se duoc tao voi email da duoc xac thuc. " +
+                    "Co gioi han gui lai 1 lan moi 60 giay."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ma OTP da duoc gui",
+                    content = @Content(schema = @Schema(implementation = OtpSendResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Email/SĐT da ton tai hoac cho cooldown")
+    })
+    public ResponseEntity<?> sendOtpDangKy(@Valid @RequestBody RegisterEmailRequest request) {
+        try {
+            OtpSendResponse response = authService.guiOtpDangKyEmail(
+                    request.getEmail(), request.getPassword(), request.getFullName(), request.getPhoneNumber());
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(429, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/register/complete")
+    @Operation(
+            summary = "Hoan tat dang ky (buoc 2)",
+            description = "Xac thuc ma OTP nhan duoc. Neu dung, tai khoan se duoc tao voi email da duoc xac thuc (isEmailVerified = true) va tra ve JWT token."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dang ky thanh cong, tra ve JWT token",
                     content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Email hoac so dien thoai da ton tai")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Ma OTP khong dung hoac da het han")
     })
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> completeRegister(@Valid @RequestBody VerifyEmailOtpRequest request) {
         try {
-            AuthResponse response = authService.register(request);
+            AuthResponse response = authService.xacThucDangKyEmail(request.getEmail().toLowerCase().trim(), request.getOtpCode());
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/send-verify-email-otp")
+    @Operation(
+            summary = "Gui ma OTP xac thuc email",
+            description = "Gui ma OTP 6 chu so den email de xac thuc. Sau khi xac thuc thanh cong, nguoi dung co the dang nhap. Chi ap dung cho tai khoan chua xac thuc email."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ma OTP da duoc gui",
+                    content = @Content(schema = @Schema(implementation = OtpSendResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Email da xac thuc hoac khong ton tai")
+    })
+    public ResponseEntity<?> sendVerifyEmailOtp(@Valid @RequestBody VerifyEmailRequest request) {
+        try {
+            OtpSendResponse response = authService.guiOtpXacThucEmail(request.getEmail());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(
+            summary = "Xac thuc email bang OTP",
+            description = "Xac thuc email bang ma OTP nhan duoc. Sau khi xac thuc thanh cong, isEmailVerified = true va nguoi dung co the dang nhap."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Xac thuc email thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Ma OTP khong dung hoac da het han")
+    })
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailOtpRequest request) {
+        try {
+            authService.xacThucEmail(request.getEmail(), request.getOtpCode());
+            return ResponseEntity.ok(
+                    com.example.be_foodgo.exception.ApiResponse.thatSuccess(
+                            null, "Xac thuc email thanh cong. Ban co the dang nhap."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     com.example.be_foodgo.exception.ApiResponse.thatError(
@@ -69,17 +136,46 @@ public class AuthController {
     @Operation(
             summary = "Gui ma OTP",
             description = "Gui ma OTP 6 chu so den email hoac so dien thoai de khoi phuc mat khau. " +
-                    "Ma OTP co hieu luc 5 phut. Trong moi truong dev/demo, ma OTP se in ra console."
+                    "Ma OTP co hieu luc 5 phut. Trong moi truong dev/demo, ma OTP se in ra console. " +
+                    "Co gioi han gui lai 1 lan moi 60 giay."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ma OTP da duoc gui",
                     content = @Content(schema = @Schema(implementation = OtpSendResponse.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Khong tim thay tai khoan")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Khong tim thay tai khoan hoac cho cooldown")
     })
     public ResponseEntity<?> sendOtp(@Valid @RequestBody OtpSendRequest request) {
         try {
             OtpSendResponse response = authService.guiOtp(request);
             return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(429, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/resend-otp")
+    @Operation(
+            summary = "Gui lai ma OTP",
+            description = "Gui lai ma OTP 6 chu so. Chi cho phep gui lai sau 60 giay tu lan gui truoc. " +
+                    "Neu chua het cooldown, tra ve so giay con lai."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ma OTP moi da duoc gui",
+                    content = @Content(schema = @Schema(implementation = OtpSendResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Khong tim thay tai khoan hoac cho cooldown")
+    })
+    public ResponseEntity<?> resendOtp(@Valid @RequestBody OtpSendRequest request) {
+        try {
+            OtpSendResponse response = authService.guiOtp(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(429, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     com.example.be_foodgo.exception.ApiResponse.thatError(

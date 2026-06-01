@@ -15,7 +15,7 @@ public class PaymentMethod {
 
     private String id;
     private String name;
-    private String type;
+    private int type;
     private String details;
     private Boolean isDefault;
     private String cardBrand;
