@@ -39,6 +39,28 @@ public class ProfileService {
         return mapToUserResponse(userCapNhat);
     }
 
+    public UserResponse updateMerchantProfile(String userId, com.example.be_foodgo.dto.UpdateMerchantProfileRequest request) throws Exception {
+        log.info("Bắt đầu cập nhật hồ sơ merchant cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        userRepository.capNhatMerchantHoSo(userId, request.getBusinessName(), request.getPhoneNumber(), request.getPhotoUrl());
+
+        if (request.getTaxCode() != null) {
+            com.google.cloud.firestore.Firestore firestore = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            java.util.Map<String, Object> merchantUpdates = new java.util.HashMap<>();
+            merchantUpdates.put("taxCode", request.getTaxCode());
+            firestore.collection("merchant_profiles").document(userId).set(merchantUpdates, com.google.cloud.firestore.SetOptions.merge()).get();
+        }
+
+        log.info("Cập nhật hồ sơ merchant thành công cho userId: {}", userId);
+        User userCapNhat = userRepository.timTheoId(userId);
+        return mapToUserResponse(userCapNhat);
+    }
+
     public UserResponse getProfile(String userId) throws Exception {
         log.info("Bat dau lay ho so cho userId: {}", userId);
 
@@ -63,7 +85,7 @@ public class ProfileService {
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             log.warn("Mat khau cu khong dung cho userId: {}", userId);
-            throw new IllegalArgumentException("Mat khau cu khong dung.");
+            throw new IllegalArgumentException("Mật khẩu cũ không đúng.");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getNewPassword());

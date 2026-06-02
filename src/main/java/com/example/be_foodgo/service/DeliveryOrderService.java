@@ -229,7 +229,11 @@ public class DeliveryOrderService {
                 }
 
                 if (storeId != null && merchantIncome != null && merchantIncome > 0) {
-                    walletService.createMerchantIncomeTransaction(storeId, orderId, merchantIncome);
+                    String orderCode = (String) orderData.get("code");
+                    if (orderCode == null || orderCode.trim().isEmpty()) {
+                        orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
+                    }
+                    walletService.createMerchantIncomeTransaction(storeId, orderId, orderCode, merchantIncome);
                 }
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);

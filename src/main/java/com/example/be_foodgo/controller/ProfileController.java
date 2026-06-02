@@ -131,6 +131,30 @@ public class ProfileController {
         }
     }
 
+    @PutMapping("/merchant-profile")
+    @Operation(
+            summary = "Cap nhat thong tin ho so quan",
+            description = "Cap nhat ten quan, so dien thoai, ma so thue va anh dai dien cua quan."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<?> updateMerchantProfile(
+            HttpServletRequest httpRequest,
+            @RequestBody com.example.be_foodgo.dto.UpdateMerchantProfileRequest request) {
+        try {
+            String userId = trichXuatUserIdTuHeader(httpRequest);
+            if (userId == null) {
+                return ResponseEntity.status(401).body(ApiResponse.thatError(401, "Chua xac thuc"));
+            }
+            UserResponse updatedUser = profileService.updateMerchantProfile(userId, request);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(updatedUser, "Cap nhat ho so quan thanh cong"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.thatError(400, e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi cap nhat merchant profile: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
+        }
+    }
+
     @PutMapping("/password")
     @Operation(
             summary = "Doi mat khau chu dong",

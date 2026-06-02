@@ -95,6 +95,16 @@ public class UserRepository {
         docRef.update(updates).get();
     }
 
+    public void capNhatMerchantHoSo(String userId, String businessName, String phoneNumber, String photoUrl) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        if (businessName != null) updates.put("fullName", businessName);
+        if (phoneNumber != null) updates.put("phoneNumber", phoneNumber);
+        if (photoUrl != null) updates.put("photoUrl", photoUrl);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
     public String sinhNextUserId() throws ExecutionException, InterruptedException {
         Query query = getCollection().orderBy("id", Query.Direction.DESCENDING).limit(1);
         QuerySnapshot snapshot = query.get().get();
