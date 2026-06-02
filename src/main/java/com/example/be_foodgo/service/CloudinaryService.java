@@ -16,7 +16,9 @@ public class CloudinaryService {
 
     private static final Logger log = LoggerFactory.getLogger(CloudinaryService.class);
     private static final String AVATARS_FOLDER = "avatars";
+    private static final String REVIEWS_FOLDER = "reviews";
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_REVIEW_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final String[] ALLOWED_CONTENT_TYPES = {
             "image/jpeg", "image/png", "image/gif", "image/webp"
     };
@@ -50,6 +52,42 @@ public class CloudinaryService {
         String url = (String) result.get("secure_url");
         log.info("Upload avatar thanh cong cho userId: {}. URL: {}", userId, url);
         return url;
+    }
+
+    @SuppressWarnings("unchecked")
+    public String uploadReviewImage(MultipartFile file, String orderId, int itemIndex, int imageIndex) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh review không được để trống.");
+        }
+
+        validateReviewImageFile(file);
+
+        String publicId = REVIEWS_FOLDER + "/review_" + orderId + "_item" + itemIndex + "_img" + imageIndex
+                + "_" + UUID.randomUUID();
+
+        Map<String, Object> params = ObjectUtils.asMap(
+                "public_id", publicId,
+                "overwrite", false,
+                "folder", REVIEWS_FOLDER,
+                "transformation", "q_auto,f_auto"
+        );
+
+        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+        String url = (String) result.get("secure_url");
+        log.info("Upload review image thanh cong. OrderId: {}, ItemIndex: {}, ImageIndex: {}, URL: {}",
+                orderId, itemIndex, imageIndex, url);
+        return url;
+    }
+
+    private void validateReviewImageFile(MultipartFile file) {
+        if (file.getSize() > MAX_REVIEW_IMAGE_SIZE) {
+            throw new IllegalArgumentException("Kích thước ảnh vượt quá giới hạn 10MB.");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !isAllowedContentType(contentType)) {
+            throw new IllegalArgumentException("Chỉ chấp nhận các định dạng ảnh: JPEG, PNG, WEBP.");
+        }
     }
 
     @SuppressWarnings("unchecked")
