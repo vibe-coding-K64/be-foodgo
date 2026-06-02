@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import com.google.cloud.Timestamp;
 import java.util.concurrent.ExecutionException;
 
 @Service
@@ -110,7 +111,7 @@ public class VoucherExchangeService {
             String myVoucherId = "mv_" + UUID.randomUUID().toString().substring(0, 8);
             int validityDays = systemVoucher.getValidityDays() > 0 ? systemVoucher.getValidityDays() : 30;
             Instant expiryInstant = ChronoUnit.DAYS.addTo(Instant.now(), validityDays);
-            Date expiryDate = Date.from(expiryInstant);
+            Timestamp expiryTimestamp = Timestamp.ofTimeSecondsAndNanos(expiryInstant.getEpochSecond(), 0);
 
             MyVoucher myVoucher = MyVoucher.builder()
                     .id(myVoucherId)
@@ -125,9 +126,9 @@ public class VoucherExchangeService {
                     .minOrderValue(systemVoucher.getMinOrderValue())
                     .isActive(true)
                     .isFreeship(systemVoucher.getIsFreeship())
-                    .expiryDate(expiryDate)
-                    .createdAt(new Date())
-                    .updatedAt(new Date())
+                    .expiryDate(Date.from(expiryInstant))
+                    .createdAt(Date.from(Instant.now()))
+                    .updatedAt(Date.from(Instant.now()))
                     .build();
 
             voucherRepository.luuMyVoucher(userId, myVoucher);
@@ -149,7 +150,7 @@ public class VoucherExchangeService {
                     .type(myVoucher.getType())
                     .value(myVoucher.getValue())
                     .minOrderValue(myVoucher.getMinOrderValue())
-                    .expiryDate(expiryDate.toString())
+                    .expiryDate(Date.from(expiryInstant).toString())
                     .isActive(myVoucher.isActive())
                     .isFreeship(myVoucher.isFreeship())
                     .diemDaDung(pointsRequired)
