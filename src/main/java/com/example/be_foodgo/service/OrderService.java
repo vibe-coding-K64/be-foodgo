@@ -26,6 +26,9 @@ public class OrderService {
     @Autowired
     private StoreRepository storeRepository;
 
+    @Autowired
+    private WalletService walletService;
+
     public List<OrderDTO> getOrdersByStoreId(String storeId) throws ExecutionException, InterruptedException {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         List<OrderDTO> dtos = new ArrayList<>();
@@ -55,11 +58,20 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    public String updateOrderStatus(String id, String status) throws ExecutionException, InterruptedException {
+    public String updateOrderStatus(String id, int status) throws ExecutionException, InterruptedException {
         Order order = orderRepository.findById(id);
         if (order != null) {
             order.setStatus(status);
-            return orderRepository.update(id, order);
+            String result = orderRepository.update(id, order);
+            
+            if (status == 3) {
+                double merchantIncome = order.getTotalAmount() - order.getShopDiscountAmount();
+
+                if (merchantIncome > 0) {
+                    walletService.createMerchantIncomeTransaction(order.getStoreId(), id, merchantIncome);
+                }
+            }
+            return result;
         }
         return null;
     }
