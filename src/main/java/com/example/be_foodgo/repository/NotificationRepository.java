@@ -36,6 +36,20 @@ public class NotificationRepository {
                 .collection(SUB_COLLECTION_NOTIFICATIONS);
     }
 
+    public Firestore getFirestore() {
+        return firestore;
+    }
+
+    public void addNotificationToCollection(String profileCollection, String profileId, java.util.Map<String, Object> data)
+            throws ExecutionException, InterruptedException {
+        firestore.collection(profileCollection)
+                .document(profileId)
+                .collection(SUB_COLLECTION_NOTIFICATIONS)
+                .add(data)
+                .get();
+        log.info("Đã tạo thông báo trong {} cho userId={}", profileCollection, profileId);
+    }
+
     private DocumentReference getNotificationDocument(String userId, String notifId) {
         return getNotificationsCollection(userId).document(notifId);
     }

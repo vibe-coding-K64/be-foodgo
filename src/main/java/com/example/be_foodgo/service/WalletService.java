@@ -323,7 +323,7 @@ public class WalletService {
         }
     }
 
-    public void createMerchantIncomeTransaction(String storeId, String orderId, double amount) {
+    public void createMerchantIncomeTransaction(String storeId, String orderId, String orderCode, double amount) {
         try {
             com.google.cloud.firestore.Firestore firestore = walletRepository.getFirestore();
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = firestore.collection("merchant_profiles")
@@ -358,7 +358,7 @@ public class WalletService {
             transData.put("amount", amount);
             transData.put("fee", fee);
             transData.put("netAmount", netAmount);
-            transData.put("description", "Doanh thu đơn hàng " + orderId);
+            transData.put("description", "Doanh thu đơn hàng " + orderCode);
             transData.put("orderId", orderId);
             transData.put("status", 1);
             transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());

@@ -96,6 +96,8 @@ public class Order {
         return status;
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
     public String getStatusText() {
         if (status instanceof Number) {
             long val = ((Number) status).longValue();
@@ -111,6 +113,8 @@ public class Order {
         return "Chờ xác nhận";
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
     public int getStatusValue() {
         if (status instanceof Number) {
             return ((Number) status).intValue();

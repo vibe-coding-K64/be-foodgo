@@ -4,6 +4,11 @@ import com.example.be_foodgo.dto.NotificationDTO;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.NotificationRepository;
 import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,40 +21,43 @@ import java.util.Map;
 
 @Service
 public class NotificationService {
-
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
+    private final Firestore firestore;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, Firestore firestore) {
         this.notificationRepository = notificationRepository;
+        this.firestore = firestore;
     }
 
-    public List<NotificationDTO> getNotifications(String userId, Integer type) {
-        log.info("Bat dau lay danh sach thong bao: userId={}, type={}", userId, type);
-        try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs =
-                    notificationRepository.findNotifications(userId, type);
+    public List<NotificationDTO> getNotifications(String driverId, Integer type) throws Exception {
+        return getNotificationsByProfile("driver_profiles", driverId, type);
+    }
 
-            List<NotificationDTO> notifications = new ArrayList<>();
-            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
-                notifications.add(mapToDTO(doc.getId(), doc.getData()));
-            }
+    public List<NotificationDTO> getNotificationsByProfile(String profileCollection, String profileId, Integer type) throws Exception {
+        Query query = firestore.collection(profileCollection)
+                .document(profileId)
+                .collection("notifications");
 
-            log.info("Tim thay {} thong bao cho userId={}", notifications.size(), userId);
-            return notifications;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Loi khi lay danh sach thong bao: {}", e.getMessage());
-            throw BusinessException.loiHeThong(e.getMessage());
-        } catch (java.util.concurrent.ExecutionException e) {
-            log.error("Loi khi lay danh sach thong bao: {}", e.getMessage());
-            throw BusinessException.loiHeThong(e.getMessage());
+        if (type != null) {
+            query = query.whereEqualTo("type", type);
         }
+
+        query = query.orderBy("createdAt", Query.Direction.DESCENDING).limit(50);
+
+        List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
+        List<NotificationDTO> notifications = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            notifications.add(mapToDTO(doc.getId(), doc.getData()));
+        }
+
+        log.info("Tìm thấy {} thông báo cho profileId={}", notifications.size(), profileId);
+        return notifications;
     }
 
     public NotificationDTO markAsRead(String userId, String notifId) {
-        log.info("Bat dau danh dau da doc thong bao: userId={}, notifId={}", userId, notifId);
+        log.info("Bắt đầu đánh dấu đã đọc thông báo: userId={}, notifId={}", userId, notifId);
         try {
             com.google.cloud.firestore.DocumentSnapshot doc =
                     notificationRepository.findNotificationById(userId, notifId);
@@ -66,46 +74,47 @@ public class NotificationService {
             }
             updatedData.put("isRead", true);
 
-            log.info("Danh dau da doc thong bao thanh cong: userId={}, notifId={}", userId, notifId);
+            log.info("Đánh dấu đã đọc thông báo thành công: userId={}, notifId={}", userId, notifId);
             return mapToDTO(doc.getId(), updatedData);
         } catch (BusinessException e) {
             throw e;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Loi khi danh dau da doc thong bao: {}", e.getMessage());
+            log.error("Lỗi khi đánh dấu đã đọc thông báo: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
-            log.error("Loi khi danh dau da doc thong bao: {}", e.getMessage());
+            log.error("Lỗi khi đánh dấu đã đọc thông báo: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
 
-    public int markAllAsRead(String userId) {
-        log.info("Bat dau danh dau tat ca thong bao da doc: userId={}", userId);
-        try {
-            List<String> unreadIds = notificationRepository.findUnreadNotificationIds(userId);
+    public int markAllAsRead(String driverId) throws Exception {
+        return markAllAsReadByProfile("driver_profiles", driverId);
+    }
 
-            if (unreadIds.isEmpty()) {
-                log.info("Khong co thong bao nao chua doc cho userId={}", userId);
-                return 0;
-            }
+    public int markAllAsReadByProfile(String profileCollection, String profileId) throws Exception {
+        CollectionReference notifsRef = firestore.collection(profileCollection)
+                .document(profileId)
+                .collection("notifications");
 
-            notificationRepository.updateAllNotificationsRead(userId, unreadIds);
+        Query query = notifsRef.whereEqualTo("isRead", false);
+        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
 
-            log.info("Danh dau {} thong bao thanh cong cho userId={}", unreadIds.size(), userId);
-            return unreadIds.size();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Loi khi danh dau tat ca thong bao da doc: {}", e.getMessage());
-            throw BusinessException.loiHeThong(e.getMessage());
-        } catch (java.util.concurrent.ExecutionException e) {
-            log.error("Loi khi danh dau tat ca thong bao da doc: {}", e.getMessage());
-            throw BusinessException.loiHeThong(e.getMessage());
+        if (documents.isEmpty()) {
+            return 0;
         }
+
+        WriteBatch batch = firestore.batch();
+        for (QueryDocumentSnapshot doc : documents) {
+            batch.update(doc.getReference(), "isRead", true);
+        }
+
+        batch.commit().get();
+        return documents.size();
     }
 
     public void deleteNotification(String userId, String notifId) {
-        log.info("Bat dau xoa thong bao: userId={}, notifId={}", userId, notifId);
+        log.info("Bắt đầu xóa thông báo: userId={}, notifId={}", userId, notifId);
         try {
             com.google.cloud.firestore.DocumentSnapshot doc =
                     notificationRepository.findNotificationById(userId, notifId);
@@ -115,15 +124,15 @@ public class NotificationService {
             }
 
             notificationRepository.deleteNotification(userId, notifId);
-            log.info("Xoa thong bao thanh cong: userId={}, notifId={}", userId, notifId);
+            log.info("Xóa thông báo thành công: userId={}, notifId={}", userId, notifId);
         } catch (BusinessException e) {
             throw e;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Loi khi xoa thong bao: {}", e.getMessage());
+            log.error("Lỗi khi xóa thông báo: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
-            log.error("Loi khi xoa thong bao: {}", e.getMessage());
+            log.error("Lỗi khi xóa thông báo: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
@@ -158,5 +167,39 @@ public class NotificationService {
         if (value instanceof java.util.Date date) return date.toInstant();
         if (value instanceof Long millis) return Instant.ofEpochMilli(millis);
         return null;
+    }
+
+    public void createNotification(String profileCollection, String profileId, NotificationDTO dto) {
+        try {
+            Map<String, Object> data = new HashMap<>();
+            data.put("title", dto.getTitle());
+            data.put("body", dto.getBody());
+            data.put("type", dto.getType());
+            data.put("isRead", false);
+            data.put("createdAt", com.google.cloud.Timestamp.now());
+            if (dto.getOrderId() != null) data.put("orderId", dto.getOrderId());
+            if (dto.getReferenceId() != null) data.put("referenceId", dto.getReferenceId());
+            if (dto.getImageUrl() != null) data.put("imageUrl", dto.getImageUrl());
+            
+            notificationRepository.addNotificationToCollection(profileCollection, profileId, data);
+        } catch (Exception e) {
+            log.error("Lỗi khi tạo thông báo cho {} ({}): {}", profileCollection, profileId, e.getMessage());
+        }
+    }
+
+    public void notifyMerchantByStoreId(String storeId, NotificationDTO dto) {
+        try {
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = notificationRepository.getFirestore()
+                    .collection("merchant_profiles")
+                    .whereArrayContains("storeIds", storeId)
+                    .limit(1)
+                    .get().get().getDocuments();
+            if (!docs.isEmpty()) {
+                String merchantId = docs.get(0).getId();
+                createNotification("merchant_profiles", merchantId, dto);
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi tìm merchant bằng storeId {}: {}", storeId, e.getMessage());
+        }
     }
 }

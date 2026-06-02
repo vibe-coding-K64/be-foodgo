@@ -1,6 +1,7 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.CancelOrderResponse;
+import com.example.be_foodgo.dto.NotificationDTO;
 import com.example.be_foodgo.dto.OrderDTO;
 import com.example.be_foodgo.dto.OrderItemDTO;
 import com.example.be_foodgo.exception.BusinessException;
@@ -29,6 +30,9 @@ public class OrderService {
     @Autowired
     private WalletService walletService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     public List<OrderDTO> getOrdersByStoreId(String storeId) throws ExecutionException, InterruptedException {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         List<OrderDTO> dtos = new ArrayList<>();
@@ -55,7 +59,19 @@ public class OrderService {
         }
 
         order.setCreatedAt(new java.util.Date());
-        return orderRepository.save(order);
+        String orderId = orderRepository.save(order);
+        
+        String orderCode = getOrderCodeDisplay(order);
+        String itemsSummary = getOrderItemsSummary(order);
+        // Thông báo cho Quán ăn (khi nhận đơn mới)
+        NotificationDTO merchantNotif = new NotificationDTO();
+        merchantNotif.setTitle("Đơn hàng mới: " + orderCode);
+        merchantNotif.setBody("Bạn vừa nhận được đơn hàng mới #" + orderCode + " gồm: " + itemsSummary + ". Vui lòng chuẩn bị món!");
+        merchantNotif.setType(1); // 1 = order type
+        merchantNotif.setOrderId(orderId);
+        notificationService.notifyMerchantByStoreId(dto.getStoreId(), merchantNotif);
+
+        return orderId;
     }
 
     public String updateOrderStatus(String id, int status) throws ExecutionException, InterruptedException {
@@ -64,13 +80,49 @@ public class OrderService {
             order.setStatus(status);
             String result = orderRepository.update(id, order);
             
-            if (status == 3) {
+            // Gửi thông báo theo từng trạng thái
+            NotificationDTO userNotif = new NotificationDTO();
+            userNotif.setOrderId(id);
+            userNotif.setType(1); // 1 = order type
+
+            NotificationDTO merchantNotif = new NotificationDTO();
+            merchantNotif.setOrderId(id);
+            merchantNotif.setType(1); // 1 = order type
+
+            String orderCode = getOrderCodeDisplay(order);
+            String itemsSummary = getOrderItemsSummary(order);
+            if (status == 1) {
+                // Đang chuẩn bị -> Thông báo cho khách hàng
+                userNotif.setTitle("Đơn hàng " + orderCode + " đang chuẩn bị");
+                userNotif.setBody("Quán đang chuẩn bị món ăn cho đơn hàng của bạn.");
+                notificationService.createNotification("customer_profiles", order.getUserId(), userNotif);
+            } else if (status == 2) {
+                // Đang giao -> Shipper đã lấy hàng
+                String driverName = (order.getDriverName() != null && !order.getDriverName().isEmpty()) ? order.getDriverName() : "Tài xế";
+                userNotif.setTitle(driverName + " đã nhận đơn");
+                userNotif.setBody(driverName + " đang giao đơn hàng đến bạn. Vui lòng chú ý điện thoại!");
+                notificationService.createNotification("customer_profiles", order.getUserId(), userNotif);
+
+                merchantNotif.setTitle("Tài xế đang giao đơn " + orderCode);
+                merchantNotif.setBody(driverName + " đã lấy món (" + itemsSummary + ") và đang giao cho khách.");
+                notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
+            } else if (status == 3) {
                 double merchantIncome = order.getTotalAmount() - order.getShopDiscountAmount();
 
                 if (merchantIncome > 0) {
-                    walletService.createMerchantIncomeTransaction(order.getStoreId(), id, merchantIncome);
+                    walletService.createMerchantIncomeTransaction(order.getStoreId(), id, orderCode, merchantIncome);
                 }
+
+                // Đơn hoàn thành
+                userNotif.setTitle("Giao hàng thành công đơn " + orderCode);
+                userNotif.setBody("Đơn hàng " + orderCode + " đã được giao thành công. Chúc bạn ngon miệng!");
+                notificationService.createNotification("customer_profiles", order.getUserId(), userNotif);
+
+                merchantNotif.setTitle("Đơn hàng " + orderCode + " hoàn thành");
+                merchantNotif.setBody("Đơn hàng #" + orderCode + " (" + itemsSummary + ") đã giao thành công và tiền đã được cộng vào ví.");
+                notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
             }
+
             return result;
         }
         return null;
@@ -107,6 +159,15 @@ public class OrderService {
             fields.put("note", reason);
         }
         String updatedAtStr = orderRepository.updateFields(orderId, fields);
+
+        String orderCode = getOrderCodeDisplay(order);
+        // Thông báo hủy đơn cho Quán
+        NotificationDTO merchantNotif = new NotificationDTO();
+        merchantNotif.setTitle("Đơn hàng " + orderCode + " bị hủy");
+        merchantNotif.setBody("Khách hàng đã hủy đơn hàng #" + orderCode + ". Lý do: " + (reason != null ? reason : "Không có"));
+        merchantNotif.setType(1);
+        merchantNotif.setOrderId(orderId);
+        notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
 
         return new CancelOrderResponse(orderId, 4, updatedAtStr);
     }
@@ -220,5 +281,33 @@ public class OrderService {
             dtos.add(convertToDTO(o));
         }
         return dtos;
+    }
+
+    private String getOrderCodeDisplay(Order order) {
+        if (order.getCode() != null && !order.getCode().trim().isEmpty()) {
+            return order.getCode();
+        }
+        if (order.getId() != null && order.getId().length() >= 6) {
+            return order.getId().substring(order.getId().length() - 6).toUpperCase();
+        }
+        return "ORDER";
+    }
+
+    private String getOrderItemsSummary(Order order) {
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            return "các món ăn";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < order.getItems().size(); i++) {
+            OrderItem item = order.getItems().get(i);
+            sb.append(item.getName());
+            if (item.getQuantity() > 1) {
+                sb.append(" (x").append(item.getQuantity()).append(")");
+            }
+            if (i < order.getItems().size() - 1) {
+                sb.append(", ");
+            }
+        }
+        return sb.toString();
     }
 }
