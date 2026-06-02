@@ -56,6 +56,18 @@ public class StoreController {
         return jwtTokenProvider.layUserIdTuToken(token);
     }
 
+    // Lấy toàn bộ danh sách cửa hàng
+    @GetMapping
+    @Operation(summary = "Lấy toàn bộ danh sách cửa hàng", description = "Trả về danh sách tất cả các cửa hàng trên hệ thống")
+    public ResponseEntity<?> getAllStores() {
+        try {
+            return ResponseEntity.ok(storeService.getAllStores());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     // Lấy thông tin quán theo id
     @GetMapping("/{id}")
     @Operation(summary = "Lấy thông tin cửa hàng", description = "Trả về thông tin chi tiết của cửa hàng dựa trên ID")

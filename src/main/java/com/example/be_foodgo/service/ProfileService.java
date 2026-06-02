@@ -101,6 +101,28 @@ public class ProfileService {
         return mapToUserResponse(userCapNhat);
     }
 
+    public UserResponse updateMerchantProfile(String userId, com.example.be_foodgo.dto.UpdateMerchantProfileRequest request) throws Exception {
+        log.info("Bắt đầu cập nhật hồ sơ merchant cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        userRepository.capNhatMerchantHoSo(userId, request.getBusinessName(), request.getPhoneNumber(), request.getPhotoUrl());
+
+        if (request.getTaxCode() != null) {
+            com.google.cloud.firestore.Firestore firestore = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            java.util.Map<String, Object> merchantUpdates = new java.util.HashMap<>();
+            merchantUpdates.put("taxCode", request.getTaxCode());
+            firestore.collection("merchant_profiles").document(userId).set(merchantUpdates, com.google.cloud.firestore.SetOptions.merge()).get();
+        }
+
+        log.info("Cập nhật hồ sơ merchant thành công cho userId: {}", userId);
+        User userCapNhat = userRepository.timTheoId(userId);
+        return mapToUserResponse(userCapNhat);
+    }
+
     public UserResponse getProfile(String userId) throws Exception {
         log.info("Bat dau lay ho so cho userId: {}", userId);
 
@@ -125,12 +147,35 @@ public class ProfileService {
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             log.warn("Mat khau cu khong dung cho userId: {}", userId);
-            throw new IllegalArgumentException("Mat khau cu khong dung.");
+            throw new IllegalArgumentException("Mật khẩu cũ không đúng.");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getNewPassword());
         userRepository.capNhatPassword(userId, hashedPassword);
         log.info("Doi mat khau thanh cong cho userId: {}", userId);
+    }
+
+    public java.util.List<UserResponse> timTatCaUsers(Integer role) throws Exception {
+        log.info("Admin lay danh sach nguoi dung, filter role={}", role);
+        java.util.List<com.example.be_foodgo.model.User> users = userRepository.timTatCa(role);
+        java.util.List<UserResponse> result = new java.util.ArrayList<>();
+        for (com.example.be_foodgo.model.User u : users) {
+            result.add(mapToUserResponse(u));
+        }
+        return result;
+    }
+
+    public boolean toggleUserActive(String userId) throws Exception {
+        log.info("Admin toggle trang thai active cho userId: {}", userId);
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+        boolean currentActive = user.getIsActive() != null ? user.getIsActive() : true;
+        boolean newActive = !currentActive;
+        userRepository.updateActiveStatus(userId, newActive);
+        log.info("Da thay doi active tu {} sang {} cho userId {}", currentActive, newActive, userId);
+        return newActive;
     }
 
     private UserResponse mapToUserResponse(User user) {
@@ -141,6 +186,7 @@ public class ProfileService {
                 .phoneNumber(user.getPhoneNumber())
                 .photoUrl(user.getPhotoUrl())
                 .roles(user.getRoles())
+                .isActive(user.getIsActive() != null ? user.getIsActive() : true)
                 .build();
     }
 }

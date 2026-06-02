@@ -36,6 +36,15 @@ public class WalletDTO {
     @Schema(description = "So du cho (chua giai ngan, VND)", example = "0.0")
     private Double pendingBalance;
 
+    @Schema(description = "Ten ngan hang thu huong", example = "Vietcombank - CN TP.HCM")
+    private String bankName;
+
+    @Schema(description = "So tai khoan ngan hang", example = "012345678901")
+    private String bankAccountNumber;
+
+    @Schema(description = "Ten nguoi thu huong", example = "NGUYEN VAN A")
+    private String bankAccountName;
+
     @Schema(description = "Thoi diem tao vi")
     private Instant createdAt;
 

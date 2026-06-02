@@ -200,6 +200,16 @@ public class DeliveryOrderService {
             if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
                 Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
+                String storeId = (String) orderData.get("storeId");
+                Double finalAmount = toDouble(orderData.get("finalAmount"));
+                Double totalAmount = toDouble(orderData.get("totalAmount"));
+                
+                Double merchantIncome = 0.0;
+                if (finalAmount != null && finalAmount > 0) {
+                    merchantIncome = finalAmount - (deliveryFee != null ? deliveryFee : 0.0);
+                } else if (totalAmount != null) {
+                    merchantIncome = totalAmount;
+                }
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
@@ -216,6 +226,14 @@ public class DeliveryOrderService {
 
                 if (deliveryFee != null && deliveryFee > 0) {
                     walletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
+                }
+
+                if (storeId != null && merchantIncome != null && merchantIncome > 0) {
+                    String orderCode = (String) orderData.get("code");
+                    if (orderCode == null || orderCode.trim().isEmpty()) {
+                        orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
+                    }
+                    walletService.createMerchantIncomeTransaction(storeId, orderId, orderCode, merchantIncome);
                 }
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);

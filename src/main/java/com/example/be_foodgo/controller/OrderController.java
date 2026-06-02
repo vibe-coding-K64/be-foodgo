@@ -133,8 +133,14 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Cap nhat trang thai don hang", description = "Cap nhat trang thai cua don hang (vi du: dang giao, da giao, v.v.)")
-    public ResponseEntity<String> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, String> body) throws Exception {
-        String status = body.get("status");
+    public ResponseEntity<String> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, Object> body) throws Exception {
+        Object statusObj = body.get("status");
+        int status;
+        if (statusObj instanceof Number) {
+            status = ((Number) statusObj).intValue();
+        } else {
+            status = Integer.parseInt(statusObj.toString());
+        }
         String result = orderService.updateOrderStatus(id, status);
         if (result != null) {
             return ResponseEntity.ok(result);
@@ -199,5 +205,11 @@ public class OrderController {
 
     @Schema(name = "ApiResponseSchema", description = "Schema co ban cho ApiResponse")
     public static class ApiResponseSchema extends ApiResponse<Void> {
+    }
+
+    @GetMapping("/admin")
+    @Operation(summary = "Lấy tất cả đơn hàng trên hệ thống dành cho Admin", description = "Admin giám sát toàn bộ đơn hàng của sàn FoodGo")
+    public ResponseEntity<List<OrderDTO>> getAllAdminOrders() throws Exception {
+        return ResponseEntity.ok(orderService.getAllOrders());
     }
 }

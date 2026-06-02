@@ -12,6 +12,8 @@ public class ReviewDTO {
     private String orderId;
     private String itemId;
     private String foodId;
+    private String orderCode;
+    private String orderItems;
     private String storeId;
     private String userId;
     private String userName;

@@ -173,4 +173,10 @@ public class ReviewController {
         ReviewDTO reviewDTO = reviewService.replyReview(id, request.getReplyComment());
         return ResponseEntity.ok(ApiResponse.thatSuccess(reviewDTO, "Đã phản hồi đánh giá."));
     }
+
+    @GetMapping("/admin")
+    @Operation(summary = "Lấy tất cả đánh giá trên hệ thống dành cho Admin", description = "Admin giám sát toàn bộ đánh giá của sàn FoodGo")
+    public ResponseEntity<ApiResponse<List<ReviewDTO>>> getAllAdminReviews() throws Exception {
+        return ResponseEntity.ok(ApiResponse.thatSuccess(reviewService.layTatCaDanhGia(), "Lấy danh sách đánh giá hệ thống thành công."));
+    }
 }

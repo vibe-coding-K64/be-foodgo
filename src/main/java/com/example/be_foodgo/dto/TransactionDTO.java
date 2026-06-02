@@ -25,7 +25,7 @@ public class TransactionDTO {
     private String userId;
 
     @Schema(description = "Loai giao dich: delivery_income, withdrawal, refund", example = "delivery_income")
-    private String type;
+    private Integer type;
 
     @Schema(description = "Tong so tien giao dich (VND)", example = "30000.0")
     private Double amount;
@@ -42,8 +42,8 @@ public class TransactionDTO {
     @Schema(description = "ID don hang lien quan (neu co)", example = "order_001")
     private String orderId;
 
-    @Schema(description = "Trang thai: pending, completed, failed", example = "completed")
-    private String status;
+    @Schema(description = "Trang thai: pending, completed, failed", example = "1")
+    private Integer status;
 
     @Schema(description = "Thoi diem tao giao dich")
     private Instant createdAt;

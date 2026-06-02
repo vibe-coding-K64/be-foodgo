@@ -38,7 +38,18 @@ public class FirebaseConfig {
     public void khoiTaoFirebase() {
         try (InputStream rawStream = new ClassPathResource(FIREBASE_SERVICE_ACCOUNT_PATH).getInputStream()) {
             this.serviceAccountBytes = rawStream.readAllBytes();
-        } catch (IOException e) {
+if (FirebaseApp.getApps().isEmpty()) {
+                InputStream serviceAccountStream = new ByteArrayInputStream(serviceAccountBytes);
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
+                        .setDatabaseUrl("https://food-go-17a5d-default-rtdb.asia-southeast1.firebasedatabase.app")
+                        .build();
+                FirebaseApp.initializeApp(options);
+                log.info("Khoi tao Firebase voi Database URL thanh cong.");
+            } else {
+                log.info("Firebase da duoc khoi tao truoc do.");
+            }
+} catch (IOException e) {
             log.error("Khong the doc file firebase-service-account.json: {}", e.getMessage());
             return;
         }

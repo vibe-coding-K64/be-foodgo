@@ -55,13 +55,14 @@ public class MerchantWalletController extends BaseController {
     @Operation(summary = "Lấy lịch sử giao dịch", description = "Lấy lịch sử thanh toán đơn hàng và rút tiền")
     public ResponseEntity<?> getTransactions(
             HttpServletRequest httpRequest,
+            @RequestParam(required = false) Integer type,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "5") int size) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) return ResponseEntity.status(401).body(holder.errorResponse);
 
         try {
-            List<TransactionDTO> transactions = walletService.getMerchantTransactions(holder.userId, page, size);
+            List<TransactionDTO> transactions = walletService.getMerchantTransactions(holder.userId, type, page, size);
             return ResponseEntity.ok(ApiResponse.thatSuccess(transactions, "Lấy lịch sử giao dịch thành công."));
         } catch (Exception e) {
             log.error("Loi khi lay lich su giao dich merchant: {}", e.getMessage());
@@ -79,7 +80,7 @@ public class MerchantWalletController extends BaseController {
         if (holder.isAuthError) return ResponseEntity.status(401).body(holder.errorResponse);
 
         try {
-            TransactionDTO transaction = walletService.requestMerchantWithdrawal(holder.userId, request.getAmount());
+            TransactionDTO transaction = walletService.requestMerchantWithdrawal(holder.userId, request);
             return ResponseEntity.ok(ApiResponse.thatSuccess(transaction, "Yêu cầu rút tiền thành công. Vui lòng chờ hệ thống xử lý."));
         } catch (BusinessException e) {
             log.warn("Loi business khi rut tien: {}", e.getMessage());

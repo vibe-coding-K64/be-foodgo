@@ -94,7 +94,13 @@ public class Order {
     }
     public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
 
-    public String getStatus() {
+    public Object getStatus() {
+        return status;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
+    public String getStatusText() {
         if (status instanceof Number) {
             long val = ((Number) status).longValue();
             if (val == 0) return "Chờ xác nhận";
@@ -109,6 +115,25 @@ public class Order {
         return "Chờ xác nhận";
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
+    public String getStatusAsString() {
+        if (status instanceof Number) {
+            long val = ((Number) status).longValue();
+            if (val == 0) return "Chờ xác nhận";
+            if (val == 1) return "Đang chuẩn bị";
+            if (val == 2) return "Đang giao";
+            if (val == 3) return "Hoàn thành";
+            if (val == 4) return "Đã hủy";
+            return "Chờ xác nhận";
+        } else if (status != null) {
+            return status.toString();
+        }
+        return "Chờ xác nhận";
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
     public int getStatusValue() {
         if (status instanceof Number) {
             return ((Number) status).intValue();

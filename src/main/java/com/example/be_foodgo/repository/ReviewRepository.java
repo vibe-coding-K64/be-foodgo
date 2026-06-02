@@ -160,4 +160,18 @@ public class ReviewRepository {
         WriteResult result = future.get();
         log.info("Da cap nhat review [{}] luc [{}]", review.getId(), result.getUpdateTime());
     }
+
+    public List<Review> findAllReviews() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).orderBy("createdAt", Query.Direction.DESCENDING).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Review> reviews = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Review review = doc.toObject(Review.class);
+            if (review != null) {
+                review.setId(doc.getId());
+                reviews.add(review);
+            }
+        }
+        return reviews;
+    }
 }

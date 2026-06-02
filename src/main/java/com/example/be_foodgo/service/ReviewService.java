@@ -1,6 +1,7 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.BatchReviewRequest;
+import com.example.be_foodgo.dto.NotificationDTO;
 import com.example.be_foodgo.dto.ReviewDTO;
 import com.example.be_foodgo.dto.ReviewRequest;
 import com.example.be_foodgo.exception.BusinessException;
@@ -44,6 +45,9 @@ public class ReviewService {
 
     @Autowired
     private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public ReviewDTO taoDanhGia(ReviewRequest request) throws Exception {
         log.info("Bat dau tao danh gia cho don hang [{}] tu nguoi dung [{}]", request.getOrderId(), request.getUserId());
@@ -98,7 +102,28 @@ public class ReviewService {
         capNhatDiemSoCuaHang(request.getStoreId(), request.getStarRating());
         capNhatDiemSoSanPham(request.getFoodId(), request.getStarRating());
 
+        // Thông báo cho Quán ăn
+        NotificationDTO merchantNotif = new NotificationDTO();
+        merchantNotif.setTitle("Đánh giá mới");
+        String userName = (request.getUserName() != null && !request.getUserName().trim().isEmpty()) ? request.getUserName() : "Khách hàng";
+        String orderCode = getOrderCodeDisplay(donHang);
+        merchantNotif.setBody(userName + " vừa đánh giá " + request.getStarRating() + " sao cho đơn hàng " + orderCode + ".");
+        merchantNotif.setType(3); // 3 = review
+        merchantNotif.setOrderId(request.getOrderId());
+        merchantNotif.setReferenceId(reviewId);
+        notificationService.notifyMerchantByStoreId(request.getStoreId(), merchantNotif);
+
         return convertToDTO(review);
+    }
+
+    private String getOrderCodeDisplay(Order order) {
+        if (order.getCode() != null && !order.getCode().trim().isEmpty()) {
+            return order.getCode();
+        }
+        if (order.getId() != null && order.getId().length() >= 6) {
+            return order.getId().substring(order.getId().length() - 6).toUpperCase();
+        }
+        return "ORDER";
     }
 
     private void capNhatDiemSoCuaHang(String storeId, int starRatingMoi) throws Exception {
@@ -196,7 +221,15 @@ public class ReviewService {
         }
         List<Review> reviews = reviewRepository.findByStoreId(storeId);
         return reviews.stream()
-                .map(this::convertToDTO)
+                .map(review -> {
+                    Order order = null;
+                    try {
+                        order = orderRepository.findById(review.getOrderId());
+                    } catch (Exception e) {
+                        log.error("Loi lay thong tin don hang", e);
+                    }
+                    return convertToDTO(review, order);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -346,12 +379,40 @@ public class ReviewService {
         return convertToDTO(review);
     }
 
-    private ReviewDTO convertToDTO(Review review) {
+    public List<ReviewDTO> layTatCaDanhGia() throws Exception {
+        List<Review> reviews = reviewRepository.findAllReviews();
+        return reviews.stream()
+                .map(review -> {
+                    Order order = null;
+                    try {
+                        order = orderRepository.findById(review.getOrderId());
+                    } catch (Exception e) {
+                        log.error("Loi lay thong tin don hang", e);
+                    }
+                    return convertToDTO(review, order);
+                })
+                .collect(Collectors.toList());
+    }
+
+    public ReviewDTO convertToDTO(Review review) {
+        return convertToDTO(review, null);
+    }
+
+    private ReviewDTO convertToDTO(Review review, Order order) {
         ReviewDTO dto = new ReviewDTO();
         dto.setId(review.getId());
         dto.setOrderId(review.getOrderId());
         dto.setItemId(review.getItemId());
         dto.setFoodId(review.getFoodId());
+        if (order != null) {
+            dto.setOrderCode(order.getCode());
+            if (order.getItems() != null && !order.getItems().isEmpty()) {
+                String itemsStr = order.getItems().stream()
+                        .map(item -> item.getName() + " (x" + item.getQuantity() + ")")
+                        .collect(Collectors.joining(", "));
+                dto.setOrderItems(itemsStr);
+            }
+        }
         dto.setStoreId(review.getStoreId());
         dto.setUserId(review.getUserId());
         dto.setUserName(review.getUserName());

@@ -11,6 +11,7 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.UserRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -352,9 +353,31 @@ public class AuthService {
             throw new IllegalArgumentException("So dien thoai da duoc su dung. Vui long su dung so dien thoai khac.");
         }
 
-        String newId = (request.getFirebaseUid() != null && !request.getFirebaseUid().isBlank())
-                ? request.getFirebaseUid()
-                : userRepository.sinhNextUserId();
+        // Tao tai khoan tren Firebase Authentication de ho tro dang nhap bang Firebase
+        String firebaseUid = null;
+        try {
+            FirebaseAuth firebaseAuth = FirebaseAuth.getInstance(FirebaseApp.getInstance());
+            UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setPassword(request.getPassword())
+                    .setDisplayName(request.getFullName())
+                    .setEmailVerified(false);
+            UserRecord userRecord = firebaseAuth.createUser(createRequest);
+            firebaseUid = userRecord.getUid();
+            log.info("Tao tai khoan Firebase Auth thanh cong - UID: {}", firebaseUid);
+        } catch (FirebaseAuthException e) {
+            log.error("Loi tao tai khoan Firebase Auth: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("EMAIL_EXISTS")) {
+                throw new IllegalArgumentException("Email nay da duoc dang ky trong Firebase. Vui long su dung email khac hoac dang nhap.");
+            }
+            // Neu Firebase Auth khong kha dung, van tao tai khoan noi bo
+            log.warn("Tiep tuc tao tai khoan noi bo du khong tao duoc Firebase Auth");
+        }
+
+        String newId = (firebaseUid != null) ? firebaseUid
+                : (request.getFirebaseUid() != null && !request.getFirebaseUid().isBlank())
+                        ? request.getFirebaseUid()
+                        : userRepository.sinhNextUserId();
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
         User user = User.builder()
@@ -444,6 +467,21 @@ public class AuthService {
         return mapToUserResponse(user);
     }
 
+    public Map<String, Object> checkAdminProfile(String uid) throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("isAdmin", false);
+
+        User user = userRepository.timTheoId(uid);
+        if (user != null && user.getRoles() != null && user.getRoles().contains(4)) {
+            result.put("isAdmin", true);
+            result.put("fullName", user.getFullName());
+            result.put("email", user.getEmail());
+            result.put("phoneNumber", user.getPhoneNumber());
+            result.put("photoUrl", user.getPhotoUrl());
+            log.info("Nguoi dung {} co quyen Admin", uid);
+        }
+        return result;
+    }
     public String layUserIdHienTai(String authHeader) {
         if (authHeader == null || !authHeader.startsWith(jwtTokenProvider.getBearerPrefix() + " ")) {
             return null;
