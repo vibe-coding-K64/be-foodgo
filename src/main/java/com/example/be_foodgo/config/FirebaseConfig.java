@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
@@ -163,5 +164,15 @@ public class FirebaseConfig {
         FirebaseMessaging instance = FirebaseMessaging.getInstance(FirebaseApp.getInstance());
         log.info("FirebaseMessaging bean da duoc tao thanh cong.");
         return instance;
+    }
+
+    @Bean
+    public String firebaseDatabaseUrl() {
+        return databaseUrl;
+    }
+
+    @Bean
+    public RestTemplate firebaseRestTemplate() {
+        return new RestTemplate();
     }
 }
