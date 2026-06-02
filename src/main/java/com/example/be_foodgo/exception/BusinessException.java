@@ -352,4 +352,12 @@ public class BusinessException extends RuntimeException {
                 "Tài xế [" + userId + "] hiện không online. Vui lòng bật trạng thái hoạt động trước khi cập nhật vị trí."
         );
     }
+
+    public static BusinessException cuaHangKhongTonTai(String storeId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "STORE_NOT_FOUND",
+                "Cua hang khong ton tai."
+        );
+    }
 }

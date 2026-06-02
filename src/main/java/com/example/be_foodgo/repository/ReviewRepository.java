@@ -64,6 +64,7 @@ public class ReviewRepository {
     public List<Review> findByStoreId(String storeId) throws ExecutionException, InterruptedException {
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("storeId", storeId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Review> reviews = new ArrayList<>();
@@ -120,6 +121,37 @@ public class ReviewRepository {
         WriteResult result = future.get();
         log.info("Da cap nhat rating cua store [{}]: rating={}, reviewCount={}, luc [{}]",
                 storeId, rating, reviewCount, result.getUpdateTime());
+    }
+
+    public double tinhRatingTrungBinh(String fieldName, String fieldValue) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo(fieldName, fieldValue)
+                .get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        if (documents.isEmpty()) {
+            return 0.0;
+        }
+        long tongSao = 0;
+        for (QueryDocumentSnapshot doc : documents) {
+            Long star = doc.getLong("starRating");
+            if (star != null) {
+                tongSao += star;
+            }
+        }
+        return Math.round((double) tongSao / documents.size() * 10.0) / 10.0;
+    }
+
+    public int demSoReview(String fieldName, String fieldValue) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo(fieldName, fieldValue)
+                .get();
+        return future.get().getDocuments().size();
+    }
+
+    public void deleteById(String id) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(id);
+        docRef.delete();
+        log.info("Da xoa review [{}]", id);
     }
 
     public void updateReview(Review review) throws ExecutionException, InterruptedException {

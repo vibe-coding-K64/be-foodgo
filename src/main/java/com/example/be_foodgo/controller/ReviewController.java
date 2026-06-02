@@ -1,9 +1,12 @@
 package com.example.be_foodgo.controller;
 
+import com.example.be_foodgo.dto.BatchReviewRequest;
+import com.example.be_foodgo.dto.BatchReviewResponse;
 import com.example.be_foodgo.dto.ReviewDTO;
 import com.example.be_foodgo.dto.ReviewRequest;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.service.ReviewService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -24,10 +28,61 @@ import java.util.List;
 @Tag(name = "Danh gia", description = "Cac API lien quan den danh gia cua khach hang")
 public class ReviewController {
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
     private ReviewService reviewService;
 
-    @PostMapping
+    @PostMapping("/batch")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Tạo đánh giá hàng loạt (multipart/form-data)",
+            description = "Cho phép khách hàng gửi nhiều đánh giá cùng lúc kèm ảnh chụp món ăn. " +
+                    "Request gồm part 'metadata' (JSON) và part 'images' (file ảnh). " +
+                    "Chỉ cho phép đánh giá khi đơn hàng ở trạng thái [Hoàn thành] (status = 3). " +
+                    "Sản phẩm đã được đánh giá sẽ bị bỏ qua."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Tạo đánh giá hàng loạt thành công",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Dữ liệu không hợp lệ hoặc đơn hàng không cho phép đánh giá",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Người dùng không phải chủ sở hữu đơn hàng",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Không tìm thấy đơn hàng",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<BatchReviewResponse>> taoDanhGiaBatch(
+            @Parameter(description = "JSON metadata chứa thông tin đánh giá", required = true)
+            @RequestPart("metadata") String metadataJson,
+            @Parameter(description = "Danh sách ảnh đính kèm (JPEG, PNG, WEBP, tối đa 10MB/ảnh)")
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) throws Exception {
+
+        BatchReviewRequest request = objectMapper.readValue(metadataJson, BatchReviewRequest.class);
+        ReviewService.BatchReviewResult result = reviewService.taoDanhGiaBatch(request, images);
+
+        BatchReviewResponse response = BatchReviewResponse.builder()
+                .count(result.count)
+                .reviewIds(result.reviewIds)
+                .build();
+        return ResponseEntity.ok(ApiResponse.thatSuccess(response, "Đánh giá đã được gửi thành công"));
+    }
     @SecurityRequirement(name = "bearerAuth")
     @Operation(
             summary = "Tao danh gia",
