@@ -268,6 +268,27 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/check-admin")
+    @Operation(
+            summary = "Kiem tra quyen admin",
+            description = "Kiem tra xem tai khoan co quyen admin (role = 4) hay khong."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Ket qua kiem tra quyen")
+    })
+    public ResponseEntity<?> checkAdminRole(
+            @Parameter(description = "ID tai khoan nguoi dung", example = "user_002")
+            @RequestParam String uid) {
+        try {
+            return ResponseEntity.ok(authService.checkAdminProfile(uid));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            400, "Loi kiem tra quyen: " + e.getMessage()));
+        }
+    }
+
+
     @PostMapping("/refresh-token")
     @Operation(
             summary = "Lam moi access token",

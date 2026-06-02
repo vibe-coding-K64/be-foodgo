@@ -175,6 +175,72 @@ public class StatsService {
         }
     }
 
+    public Map<String, Object> getSystemStats() {
+        log.info("Bat dau lay thong ke he thong cho Admin");
+        try {
+            com.google.cloud.firestore.Firestore firestore = walletRepository.getFirestore();
+
+            long totalOrders = firestore.collection("orders").get().get().size();
+            long totalStores = firestore.collection("stores").get().get().size();
+            long totalDrivers = firestore.collection("users").whereEqualTo("role", 2).get().get().size();
+            long totalCustomers = firestore.collection("users").whereEqualTo("role", 1).get().get().size();
+
+            double totalRevenue = 0.0;
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> completedOrders = firestore.collection("orders")
+                    .whereEqualTo("status", 3)
+                    .get()
+                    .get()
+                    .getDocuments();
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : completedOrders) {
+                Double amount = doc.getDouble("totalAmount");
+                if (amount != null) {
+                    totalRevenue += amount;
+                }
+            }
+
+            // Tinh weekly revenue
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+            
+            double[] weeklyRevenueArray = new double[7];
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : completedOrders) {
+                Instant orderTime = toInstant(doc.get("createdAt"));
+                if (orderTime == null) continue;
+                java.time.LocalDate orderDate = orderTime.atZone(ZoneId.systemDefault()).toLocalDate();
+                if (!orderDate.isBefore(monday) && !orderDate.isAfter(monday.plusDays(6))) {
+                    int dayIndex = orderDate.getDayOfWeek().getValue() - 1; // 0 for Monday, 6 for Sunday
+                    Double amount = doc.getDouble("totalAmount");
+                    if (amount != null) {
+                        weeklyRevenueArray[dayIndex] += amount;
+                    }
+                }
+            }
+
+            List<Double> weeklyRevenue = new ArrayList<>();
+            for (double val : weeklyRevenueArray) {
+                weeklyRevenue.add(val);
+            }
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalRevenue", totalRevenue);
+            stats.put("totalOrders", totalOrders);
+            stats.put("totalStores", totalStores);
+            stats.put("totalDrivers", totalDrivers);
+            stats.put("totalCustomers", totalCustomers);
+            stats.put("weeklyRevenue", weeklyRevenue);
+
+            return stats;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay thong ke he thong: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay thong ke he thong: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     private Double toDouble(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).doubleValue();

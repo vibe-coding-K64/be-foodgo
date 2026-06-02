@@ -139,6 +139,13 @@ public class ReviewService {
         return convertToDTO(review);
     }
 
+    public List<ReviewDTO> layTatCaDanhGia() throws Exception {
+        List<Review> reviews = reviewRepository.findAllReviews();
+        return reviews.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     private ReviewDTO convertToDTO(Review review) {
         ReviewDTO dto = new ReviewDTO();
         dto.setId(review.getId());

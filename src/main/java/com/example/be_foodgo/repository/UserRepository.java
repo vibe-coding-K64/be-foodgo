@@ -130,6 +130,10 @@ public class UserRepository {
                 }
             }
         }
+        Boolean active = true;
+        if (data.containsKey("isActive") && data.get("isActive") != null) {
+            active = (Boolean) data.get("isActive");
+        }
         return User.builder()
                 .id((String) data.get("id"))
                 .email((String) data.get("email"))
@@ -141,6 +145,7 @@ public class UserRepository {
                 .createdAt(objectToString(data.get("createdAt")))
                 .updatedAt(objectToString(data.get("updatedAt")))
                 .isEmailVerified(data.get("isEmailVerified") != null ? (Boolean) data.get("isEmailVerified") : false)
+                .isActive(active)
                 .build();
     }
 
@@ -156,7 +161,31 @@ public class UserRepository {
         map.put("createdAt", user.getCreatedAt());
         map.put("updatedAt", user.getUpdatedAt());
         map.put("isEmailVerified", user.getIsEmailVerified() != null ? user.getIsEmailVerified() : false);
+        map.put("isActive", user.getIsActive() != null ? user.getIsActive() : true);
         return map;
+    }
+
+    public List<User> timTatCa(Integer role) throws ExecutionException, InterruptedException {
+        Query query = getCollection();
+        QuerySnapshot snapshot = query.get().get();
+        List<User> users = new ArrayList<>();
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            User u = documentToUser(doc);
+            if (u != null) {
+                if (role == null || (u.getRoles() != null && u.getRoles().contains(role))) {
+                    users.add(u);
+                }
+            }
+        }
+        return users;
+    }
+
+    public void updateActiveStatus(String userId, boolean isActive) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isActive", isActive);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
     }
 
     private String objectToString(Object obj) {

@@ -35,4 +35,7 @@ public class UserResponse {
 
     @Schema(description = "Email da duoc xac thuc chua", example = "false")
     private Boolean isEmailVerified;
+
+    @Schema(description = "Trang thai hoat dong cua tai khoan", example = "true")
+    private Boolean isActive;
 }
