@@ -77,6 +77,39 @@ public class ReviewRepository {
         return reviews;
     }
 
+    public List<Review> findByFoodId(String foodId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("foodId", foodId)
+                .get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Review> reviews = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Review review = doc.toObject(Review.class);
+            if (review != null) {
+                review.setId(doc.getId());
+                reviews.add(review);
+            }
+        }
+        return reviews;
+    }
+
+    public List<Review> findByOrderIdAndItemId(String orderId, String itemId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("orderId", orderId)
+                .whereEqualTo("itemId", itemId)
+                .get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Review> reviews = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Review review = doc.toObject(Review.class);
+            if (review != null) {
+                review.setId(doc.getId());
+                reviews.add(review);
+            }
+        }
+        return reviews;
+    }
+
     public void capNhatStoreRating(String storeId, double rating, int reviewCount) throws ExecutionException, InterruptedException {
         DocumentReference storeRef = firestore.collection("stores").document(storeId);
         ApiFuture<WriteResult> future = storeRef.update(

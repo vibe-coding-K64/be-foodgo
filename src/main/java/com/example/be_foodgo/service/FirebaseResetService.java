@@ -458,7 +458,9 @@ public class FirebaseResetService {
                                 ))
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_002"), Map.entry("storeId", "store_001"),
@@ -469,7 +471,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_003"), Map.entry("storeId", "store_001"),
@@ -502,7 +506,9 @@ public class FirebaseResetService {
                                 ))
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_005"), Map.entry("storeId", "store_002"),
@@ -513,7 +519,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_006"), Map.entry("storeId", "store_002"),
@@ -524,7 +532,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1557992260-ec58fa23b80b?w=400&q=80"),
                         Map.entry("isOutOfStock", true), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 3.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_007"), Map.entry("storeId", "store_003"),
@@ -574,7 +584,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_011"), Map.entry("storeId", "store_004"),
@@ -596,7 +608,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_013"), Map.entry("storeId", "store_001"),
@@ -707,7 +721,7 @@ public class FirebaseResetService {
         map.put("isFreeship", isFreeship);
         map.put("terms", terms);
         map.put("minOrderValue", minOrderValue);
-        map.put("expiryDate", Date.from(Instant.parse(expiryDate)));
+        map.put("expiryDate", FieldValue.serverTimestamp());
         map.put("pointsRequired", pointsRequired);
         map.put("validityDays", validityDays);
         map.put("createdAt", FieldValue.serverTimestamp());
@@ -718,8 +732,13 @@ public class FirebaseResetService {
     private void seedReviews() {
         List<Map<String, Object>> reviews = Arrays.asList(
                 Map.ofEntries(
-                        Map.entry("id", "rev_001"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
+                        Map.entry("id", "rev_001"),
+                        Map.entry("orderId", "order_001"),
+                        Map.entry("itemId", "item_001"),
+                        Map.entry("foodId", "prod_001"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Do an rat ngon, giao hang nhanh, dong goi ky luong."),
@@ -731,8 +750,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_002"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_002"), Map.entry("userName", "Quan Tri Vien"),
+                        Map.entry("id", "rev_002"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_002"),
+                        Map.entry("foodId", "prod_001"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_002"),
+                        Map.entry("userName", "Quan Tri Vien"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/admin.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Mon an ngon, nhung giao hang tre hon 15 phut."),
@@ -741,8 +765,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_003"), Map.entry("storeId", "store_002"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
+                        Map.entry("id", "rev_003"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_003"),
+                        Map.entry("foodId", "prod_004"),
+                        Map.entry("storeId", "store_002"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Tra sua rat ngon, topping nhieu, uong la lanh."),
@@ -751,8 +780,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_004"), Map.entry("storeId", "store_003"),
-                        Map.entry("userId", "user_002"), Map.entry("userName", "Quan Tri Vien"),
+                        Map.entry("id", "rev_004"),
+                        Map.entry("orderId", "order_003"),
+                        Map.entry("itemId", "item_004"),
+                        Map.entry("foodId", "prod_006"),
+                        Map.entry("storeId", "store_003"),
+                        Map.entry("userId", "user_002"),
+                        Map.entry("userName", "Quan Tri Vien"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/admin.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Ga ran gion, an bieu nhu ham thit ngot."),
@@ -761,8 +795,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_005"), Map.entry("storeId", "store_004"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
+                        Map.entry("id", "rev_005"),
+                        Map.entry("orderId", "order_004"),
+                        Map.entry("itemId", "item_005"),
+                        Map.entry("foodId", "prod_010"),
+                        Map.entry("storeId", "store_004"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Bun bo Hue ngon chuan, nuoc dung ngot thanh."),
@@ -774,8 +813,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_006"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_003"), Map.entry("userName", "Le Van B"),
+                        Map.entry("id", "rev_006"),
+                        Map.entry("orderId", "order_001"),
+                        Map.entry("itemId", "item_006"),
+                        Map.entry("foodId", "prod_002"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_003"),
+                        Map.entry("userName", "Le Van B"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/driver001.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Com tam ngon, phan an vua du."),
@@ -784,8 +828,13 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_007"), Map.entry("storeId", "store_002"),
-                        Map.entry("userId", "user_003"), Map.entry("userName", "Le Van B"),
+                        Map.entry("id", "rev_007"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_007"),
+                        Map.entry("foodId", "prod_005"),
+                        Map.entry("storeId", "store_002"),
+                        Map.entry("userId", "user_003"),
+                        Map.entry("userName", "Le Van B"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/driver001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Quan nay ban tra sua ngon lam, giao hang cung nhanh."),
@@ -794,11 +843,31 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_008"), Map.entry("storeId", "store_003"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
+                        Map.entry("id", "rev_008"),
+                        Map.entry("orderId", "order_007"),
+                        Map.entry("itemId", "item_008"),
+                        Map.entry("foodId", "prod_006"),
+                        Map.entry("storeId", "store_003"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
                         Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
                         Map.entry("starRating", 3),
                         Map.entry("comment", "An cung duoc nhung gia ca hoi cao."),
+                        Map.entry("imageUrls", List.of()),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "rev_009"),
+                        Map.entry("orderId", "order_008"),
+                        Map.entry("itemId", "item_009"),
+                        Map.entry("foodId", "prod_012"),
+                        Map.entry("storeId", "store_005"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("starRating", 5),
+                        Map.entry("comment", "Bun cha sieu ngon, thit nuong thom, nuoc cham dam da!"),
                         Map.entry("imageUrls", List.of()),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
@@ -1097,7 +1166,7 @@ public class FirebaseResetService {
                         Map.entry("subtitle", "Ap dung cho don tu 50K."),
                         Map.entry("code", "FREESHIP20"),
                         Map.entry("description", "Ap dung cho don tu 100K"),
-                        Map.entry("expiryDate", Date.from(Instant.parse("2027-12-31T23:59:59Z"))),
+                        Map.entry("expiryDate", FieldValue.serverTimestamp()),
                         Map.entry("type", 2),
                         Map.entry("value", 20000.0),
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
@@ -1114,7 +1183,7 @@ public class FirebaseResetService {
                         Map.entry("subtitle", "Giam 10% cho moi don hang."),
                         Map.entry("code", "SAVE10"),
                         Map.entry("description", "Giam 10% cho moi don hang"),
-                        Map.entry("expiryDate", Date.from(Instant.parse("2027-12-31T23:59:59Z"))),
+                        Map.entry("expiryDate", FieldValue.serverTimestamp()),
                         Map.entry("type", 1),
                         Map.entry("value", 10.0),
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),

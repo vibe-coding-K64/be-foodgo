@@ -88,6 +88,27 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.thatSuccess(reviews, "Lay danh sach danh gia thanh cong."));
     }
 
+    @GetMapping("/product/{foodId}")
+    @Operation(
+            summary = "Lay danh sach danh gia theo san pham",
+            description = "Lay tat ca danh gia cua mot san pham theo foodId."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lay danh sach danh gia thanh cong",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<List<ReviewDTO>>> layDanhSachDanhGiaSanPham(
+            @Parameter(description = "ID san pham", required = true)
+            @PathVariable String foodId) throws Exception {
+
+        List<ReviewDTO> reviews = reviewService.layDanhSachDanhGiaSanPham(foodId);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(reviews, "Lay danh sach danh gia san pham thanh cong."));
+    }
+
     @PutMapping("/{id}/reply")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Phản hồi đánh giá", description = "Cho phép chủ gian hàng phản hồi đánh giá của khách hàng")

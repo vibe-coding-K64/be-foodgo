@@ -4,9 +4,11 @@ import com.example.be_foodgo.dto.ReviewDTO;
 import com.example.be_foodgo.dto.ReviewRequest;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.model.Order;
+import com.example.be_foodgo.model.Product;
 import com.example.be_foodgo.model.Review;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.repository.OrderRepository;
+import com.example.be_foodgo.repository.ProductRepository;
 import com.example.be_foodgo.repository.ReviewRepository;
 import com.example.be_foodgo.repository.StoreRepository;
 import org.slf4j.Logger;
@@ -34,6 +36,9 @@ public class ReviewService {
     @Autowired
     private StoreRepository storeRepository;
 
+    @Autowired
+    private ProductRepository productRepository;
+
     public ReviewDTO taoDanhGia(ReviewRequest request) throws Exception {
         log.info("Bat dau tao danh gia cho don hang [{}] tu nguoi dung [{}]", request.getOrderId(), request.getUserId());
 
@@ -57,14 +62,18 @@ public class ReviewService {
             throw BusinessException.trangThaiDonHangKhongChoPhepDanhGia(request.getOrderId(), trangThaiHienTai);
         }
 
-        List<Review> danhSachDanhGiaHienTai = reviewRepository.findByOrderId(request.getOrderId());
+        List<Review> danhSachDanhGiaHienTai = reviewRepository.findByOrderIdAndItemId(
+                request.getOrderId(), request.getItemId());
         if (!danhSachDanhGiaHienTai.isEmpty()) {
-            log.warn("Don hang [{}] da duoc danh gia roi", request.getOrderId());
+            log.warn("Mon an [{}] trong don hang [{}] da duoc danh gia roi",
+                    request.getItemId(), request.getOrderId());
             throw BusinessException.donHangDaDuocDanhGia(request.getOrderId());
         }
 
         Review review = new Review();
         review.setOrderId(request.getOrderId());
+        review.setItemId(request.getItemId());
+        review.setFoodId(request.getFoodId());
         review.setStoreId(request.getStoreId());
         review.setUserId(request.getUserId());
         review.setUserName(request.getUserName());
@@ -77,9 +86,11 @@ public class ReviewService {
 
         String reviewId = reviewRepository.save(review);
         review.setId(reviewId);
-        log.info("Da luu danh gia [{}] cho don hang [{}]", reviewId, request.getOrderId());
+        log.info("Da luu danh gia [{}] cho mon [{}] trong don hang [{}]",
+                reviewId, request.getItemId(), request.getOrderId());
 
         capNhatDiemSoCuaHang(request.getStoreId(), request.getStarRating());
+        capNhatDiemSoSanPham(request.getFoodId(), request.getStarRating());
 
         return convertToDTO(review);
     }
@@ -118,8 +129,49 @@ public class ReviewService {
         reviewRepository.capNhatStoreRating(storeId, ratingMoi, reviewCountMoi);
     }
 
+    private void capNhatDiemSoSanPham(String foodId, int starRatingMoi) throws Exception {
+        Product sanPham = productRepository.findById(foodId);
+        if (sanPham == null) {
+            log.warn("San pham [{}] khong ton tai, khong the cap nhat diem so", foodId);
+            return;
+        }
+
+        int reviewCountCu = 0;
+        double ratingCu = 0.0;
+
+        if (sanPham.getReviewCount() != null) {
+            reviewCountCu = sanPham.getReviewCount();
+        }
+        if (sanPham.getRating() != null) {
+            ratingCu = sanPham.getRating();
+        }
+
+        int reviewCountMoi = reviewCountCu + 1;
+        double ratingMoi;
+        if (reviewCountCu == 0) {
+            ratingMoi = starRatingMoi;
+        } else {
+            double tongDiem = ratingCu * reviewCountCu + starRatingMoi;
+            ratingMoi = tongDiem / reviewCountMoi;
+        }
+
+        ratingMoi = Math.round(ratingMoi * 10.0) / 10.0;
+
+        log.info("Cap nhat diem so san pham [{}]: reviewCount {} -> {}, rating {} -> {}",
+                foodId, reviewCountCu, reviewCountMoi, ratingCu, ratingMoi);
+
+        productRepository.capNhatProductRating(foodId, ratingMoi, reviewCountMoi);
+    }
+
     public List<ReviewDTO> layDanhSachDanhGiaCuaHang(String storeId) throws Exception {
         List<Review> reviews = reviewRepository.findByStoreId(storeId);
+        return reviews.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<ReviewDTO> layDanhSachDanhGiaSanPham(String foodId) throws Exception {
+        List<Review> reviews = reviewRepository.findByFoodId(foodId);
         return reviews.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -143,6 +195,8 @@ public class ReviewService {
         ReviewDTO dto = new ReviewDTO();
         dto.setId(review.getId());
         dto.setOrderId(review.getOrderId());
+        dto.setItemId(review.getItemId());
+        dto.setFoodId(review.getFoodId());
         dto.setStoreId(review.getStoreId());
         dto.setUserId(review.getUserId());
         dto.setUserName(review.getUserName());
