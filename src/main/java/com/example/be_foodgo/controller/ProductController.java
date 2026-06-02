@@ -102,9 +102,11 @@ public class ProductController {
     @Operation(summary = "Lấy danh sách món ăn nổi bật", description = "Lấy danh sách các món ăn nổi bật (featured)")
     public ResponseEntity<Map<String, Object>> getFeaturedProducts(
             @RequestParam(defaultValue = "10") int limit,
-            @RequestParam(required = false) String categoryId) {
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
         try {
-            Map<String, Object> response = productService.getFeaturedProducts(limit, categoryId);
+            Map<String, Object> response = productService.getFeaturedProducts(limit, categoryId, lat, lng);
             return ResponseEntity.ok(response);
         } catch (ExecutionException | InterruptedException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

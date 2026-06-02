@@ -34,6 +34,12 @@ public class ProductDTO {
 
     private List<ProductOptionGroupDTO> optionGroups;
 
+    @PositiveOrZero(message = "Rating phải >= 0")
+    private Double rating;
+
+    @PositiveOrZero(message = "Review count phải >= 0")
+    private Integer reviewCount;
+
     @Data
     public static class ProductOptionGroupDTO {
         @NotBlank(message = "Tên nhóm không được để trống")

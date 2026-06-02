@@ -336,4 +336,28 @@ public class BusinessException extends RuntimeException {
                 message
         );
     }
+
+    public static BusinessException loiDinhVi(String message) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "LOCATION_ERROR",
+                message
+        );
+    }
+
+    public static BusinessException taiXeKhongOnline(String userId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "DRIVER_NOT_ONLINE",
+                "Tài xế [" + userId + "] hiện không online. Vui lòng bật trạng thái hoạt động trước khi cập nhật vị trí."
+        );
+    }
+
+    public static BusinessException cuaHangKhongTonTai(String storeId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "STORE_NOT_FOUND",
+                "Cua hang khong ton tai."
+        );
+    }
 }

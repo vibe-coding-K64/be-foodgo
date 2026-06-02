@@ -11,6 +11,12 @@ public class ReviewRequest {
     @NotBlank(message = "ID đơn hàng không được để trống")
     private String orderId;
 
+    @NotBlank(message = "ID item không được để trống")
+    private String itemId;
+
+    @NotBlank(message = "ID sản phẩm không được để trống")
+    private String foodId;
+
     @NotBlank(message = "ID cửa hàng không được để trống")
     private String storeId;
 

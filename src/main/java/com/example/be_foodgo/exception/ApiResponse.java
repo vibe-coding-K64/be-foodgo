@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,6 +19,7 @@ public class ApiResponse<T> {
     private String message;
     private T data;
     private Instant timestamp;
+    private List<FieldError> errors;
 
     public static <T> ApiResponse<T> thatSuccess(T data, String message) {
         return ApiResponse.<T>builder()
@@ -35,6 +37,17 @@ public class ApiResponse<T> {
                 .statusCode(statusCode)
                 .message(message)
                 .data(null)
+                .timestamp(Instant.now())
+                .build();
+    }
+
+    public static <T> ApiResponse<T> thatError(int statusCode, String message, List<FieldError> errors) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .statusCode(statusCode)
+                .message(message)
+                .data(null)
+                .errors(errors)
                 .timestamp(Instant.now())
                 .build();
     }

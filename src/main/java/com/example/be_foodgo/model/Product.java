@@ -16,6 +16,8 @@ public class Product {
     private Boolean isOutOfStock;
     private Boolean isFeatured;
     private List<ProductOptionGroup> optionGroups;
+    private Double rating;
+    private Integer reviewCount;
     private com.google.cloud.Timestamp createdAt;
     private com.google.cloud.Timestamp updatedAt;
 
