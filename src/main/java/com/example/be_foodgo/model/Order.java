@@ -20,16 +20,16 @@ public class Order {
 
     private String driverName;
     private String driverPhone;
-    
+
     private List<OrderItem> items;
-    
+
     private double totalAmount;
     private double discountAmount;
     private double shopDiscountAmount;
     private double freeshipDiscountAmount;
     private double finalAmount;
     private Object paymentMethod;
-    
+
     private Object status; // 0=Chờ xác nhận, 1=Đang chuẩn bị, 2=Đang giao, 3=Hoàn thành, 4=Đã hủy
     private Date createdAt;
     private Date updatedAt;
@@ -79,6 +79,7 @@ public class Order {
     public void setFreeshipDiscountAmount(double freeshipDiscountAmount) { this.freeshipDiscountAmount = freeshipDiscountAmount; }
     public double getFinalAmount() { return finalAmount; }
     public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
+
     public int getPaymentMethod() {
         if (paymentMethod instanceof Number) {
             return ((Number) paymentMethod).intValue();
@@ -91,7 +92,8 @@ public class Order {
         }
         return 0;
     }
-    public void setPaymentMethod(int paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
+
     public String getStatus() {
         if (status instanceof Number) {
             long val = ((Number) status).longValue();
