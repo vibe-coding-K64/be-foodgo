@@ -200,4 +200,13 @@ public class OrderService {
         }
         return entity;
     }
+
+    public List<OrderDTO> getAllOrders() throws ExecutionException, InterruptedException {
+        List<Order> orders = orderRepository.findAllOrders();
+        List<OrderDTO> dtos = new ArrayList<>();
+        for (Order o : orders) {
+            dtos.add(convertToDTO(o));
+        }
+        return dtos;
+    }
 }

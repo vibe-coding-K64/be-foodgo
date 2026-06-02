@@ -134,6 +134,16 @@ public class StoreService {
         return mapToDTO(store);
     }
 
+    public List<StoreDTO> getAllStores() throws Exception {
+        List<Store> stores = storeRepository.layTatCaStores();
+        List<StoreDTO> dtos = new ArrayList<>();
+        for (Store store : stores) {
+            dtos.add(mapToDTO(store));
+        }
+        return dtos;
+    }
+
+
     private StoreDTO mapToDTO(Store store) {
         StoreDTO dto = new StoreDTO();
         dto.setId(store.getId());

@@ -67,4 +67,18 @@ public class OrderRepository {
         ApiFuture<WriteResult> writeResult = firestore.collection(COLLECTION_NAME).document(id).delete();
         return writeResult.get().getUpdateTime().toString();
     }
+
+    public List<Order> findAllOrders() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).orderBy("createdAt", Query.Direction.DESCENDING).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Order> orders = new ArrayList<>();
+        for (DocumentSnapshot document : documents) {
+            Order order = document.toObject(Order.class);
+            if (order != null) {
+                order.setId(document.getId());
+                orders.add(order);
+            }
+        }
+        return orders;
+    }
 }

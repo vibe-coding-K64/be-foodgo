@@ -200,4 +200,10 @@ public class OrderController {
     @Schema(name = "ApiResponseSchema", description = "Schema co ban cho ApiResponse")
     public static class ApiResponseSchema extends ApiResponse<Void> {
     }
+
+    @GetMapping("/admin")
+    @Operation(summary = "Lấy tất cả đơn hàng trên hệ thống dành cho Admin", description = "Admin giám sát toàn bộ đơn hàng của sàn FoodGo")
+    public ResponseEntity<List<OrderDTO>> getAllAdminOrders() throws Exception {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
 }

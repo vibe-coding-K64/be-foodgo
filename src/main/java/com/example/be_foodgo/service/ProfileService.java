@@ -71,6 +71,29 @@ public class ProfileService {
         log.info("Doi mat khau thanh cong cho userId: {}", userId);
     }
 
+    public java.util.List<UserResponse> timTatCaUsers(Integer role) throws Exception {
+        log.info("Admin lay danh sach nguoi dung, filter role={}", role);
+        java.util.List<com.example.be_foodgo.model.User> users = userRepository.timTatCa(role);
+        java.util.List<UserResponse> result = new java.util.ArrayList<>();
+        for (com.example.be_foodgo.model.User u : users) {
+            result.add(mapToUserResponse(u));
+        }
+        return result;
+    }
+
+    public boolean toggleUserActive(String userId) throws Exception {
+        log.info("Admin toggle trang thai active cho userId: {}", userId);
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+        boolean currentActive = user.getIsActive() != null ? user.getIsActive() : true;
+        boolean newActive = !currentActive;
+        userRepository.updateActiveStatus(userId, newActive);
+        log.info("Da thay doi active tu {} sang {} cho userId {}", currentActive, newActive, userId);
+        return newActive;
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -79,6 +102,7 @@ public class ProfileService {
                 .phoneNumber(user.getPhoneNumber())
                 .photoUrl(user.getPhotoUrl())
                 .roles(user.getRoles())
+                .isActive(user.getIsActive() != null ? user.getIsActive() : true)
                 .build();
     }
 }
