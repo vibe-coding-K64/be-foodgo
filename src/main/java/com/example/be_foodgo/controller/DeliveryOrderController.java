@@ -269,6 +269,35 @@ public class DeliveryOrderController extends BaseController {
         }
     }
 
+    @GetMapping("/active")
+    @Operation(
+            summary = "Lay danh sach don hang dang hoat dong",
+            description = "Lay tat ca don hang dang hoat dong cua tai xe hien tai (status == 2, driverId == currentUser)."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lay danh sach don hang active thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Chua xac thuc")
+    })
+    public ResponseEntity<?> getActiveOrders(HttpServletRequest httpRequest) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            List<DeliveryOrderDTO> orders = deliveryOrderService.getActiveOrders(holder.userId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(orders, "Lay danh sach don hang hoat dong thanh cong."));
+        } catch (Exception e) {
+            log.error("Loi khi lay don hang hoat dong: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
     @GetMapping("/history")
     @Operation(
             summary = "Lay lich su don hang",

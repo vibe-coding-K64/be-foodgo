@@ -295,6 +295,42 @@ public class DeliveryOrderService {
         }
     }
 
+    public List<DeliveryOrderDTO> getActiveOrders(String userId) {
+        log.info("Bat dau lay don hang active cua tai xe: {}", userId);
+        try {
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
+                    .findByDriverIdAndStatus(userId, 2);
+            List<DeliveryOrderDTO> orders = new ArrayList<>();
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                Map<String, Object> data = doc.getData();
+                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
+
+                if (data.get("storeId") != null) {
+                    Map<String, Object> storeData = statsRepository
+                            .findStoreById(data.get("storeId").toString());
+                    if (storeData != null) {
+                        dto.setStoreAddress((String) storeData.get("address"));
+                        dto.setStoreLat(toDouble(storeData.get("lat")));
+                        dto.setStoreLng(toDouble(storeData.get("lng")));
+                    }
+                }
+
+                orders.add(dto);
+            }
+
+            log.info("Tim thay {} don hang active", orders.size());
+            return orders;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay don hang active: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay don hang active: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     public List<DeliveryOrderDTO> getOrderHistory(String userId) {
         log.info("Bat dau lay lich su don hang cua tai xe: {}", userId);
         try {
