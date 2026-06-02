@@ -86,7 +86,7 @@ public class WalletRepository {
         batch.commit().get();
     }
 
-    public List<QueryDocumentSnapshot> findDriverWalletByUserIdAndRole(String userId, String role)
+    public List<QueryDocumentSnapshot> findDriverWalletByUserIdAndRole(String userId, Object role)
             throws ExecutionException, InterruptedException {
         return firestore.collection(COLLECTION_WALLETS)
                 .whereEqualTo("userId", userId)
@@ -98,8 +98,8 @@ public class WalletRepository {
     }
 
     public String createDriverWallet(String userId) throws ExecutionException, InterruptedException {
-        DocumentReference newDocRef = firestore.collection(COLLECTION_WALLETS).document();
-        String walletId = newDocRef.getId();
+        String walletId = generateNextWalletId();
+        DocumentReference newDocRef = firestore.collection(COLLECTION_WALLETS).document(walletId);
 
         Map<String, Object> walletData = new HashMap<>();
         walletData.put("id", walletId);
@@ -109,8 +109,8 @@ public class WalletRepository {
         walletData.put("totalEarned", 0.0);
         walletData.put("totalWithdrawn", 0.0);
         walletData.put("pendingBalance", 0.0);
-        walletData.put("createdAt", Instant.now());
-        walletData.put("updatedAt", Instant.now());
+        walletData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+        walletData.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
 
         newDocRef.set(walletData).get();
         log.info("Da tao vi moi cho tai xe {}: walletId={}", userId, walletId);
@@ -127,13 +127,10 @@ public class WalletRepository {
     }
 
     public ApiFuture<QuerySnapshot> findTransactionsPaginated(
-            String userId, String type, int page, int size) {
+            String userId, Integer type, int page, int size) {
         return firestore.collection(COLLECTION_TRANSACTIONS)
                 .whereEqualTo("userId", userId)
                 .whereEqualTo("type", type)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .offset(page * size)
-                .limit(size)
                 .get();
     }
 
@@ -141,43 +138,88 @@ public class WalletRepository {
             String userId, int page, int size) {
         return firestore.collection(COLLECTION_TRANSACTIONS)
                 .whereEqualTo("userId", userId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .offset(page * size)
-                .limit(size)
                 .get();
     }
 
+    private String generateNextWalletId() throws ExecutionException, InterruptedException {
+        QuerySnapshot snapshot = firestore.collection(COLLECTION_WALLETS)
+                .orderBy("id", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .get();
+
+        if (snapshot.isEmpty()) {
+            return "wallet_001";
+        }
+
+        String lastId = snapshot.getDocuments().get(0).getId();
+        if (lastId.startsWith("wallet_")) {
+            try {
+                int num = Integer.parseInt(lastId.substring(7));
+                return String.format("wallet_%03d", num + 1);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid wallet id format: {}", lastId);
+            }
+        }
+        return "wallet_" + System.currentTimeMillis();
+    }
+
     public String createMerchantWallet(String userId) throws ExecutionException, InterruptedException {
-        DocumentReference newDocRef = firestore.collection(COLLECTION_WALLETS).document();
-        String walletId = newDocRef.getId();
+        String walletId = generateNextWalletId();
+        DocumentReference newDocRef = firestore.collection(COLLECTION_WALLETS).document(walletId);
 
         Map<String, Object> walletData = new HashMap<>();
         walletData.put("id", walletId);
         walletData.put("userId", userId);
-        walletData.put("role", "merchant");
+        walletData.put("role", 1);
         walletData.put("balance", 0.0);
         walletData.put("totalEarned", 0.0);
         walletData.put("totalWithdrawn", 0.0);
         walletData.put("pendingBalance", 0.0);
-        walletData.put("createdAt", Instant.now());
-        walletData.put("updatedAt", Instant.now());
+        walletData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+        walletData.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
 
         newDocRef.set(walletData).get();
         log.info("Da tao vi moi cho gian hang {}: walletId={}", userId, walletId);
         return walletId;
     }
 
+    private String generateNextTransactionId() throws ExecutionException, InterruptedException {
+        QuerySnapshot snapshot = firestore.collection(COLLECTION_TRANSACTIONS)
+                .orderBy("id", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .get();
+
+        if (snapshot.isEmpty()) {
+            return "trans_001";
+        }
+
+        String lastId = snapshot.getDocuments().get(0).getId();
+        if (lastId.startsWith("trans_")) {
+            try {
+                int num = Integer.parseInt(lastId.substring(6));
+                return String.format("trans_%03d", num + 1);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid transaction id format: {}", lastId);
+            }
+        }
+        return "trans_" + System.currentTimeMillis();
+    }
+
     public String createTransaction(Map<String, Object> data)
             throws ExecutionException, InterruptedException {
-        ApiFuture<DocumentReference> ref = firestore.collection(COLLECTION_TRANSACTIONS).add(data);
-        return ref.get().getId();
+        String transId = generateNextTransactionId();
+        data.put("id", transId);
+        firestore.collection(COLLECTION_TRANSACTIONS).document(transId).set(data).get();
+        return transId;
     }
 
     public ApiFuture<QuerySnapshot> findAllDeliveryTransactionsByUserId(String userId) {
         return firestore.collection(COLLECTION_TRANSACTIONS)
                 .whereEqualTo("userId", userId)
-                .whereEqualTo("type", "delivery_income")
-                .whereEqualTo("status", "completed")
+                .whereEqualTo("type", 2)
+                .whereEqualTo("status", 1)
                 .get();
     }
 
@@ -196,12 +238,12 @@ public class WalletRepository {
         return snapshots.getDocuments().get(0).getData();
     }
 
-    public String withdrawInTransaction(String walletId, String userId, double amount)
+    public String withdrawInTransaction(String walletId, String userId, double amount, String description)
             throws ExecutionException, InterruptedException {
 
         DocumentReference walletRef = firestore.collection(COLLECTION_WALLETS).document(walletId);
-        DocumentReference transRef = firestore.collection(COLLECTION_TRANSACTIONS).document();
-        final String transId = transRef.getId();
+        final String transId = generateNextTransactionId();
+        DocumentReference transRef = firestore.collection(COLLECTION_TRANSACTIONS).document(transId);
 
         firestore.runTransaction(transaction -> {
             DocumentSnapshot walletDoc = transaction.get(walletRef).get();
@@ -215,13 +257,13 @@ public class WalletRepository {
             transData.put("id", transId);
             transData.put("walletId", walletId);
             transData.put("userId", userId);
-            transData.put("type", "withdrawal");
+            transData.put("type", 3);
             transData.put("amount", amount);
             transData.put("fee", 0.0);
             transData.put("netAmount", amount);
-            transData.put("description", "Yeu cau rut tien tai khoan.");
-            transData.put("status", "pending");
-            transData.put("createdAt", Instant.now());
+            transData.put("description", description != null ? description : "Yêu cầu rút tiền tài khoản.");
+            transData.put("status", 0);
+            transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             transaction.set(transRef, transData);
 
             double currentPending = walletDoc.getDouble("pendingBalance") != null
@@ -230,7 +272,7 @@ public class WalletRepository {
             Map<String, Object> walletUpdates = new HashMap<>();
             walletUpdates.put("balance", balance - amount);
             walletUpdates.put("pendingBalance", currentPending + amount);
-            walletUpdates.put("updatedAt", Instant.now());
+            walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             transaction.update(walletRef, walletUpdates);
 
             return null;

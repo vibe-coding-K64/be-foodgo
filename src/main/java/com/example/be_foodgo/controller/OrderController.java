@@ -133,8 +133,14 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Cap nhat trang thai don hang", description = "Cap nhat trang thai cua don hang (vi du: dang giao, da giao, v.v.)")
-    public ResponseEntity<String> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, String> body) throws Exception {
-        String status = body.get("status");
+    public ResponseEntity<String> updateOrderStatus(@PathVariable String id, @RequestBody Map<String, Object> body) throws Exception {
+        Object statusObj = body.get("status");
+        int status;
+        if (statusObj instanceof Number) {
+            status = ((Number) statusObj).intValue();
+        } else {
+            status = Integer.parseInt(statusObj.toString());
+        }
         String result = orderService.updateOrderStatus(id, status);
         if (result != null) {
             return ResponseEntity.ok(result);

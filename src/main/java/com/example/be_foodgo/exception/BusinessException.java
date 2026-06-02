@@ -317,7 +317,7 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(
                 HttpStatus.NOT_FOUND,
                 "WALLET_NOT_FOUND",
-                "Không tìm thấy ví tài xế với user ID [" + userId + "]."
+                "Không tìm thấy ví với user ID [" + userId + "]."
         );
     }
 

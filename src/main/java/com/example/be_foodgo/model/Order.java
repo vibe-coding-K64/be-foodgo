@@ -92,7 +92,11 @@ public class Order {
         return 0;
     }
     public void setPaymentMethod(int paymentMethod) { this.paymentMethod = paymentMethod; }
-    public String getStatus() {
+    public Object getStatus() {
+        return status;
+    }
+
+    public String getStatusText() {
         if (status instanceof Number) {
             long val = ((Number) status).longValue();
             if (val == 0) return "Chờ xác nhận";
