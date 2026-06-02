@@ -20,10 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.be_foodgo.dto.StoreDTO;
-import com.example.be_foodgo.repository.AddressRepository;
 import com.example.be_foodgo.repository.OrderRepository;
 import com.example.be_foodgo.security.JwtTokenProvider;
-import com.example.be_foodgo.service.OrderAssignmentService;
 import com.example.be_foodgo.service.StoreService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,12 +43,6 @@ public class StoreController {
 
     @Autowired
     private OrderRepository orderRepository;
-
-    @Autowired
-    private AddressRepository addressRepository;
-
-    @Autowired
-    private OrderAssignmentService orderAssignmentService;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -183,6 +175,8 @@ public class StoreController {
             updates.put("updatedAt", new java.util.Date());
             orderRepository.updateFields(orderId, updates);
 
+            orderRepository.updateRdbStatus(orderId, 1);
+
             log.info("Merchant {} xac nhan don hang {} thanh cong. Store: {}", userId, orderId, orderStoreId);
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -198,13 +192,4 @@ public class StoreController {
         }
     }
 
-    private double tinhHeading(double fromLat, double fromLng, double toLat, double toLng) {
-        double dLng = Math.toRadians(toLng - fromLng);
-        double lat1 = Math.toRadians(fromLat);
-        double lat2 = Math.toRadians(toLat);
-        double x = Math.sin(dLng) * Math.cos(lat2);
-        double y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-        double heading = Math.toDegrees(Math.atan2(x, y));
-        return (heading + 360.0) % 360.0;
-    }
 }

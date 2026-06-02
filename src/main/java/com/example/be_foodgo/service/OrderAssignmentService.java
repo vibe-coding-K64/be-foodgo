@@ -1,24 +1,24 @@
 package com.example.be_foodgo.service;
 
+import com.example.be_foodgo.repository.OrderRepository;
 import com.example.be_foodgo.repository.OrderRequestRepository;
+import com.example.be_foodgo.repository.StoreRepository;
 import com.example.be_foodgo.repository.WalletRepository;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class OrderAssignmentService {
@@ -30,22 +30,133 @@ public class OrderAssignmentService {
     private static final int TIMEOUT_GIOY_SECONDS = 10;
     private static final double GOC_CHENH_LECH_HEADING_TOI_DA = 45.0;
     private static final String RDB_ACTIVE_DRIVERS = "active_drivers";
+    private static final String RDB_ORDERS = "orders";
 
     private final OrderRequestRepository orderRequestRepository;
+    private final OrderRepository orderRepository;
+    private final StoreRepository storeRepository;
     private final WalletRepository walletRepository;
     private final FCMService fcmService;
 
+    private final Set<String> processingOrders = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean listenerInitialized = new AtomicBoolean(false);
+
     public OrderAssignmentService(
             OrderRequestRepository orderRequestRepository,
+            OrderRepository orderRepository,
+            StoreRepository storeRepository,
             WalletRepository walletRepository,
             FCMService fcmService) {
         this.orderRequestRepository = orderRequestRepository;
+        this.orderRepository = orderRepository;
+        this.storeRepository = storeRepository;
         this.walletRepository = walletRepository;
         this.fcmService = fcmService;
     }
 
+    @PostConstruct
+    public void initOrderStatusListener() {
+        if (!listenerInitialized.compareAndSet(false, true)) return;
+        log.info("Khoi tao listener lang nghe order status tu RTDB...");
+
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference(RDB_ORDERS);
+        ordersRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                for (DataSnapshot orderSnap : snapshot.getChildren()) {
+                    Integer status = orderSnap.child("status").getValue(Integer.class);
+                    if (status == null || status != 1) continue;
+
+                    String orderId = orderSnap.getKey();
+                    if (orderId == null || !processingOrders.add(orderId)) continue;
+
+                    log.info("RTDB listener: phat hien don [{}] co status=1, kich hoat gan don tu dong", orderId);
+                    xuLyGanDonTuRtdb(orderId);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                log.error("Loi listener order status RTDB: {}", error.getMessage());
+            }
+        });
+    }
+
+    private void xuLyGanDonTuRtdb(String orderId) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                Double storeLat = null, storeLng = null;
+                Double deliveryLat = null, deliveryLng = null;
+                Double heading = null;
+
+                DataSnapshot orderSnap = layOrderTuRtdb(orderId);
+                if (orderSnap != null && orderSnap.exists()) {
+                    deliveryLat = orderSnap.child("deliveryLat").getValue(Double.class);
+                    deliveryLng = orderSnap.child("deliveryLng").getValue(Double.class);
+                    heading = orderSnap.child("deliveryHeading").getValue(Double.class);
+                }
+
+                var order = orderRepository.findById(orderId);
+                if (order != null) {
+                    var store = storeRepository.getStoreById(order.getStoreId());
+                    if (store != null) {
+                        storeLat = store.getLat();
+                        storeLng = store.getLng();
+                    }
+                    if (deliveryLat == null) deliveryLat = order.getDeliveryLat();
+                    if (deliveryLng == null) deliveryLng = order.getDeliveryLng();
+                    if (heading == null && storeLat != null && storeLng != null
+                            && deliveryLat != null && deliveryLng != null) {
+                        heading = tinhHeading(storeLat, storeLng, deliveryLat, deliveryLng);
+                    }
+                }
+
+                batDauGanDon(orderId, storeLat, storeLng, deliveryLat, deliveryLng, heading);
+            } catch (Exception e) {
+                log.error("Loi xu ly gan don tu RTDB [{}]: {}", orderId, e.getMessage());
+            } finally {
+                processingOrders.remove(orderId);
+            }
+        });
+    }
+
+    private DataSnapshot layOrderTuRtdb(String orderId) {
+        CountDownLatch latch = new CountDownLatch(1);
+        final DataSnapshot[] result = new DataSnapshot[1];
+
+        FirebaseDatabase.getInstance().getReference(RDB_ORDERS).child(orderId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        result[0] = snapshot;
+                        latch.countDown();
+                    }
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return result[0];
+    }
+
+    private double tinhHeading(double fromLat, double fromLng, double toLat, double toLng) {
+        double dLng = Math.toRadians(toLng - fromLng);
+        double lat1 = Math.toRadians(fromLat);
+        double lat2 = Math.toRadians(toLat);
+        double x = Math.sin(dLng) * Math.cos(lat2);
+        double y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+        double heading = Math.toDegrees(Math.atan2(x, y));
+        return (heading + 360.0) % 360.0;
+    }
+
     @Async
-    public void batDauGánDon(String orderId, Double storeLat, Double storeLng,
+    public void batDauGanDon(String orderId, Double storeLat, Double storeLng,
                               Double deliveryLat, Double deliveryLng, Double deliveryHeading) {
         log.info("Bat dau gan don hang [{}] - store: ({},{}), delivery: ({},{}), heading: {}",
                 orderId, storeLat, storeLng, deliveryLat, deliveryLng, deliveryHeading);
@@ -151,6 +262,11 @@ public class OrderAssignmentService {
         }
 
         for (String driverId : targetDriverIds) {
+            try {
+                orderRequestRepository.savePerDriver(driverId, orderRequest);
+            } catch (Exception e) {
+                log.error("Loi khi ghi order_request cho tai xe [{}]: {}", driverId, e.getMessage());
+            }
             guiPushDenTaiXe(driverId, orderId);
         }
     }
@@ -185,6 +301,10 @@ public class OrderAssignmentService {
             Double deliveryHeading = toDouble(orderRequest.get("deliveryHeading"));
             Double deliveryLat = toDouble(orderRequest.get("deliveryLat"));
             Double deliveryLng = toDouble(orderRequest.get("deliveryLng"));
+            @SuppressWarnings("unused")
+            Double _unusedDeliveryLat = deliveryLat;
+            @SuppressWarnings("unused")
+            Double _unusedDeliveryLng = deliveryLng;
 
             List<String> nextDrivers = timTaiXeGanNhat(storeLat, storeLng, loaiTru);
             List<String> candidates = locTaiXeCungHuong(nextDrivers, storeLat, storeLng, deliveryHeading);
@@ -321,18 +441,6 @@ public class OrderAssignmentService {
                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return BAN_KINH_TRAI_DAT * c;
-    }
-
-    private double tinhHeading(double fromLat, double fromLng, double toLat, double toLng) {
-        double dLng = Math.toRadians(toLng - fromLng);
-        double lat1 = Math.toRadians(fromLat);
-        double lat2 = Math.toRadians(toLat);
-
-        double x = Math.sin(dLng) * Math.cos(lat2);
-        double y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-
-        double heading = Math.toDegrees(Math.atan2(x, y));
-        return (heading + 360.0) % 360.0;
     }
 
     private boolean chechCungHuong(double heading1, double heading2) {
