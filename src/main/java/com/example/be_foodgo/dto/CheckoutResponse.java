@@ -61,6 +61,9 @@ public class CheckoutResponse {
     @Schema(description = "Trang thai don hang (0 = Cho xac nhan)", example = "0")
     private Integer status;
 
+    @Schema(description = "Trang thai thanh toan (1 = Chua TT, 2 = Da TT)", example = "1")
+    private Integer paymentStatus;
+
     @Schema(description = "Thoi gian tao don", example = "2026-05-25T10:30:00Z")
     private Instant createdAt;
 
