@@ -114,7 +114,7 @@ public class DeliveryController extends BaseController {
     @PutMapping("/status")
     @Operation(
             summary = "Cap nhat trang thai nhan don",
-            description = "Bat/tat trang thai san sang nhan don cua tai xe."
+            description = "Bat/tat trang thai san sang nhan don cua tai xe. Khi bat (isActive=true), bat buoc phai gui kem vi tri GPS (lat, lng)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -140,7 +140,12 @@ public class DeliveryController extends BaseController {
         }
 
         try {
-            DeliveryProfileDTO profile = deliveryService.updateDriverStatus(holder.userId, request.getIsActive());
+            DeliveryProfileDTO profile;
+            if (Boolean.TRUE.equals(request.getIsActive())) {
+                profile = deliveryService.updateDriverStatus(holder.userId, request.getIsActive(), request);
+            } else {
+                profile = deliveryService.updateDriverStatus(holder.userId, request.getIsActive());
+            }
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Cap nhat trang thai nhan don thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi cap nhat trang thai nhan don: {}", e.getMessage());
@@ -190,7 +195,7 @@ public class DeliveryController extends BaseController {
     @PostMapping("/location")
     @Operation(
             summary = "Cap nhat vi tri GPS",
-            description = "Tai xe gui vi tri GPS hien tai len Realtime Database."
+            description = "Tai xe gui vi tri GPS hien tai len Realtime Database. Tai xe phai dang online moi duoc phep cap nhat vi tri."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -199,7 +204,7 @@ public class DeliveryController extends BaseController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "Du lieu GPS khong hop le"),
+                    description = "Du lieu GPS khong hop le hoac tai xe chua bat trang thai online"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     description = "Chua xac thuc")
@@ -213,6 +218,12 @@ public class DeliveryController extends BaseController {
         }
 
         try {
+            DeliveryProfileDTO profile = deliveryService.getDriverProfile(holder.userId);
+            if (!Boolean.TRUE.equals(profile.getIsActive())) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.thatError(400, "Tai xe chua bat trang thai hoat dong. Vui long bat trang thai online truoc."));
+            }
+
             deliveryService.updateDriverLocation(
                     holder.userId,
                     request.getLat(),

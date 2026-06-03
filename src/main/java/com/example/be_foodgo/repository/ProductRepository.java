@@ -3,6 +3,8 @@ package com.example.be_foodgo.repository;
 import com.example.be_foodgo.model.Product;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +14,8 @@ import java.util.concurrent.ExecutionException;
 
 @Repository
 public class ProductRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductRepository.class);
 
     @Autowired
     private Firestore firestore;
@@ -99,5 +103,17 @@ public class ProductRepository {
             return tb.compareTo(ta);
         });
         return products;
+    }
+
+    public void capNhatProductRating(String productId, double rating, int reviewCount) throws ExecutionException, InterruptedException {
+        DocumentReference productRef = firestore.collection(COLLECTION_NAME).document(productId);
+        ApiFuture<WriteResult> future = productRef.update(
+                "rating", rating,
+                "reviewCount", reviewCount,
+                "updatedAt", com.google.cloud.Timestamp.now()
+        );
+        WriteResult result = future.get();
+        log.info("Da cap nhat rating product [{}]: rating={}, reviewCount={}, luc [{}]",
+                productId, rating, reviewCount, result.getUpdateTime());
     }
 }

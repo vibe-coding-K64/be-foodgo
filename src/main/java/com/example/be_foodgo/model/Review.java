@@ -9,6 +9,8 @@ import java.util.List;
 public class Review {
     private String id;
     private String orderId;
+    private String itemId;
+    private String foodId;
     private String storeId;
     private String userId;
     private String userName;

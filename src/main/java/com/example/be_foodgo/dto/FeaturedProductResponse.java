@@ -34,6 +34,8 @@ public class FeaturedProductResponse {
     private String deliveryTime;
     private Double deliveryFee;
     private String address;
+    private Double distance;
+    private Long sales;
 
     // OptionGroups (cho bottom sheet them gio hang)
     private List<OptionGroupDTO> optionGroups;

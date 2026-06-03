@@ -93,10 +93,9 @@ Firestore Root
 | 4   | `fullName`    | String            | Có       | Họ và tên đầy đủ                                                            |
 | 5   | `phoneNumber` | String            | Có       | Số điện thoại di động                                                       |
 | 6   | `photoUrl`    | String (nullable) | Không    | Đường dẫn ảnh đại diện                                                      |
-| 7   | `roles`       | ArrayNumber       | Không    | Danh sách quyền. 1=Khách hàng, 2=Tài xế, 3=Quán bán, 4=Admin. Mặc định: [1] |
-| 8   | `isEmailVerified` | Boolean       | Không    | Email đã được xác thực chưa (mặc định: false)                       |
-| 9   | `createdAt`   | Timestamp         | Có       | Thời điểm tạo tài khoản                                                     |
-| 10  | `updatedAt`   | Timestamp         | Không    | Thời điểm cập nhật gần nhất                                                 |
+| 7   | `roles`       | Array (Number)    | Không    | Danh sách quyền. 1=Khách hàng, 2=Tài xế, 3=Quán bán, 4=Admin. Mặc định: [1] |
+| 8   | `createdAt`   | Timestamp         | Không    | Thời điểm tạo tài khoản (String ISO-8601)                            |
+| 9   | `updatedAt`   | Timestamp         | Không    | Thời điểm cập nhật gần nhất (String ISO-8601)                              |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -104,18 +103,19 @@ Firestore Root
 {
   "id": "user_001",
   "email": "khachhang@gmail.com",
-  "password": "password123",
+  "password": "$2a$10$o2RRBNQzzEn2zXiKJ9g2Z.m.UybDFl4pduE85Z5RCdtI5NQl3D8Q.",
   "fullName": "Khoi",
   "phoneNumber": "0123456789",
   "photoUrl": "https://example.com/avatar/user001.jpg",
   "roles": [1, 2, 3],
-  "isEmailVerified": true,
   "createdAt": "2026-04-07T00:00:00Z",
   "updatedAt": "2026-04-07T00:00:00Z"
 }
 ```
 
 **Người dùng test:** user_001 (roles: [1,2,3] - Khách hàng + Tài xế + Quán bán), user_002 (roles: [4] - Admin), user_003/user_005/user_006 (roles: [2] - Tài xế), user_004 (roles: [3] - Quán bán).
+
+**Ghi chú:** Trường `createdAt` và `updatedAt` trong model `User.java` có kiểu `String` (ISO-8601), không phải Firestore `Timestamp`. Trường `isEmailVerified` đã được loại bỏ khỏi model.
 
 ---
 
@@ -177,461 +177,34 @@ Firestore Root
 | --- | ------------------- | ------------- | -------- | ----------------------------------- |
 | 1   | `id`                | String        | Có       | ID document                         |
 | 2   | `userId`            | String        | Có       | ID người dùng sở hữu ví            |
-| 3   | `role`              | String        | Có       | Vai trò: "merchant", "driver"           |
+| 3   | `role`              | Number        | Có       | Vai trò: 1=merchant, 2=driver             |
 | 4   | `balance`           | Number        | Có       | Số dư hiện tại (VND)               |
 | 5   | `totalEarned`       | Number        | Có       | Tổng thu nhập từ trước đến nay (VND)|
 | 6   | `totalWithdrawn`    | Number        | Có       | Tổng số đã rút (VND)               |
 | 7   | `pendingBalance`    | Number        | Có       | Số dư chờ (chưa giải ngân, VND)     |
-| 8   | `createdAt`         | Timestamp     | Có       | Thời điểm tạo ví                   |
-| 9   | `updatedAt`         | Timestamp     | Có       | Thời điểm cập nhật gần nhất        |
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "wallet_001",
-  "userId": "user_001",
-  "role": "merchant",
-  "balance": 2500000.0,
-  "totalEarned": 5000000.0,
-  "totalWithdrawn": 2500000.0,
-  "pendingBalance": 0.0,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-```
-
----
-
-### 2.4. `transactions`
-
-**Mục đích sử dụng:** Lưu trữ lịch sử giao dịch của ví, bao gồm các loại như thanh toán đơn hàng, thu nhập giao hàng, và rút tiền.
-
-**Đường dẫn:** `/transactions/{transactionId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường      | Kiểu dữ liệu  | Bắt buộc | Mô tả                                     |
-| --- | --------------- | ------------- | -------- | ----------------------------------------- |
-| 1   | `id`            | String        | Có       | ID document                               |
-| 2   | `walletId`      | String        | Có       | ID ví liên quan                           |
-| 3   | `userId`        | String        | Có       | ID người thực hiện giao dịch             |
-| 4   | `type`          | String        | Có       | Loại giao dịch: "order_payment", "delivery_income", "withdrawal", "refund" |
-| 5   | `amount`        | Number        | Có       | Tổng số tiền giao dịch (VND)             |
-| 6   | `fee`           | Number        | Có       | Phí giao dịch (VND)                       |
-| 7   | `netAmount`     | Number        | Có       | Số tiền thực nhận = amount - fee (VND)   |
-| 8   | `description`   | String        | Không    | Mô tả giao dịch                           |
-| 9   | `orderId`       | String (null) | Không    | ID đơn hàng liên quan (nếu có)           |
-| 10  | `status`        | String        | Có       | Trạng thái: "pending", "completed", "failed"    |
-| 11  | `createdAt`     | Timestamp     | Có       | Thời điểm tạo                            |
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "trans_001",
-  "walletId": "wallet_001",
-  "userId": "user_001",
-  "type": "order_payment",
-  "amount": 76500.0,
-  "fee": 11475.0,
-  "netAmount": 65025.0,
-  "description": "Đơn hàng order_001 - Phiên bản trừ phí hoa hồng",
-  "orderId": "order_001",
-  "status": "completed",
-  "createdAt": "2026-04-07T00:00:00Z"
-}
-```
-
-**Các loại giao dịch (type):**
-
-| type              | Mô tả                                      |
-| ----------------- | ------------------------------------------ |
-| order_payment     | Thanh toán đơn hàng (merchant nhận)        |
-| delivery_income   | Thu nhập giao hàng (driver nhận)           |
-| withdrawal        | Rút tiền                                   |
-| refund            | Hoàn tiền                                  |
-
-**Các trạng thái giao dịch (status):**
-
-| status     | Mô tả         |
-| ---------- | -------------- |
-| pending    | Đang xử lý     |
-| completed  | Hoàn thành    |
-| failed     | Thất bại      |
-
----
-
-### 2.5. `categories`
-
-**Mục đích sử dụng:** Lưu trữ danh sách danh mục món ăn/loại cửa hàng. Phân biệt theo `storeId`: `null` = danh mục hệ thống (do admin quản lý), giá trị khác = danh mục cửa hàng (do chủ cửa hàng tạo).
-
-**Đường dẫn:** `/categories/{categoryId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường  | Kiểu dữ liệu | Bắt buộc | Mô tả                                                           |
-| --- | ----------- | ------------- | -------- | --------------------------------------------------------------- |
-| 1   | `id`        | String        | Có       | ID document từ Firestore                                        |
-| 2   | `storeId`   | String        | Không    | `null` = danh mục hệ thống, giá trị khác = cửa hàng         |
-| 3   | `name`      | String        | Có       | Tên danh mục (VD: "Cơm", "Trà sữa")                           |
-| 4   | `icon`      | String        | Có       | Tên icon (VD: "restaurant", "local_cafe")                       |
-| 5   | `order`     | Number        | Có       | Thứ tự sắp xếp hiển thị                                        |
-| 6   | `imageUrl`  | String        | Có       | Đường dẫn ảnh danh mục                                         |
-| 7   | `createdAt` | Timestamp     | Có       | Thời điểm tạo                                                  |
-| 8   | `updatedAt` | Timestamp     | Có       | Thời điểm cập nhật                                             |
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "syscate_001",
-  "storeId": null,
-  "name": "Com",
-  "icon": "restaurant",
-  "order": 1,
-  "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
-  "createdAt": "2026-01-01T00:00:00Z",
-  "updatedAt": "2026-01-01T00:00:00Z"
-}
-```
-
-**Các mục hiện có:** Com (syscate_001), Pho/Bun (syscate_002), Tra sua (syscate_003), An vat (syscate_004), Ga ran (syscate_005), Mon Han (syscate_006), Mon Nhat (syscate_007), Banh mi (syscate_008), Lau/Buffet (syscate_009), Tra cay (syscate_010).
-
----
-
-### 2.6. `stores`
-
-**Mục đích sử dụng:** Lưu trữ thông tin chi tiết của các quán ăn/cửa hàng, bao gồm tên, địa chỉ, đánh giá, phí giao hàng, thời gian giao, và danh sách danh mục nội bộ của quán.
-
-**Đường dẫn:** `/stores/{storeId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường              | Kiểu dữ liệu      | Bắt buộc | Mô tả                                                        |
-| --- | ----------------------- | ----------------- | -------- | ------------------------------------------------------------ |
-| 1   | `id`                    | String            | Có       | ID document từ Firestore                                     |
-| 2   | `name`                  | String            | Có       | Tên quán ăn                                                 |
-| 3   | `address`               | String            | Có       | Địa chỉ cụ thể (VD: "123 Lê Văn Việt, TP. Thủ Đức")        |
-| 4   | `rating`                | Number            | Có       | Điểm đánh giá trung bình (0.0 - 5.0)                        |
-| 5   | `reviewCount`           | Number            | Có       | Tổng số đánh giá                                            |
-| 6   | `avtUrl`                | String            | Có       | Đường dẫn ảnh đại diện (avatar)                            |
-| 7   | `backUrl`               | String            | Có       | Đường dẫn ảnh bìa (backdrop)                                |
-| 8   | `isOpen`                | Boolean           | Có       | Quán có đang mở không                                        |
-| 9   | `deliveryTime`          | String            | Có       | Thời gian giao ước tính (VD: "20-30 phút")                   |
-| 10  | `deliveryFee`           | Number            | Có       | Phí giao hàng (VND)                                          |
-| 11  | `categoryIds`           | ArrayString       | Không    | Danh sách ID danh mục hệ thống mà quán này thuộc            |
-| 12  | `lat`                  | Number            | Không    | Vĩ độ (latitude) của tọa độ quán (VD: 10.8500)              |
-| 13  | `lng`                  | Number            | Không    | Kinh độ (longitude) của tọa độ quán (VD: 106.7900)          |
-| 14  | `restaurant_categories` | MapString, Object | Không    | Danh mục nội bộ của quán (VD: món chính, món phụ, nước uống) |
-| 15  | `createdAt`             | Timestamp         | Có       | Thời điểm tạo                                               |
-| 16  | `updatedAt`             | Timestamp         | Có       | Thời điểm cập nhật                                          |
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "store_001",
-  "name": "Com tam Phuc Loc Tho",
-  "address": "123 Le Van Viet, TP. Thu Duc",
-  "rating": 4.8,
-  "reviewCount": 500,
-  "avtUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
-  "backUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
-  "isOpen": true,
-  "deliveryTime": "20-30 phut",
-  "deliveryFee": 15000.0,
-  "categoryIds": ["cate_001", "cate_004"],
-  "lat": 10.8500,
-  "lng": 106.7900,
-  "restaurant_categories": {
-    "rest_cate_001": {
-      "name": "Mon chinh",
-      "order": 1,
-      "createdAt": "2026-04-07T00:00:00Z",
-      "updatedAt": "2026-04-07T00:00:00Z"
-    },
-    "rest_cate_002": {
-      "name": "Mon phu",
-      "order": 2,
-      "createdAt": "2026-04-07T00:00:00Z",
-      "updatedAt": "2026-04-07T00:00:00Z"
-    }
-  },
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-```
-
-**Các quán hiện có:** store_001 (Com tam Phuc Loc Tho), store_002 (Tra sua Tocotoco), store_003 (Ga ran KFC Nguyen Cuu), store_004 (Bun bo Hue Ba Le), store_005 (Quan Bun Cha).
-
----
-
-### 2.7. `products`
-
-**Mục đích sử dụng:** Lưu trữ thông tin sản phẩm/món ăn của từng quán, bao gồm giá, mô tả, tùy chọn (size, topping), trạng thái tồn kho, và thông tin quảng cáo.
-
-**Đường dẫn:** `/products/{productId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường     | Kiểu dữ liệu | Bắt buộc | Mô tả                                        |
-| --- | -------------- | ------------ | -------- | -------------------------------------------- |
-| 1   | `id`           | String       | Có       | ID document từ Firestore                     |
-| 2   | `storeId`      | String       | Có       | ID quán chứa sản phẩm này                   |
-| 3   | `categoryId`   | String       | Có       | ID danh mục hệ thống                        |
-| 4   | `categoryName` | String       | Có       | Tên danh mục hệ thống                       |
-| 5   | `name`         | String       | Có       | Tên món ăn                                   |
-| 6   | `description`  | String       | Có       | Mô tả chi tiết món ăn                        |
-| 7   | `basePrice`    | Number       | Có       | Giá cơ sở (chưa tính size/topping)          |
-| 8   | `imageUrl`     | String       | Có       | Đường dẫn ảnh món ăn                        |
-| 9   | `isOutOfStock` | Boolean      | Có       | Có đang hết hàng không                        |
-| 10  | `isFeatured`   | Boolean      | Có       | Có phải món nổi bật không                    |
-| 11  | `optionGroups` | ArrayObject  | Không    | Danh sách nhóm tùy chọn (size, topping...)  |
-| 12  | `createdAt`    | Timestamp    | Có       | Thời điểm tạo                               |
-| 13  | `updatedAt`    | Timestamp    | Có       | Thời điểm cập nhật                          |
-
-**Cấu trúc optionGroups (trường phức tạp):**
-
-```json
-"optionGroups": [
-  {
-    "name": "Kich thuoc",
-    "options": [
-      {"name": "Vua", "price": 0.0},
-      {"name": "Lon", "price": 10000.0}
-    ]
-  },
-  {
-    "name": "Topping",
-    "options": [
-      {"name": "Tran chau", "price": 5000.0},
-      {"name": "Thach", "price": 3000.0},
-      {"name": "Pudding", "price": 6000.0}
-    ]
-  }
-]
-```
-
-> **Giải thích trường:**
-> - `name`: Tên nhóm tùy chọn (VD: "Kich thuoc", "Topping")
-> - `options`: Danh sách tùy chọn, mỗi option gồm `name` (tên) và `price` (phụ phí)
-> - Quy tắc ngầm: nhóm chứa `"size"`, `"Kich thuoc"`, `"kích thước"` → chọn một (single-select); nhóm chứa `"topping"`, `"Topping"` → chọn nhiều (multi-select)
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "prod_001",
-  "storeId": "store_001",
-  "categoryId": "cate_001",
-  "categoryName": "Com",
-  "name": "Com tam suon bi cha",
-  "description": "Com tam ngon chuan vi Sai Gon voi suon nuong thom phuc",
-  "basePrice": 45000.0,
-  "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
-  "isOutOfStock": false,
-  "isFeatured": true,
-  "optionGroups": [
-    {
-      "name": "Kich thuoc",
-      "options": [
-        {"name": "Vua", "price": 0.0},
-        {"name": "Lon", "price": 10000.0}
-      ]
-    }
-  ],
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-```
-
-**Tổng số sản phẩm mẫu:** 17 sản phẩm, phân bổ cho 5 quán (store_001 đến store_005).
-
----
-
-### 2.8. `banners`
-
-**Mục đích sử dụng:** Lưu trữ thông tin banner quảng cáo hiển thị trên trang chủ (carousel).
-
-**Đường dẫn:** `/banners/{bannerId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường  | Kiểu dữ liệu      | Bắt buộc | Mô tả                             |
-| --- | ----------- | ----------------- | -------- | --------------------------------- |
-| 1   | `id`        | String            | Có       | ID document từ Firestore          |
-| 2   | `title`     | String            | Có       | Tiêu đề banner                   |
-| 3   | `imageUrl`  | String            | Có       | Đường dẫn ảnh banner              |
-| 4   | `storeId`   | String (nullable) | Không    | Nếu banner dành cho 1 quán cụ thể |
-| 5   | `storeName` | String (nullable) | Không    | Tên quán (nếu có)                  |
-| 6   | `isActive`  | Boolean           | Có       | Banner có đang hoạt động không     |
-| 7   | `order`     | Number            | Có       | Thứ tự hiển thị                   |
-| 8   | `createdAt` | Timestamp         | Có       | Thời điểm tạo                     |
-| 9   | `updatedAt` | Timestamp         | Có       | Thời điểm cập nhật                |
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "banner_001",
-  "title": "Siêu sale giữa tháng",
-  "imageUrl": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&q=80",
-  "storeId": null,
-  "storeName": null,
-  "isActive": true,
-  "order": 1,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-```
-
-**Các banner hiện có:** banner_001 (Siêu sale giữa tháng), banner_002 (Freeship 0 đồng), banner_003 (Lễ hội ẩm thực), banner_004 (Uống trà vẫn chiều).
-
----
-
-### 2.9. `vouchers`
-
-**Mục đích sử dụng:** Lưu trữ thông tin voucher có sẵn trong hệ thống, hiển thị tại trang Ưu đãi để khách hàng xem và đổi bằng điểm loyalty.
-
-- **Voucher cửa hàng:** `storeId` = ID cửa hàng cụ thể.
-- **Voucher hệ thống (đổi điểm):** `storeId` = `null` và `pointsRequired` > 0. Khách hàng đổi bằng điểm loyalty.
-
-**Đường dẫn:** `/vouchers/{voucherId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường       | Kiểu dữ liệu | Bắt buộc | Mô tả                                      |
-| --- | ---------------- | ------------ | -------- | ------------------------------------------ |
-| 1   | `id`             | String       | Có       | ID document từ Firestore                   |
-| 2   | `storeId`        | String (nullable) | Không   | ID cửa hàng (null = toàn hệ thống)       |
-| 3   | `title`          | String       | Có       | Tiêu đề voucher                            |
-| 4   | `subtitle`       | String       | Có       | Mô tả ngắn gọn                             |
-| 5   | `code`           | String       | Có       | Mã voucher dùng khi apply                   |
-| 6   | `type`           | Number       | Có       | Loại giảm giá: 1=% (phần trăm), 2=VND      |
-| 7   | `value`          | Number       | Có       | Giá trị giảm (type=1: %; type=2: VND)      |
-| 8   | `pointsRequired` | Number       | Có       | Số điểm cần để đổi voucher này (0 = miễn phí) |
-| 9   | `remaining`      | Number       | Có       | Số lượng voucher còn lại                    |
-| 10  | `terms`          | String       | Có       | Điều khoản sử dụng                         |
-| 11  | `minOrderValue`  | Number       | Có       | Đơn hàng tối thiểu để sử dụng (VND)        |
-| 12  | `limitCount`     | Number       | Không    | Tổng số lượng phát hành (mặc định: 0)      |
-| 13  | `usedCount`      | Number       | Không    | Số lượng đã sử dụng (mặc định: 0)         |
-| 14  | `expiryDate`     | Timestamp (nullable) | Không | Ngày hết hạn voucher                      |
-| 15  | `isActive`       | Boolean      | Không    | Voucher có đang kích hoạt không (mặc định: false) |
-| 16  | `validityDays`   | Number       | Không    | Số ngày hiệu lực sau khi đổi              |
-| 17  | `isFreeship`     | Boolean      | Không    | Có phải voucher freeship không (mặc định: false) |
-| 18  | `createdAt`       | Timestamp    | Có       | Thời điểm tạo                              |
-| 19  | `updatedAt`       | Timestamp    | Có       | Thời điểm cập nhật                          |
-
-**Ghi chú về vouchers:** Collection `vouchers` lưu chung cả voucher hệ thống và voucher cửa hàng:
-- **Voucher hệ thống:** `storeId = null`, `pointsRequired > 0` (dùng để đổi bằng điểm loyalty).
-- **Voucher cửa hàng:** `storeId = ID cửa hàng cụ thể`.
-- Trường `isFreeship` dùng để phân biệt voucher giảm tiền hàng vs voucher freeship (giảm phí ship).
-
-**Dữ liệu mẫu (Mock Data):**
-
-```json
-{
-  "id": "voucher_001",
-  "storeId": null,
-  "title": "Giam 20K cho don tu 100K",
-  "subtitle": "Danh cho khach hang moi",
-  "code": "GIAM20K",
-  "type": 2,
-  "value": 20000.0,
-  "pointsRequired": 200,
-  "remaining": 100,
-  "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
-  "isActive": true,
-  "terms": "Ap dung cho tat ca quan an.",
-  "minOrderValue": 100000.0,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-
-{
-  "id": "voucher_002",
-  "storeId": null,
-  "title": "Freeship 0 dong",
-  "subtitle": "Mien phi giao hang",
-  "code": "FREESHIP0",
-  "type": 2,
-  "value": 15000.0,
-  "pointsRequired": 300,
-  "remaining": 50,
-  "imageUrl": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80",
-  "terms": "Ap dung cho don tu 50K tro len.",
-  "minOrderValue": 50000.0,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-
-{
-  "id": "voucher_003",
-  "storeId": null,
-  "title": "Giam 10% cho don tu 200K",
-  "subtitle": "Khuyen mai dac biet cuoi tuan",
-  "code": "SAVE10P",
-  "type": 1,
-  "value": 10.0,
-  "pointsRequired": 500,
-  "remaining": 30,
-  "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
-  "terms": "Giam toi da 50K. Ap dung cuoi tuan.",
-  "minOrderValue": 200000.0,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-
-{
-  "id": "voucher_004",
-  "storeId": "store_005",
-  "title": "Giam 30K Bun Cha",
-  "subtitle": "Khuyen mai mung khai truong",
-  "code": "BUNCHAMOI",
-  "type": 2,
-  "value": 30000.0,
-  "pointsRequired": 100,
-  "remaining": 50,
-  "imageUrl": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80",
-  "isActive": true,
-  "terms": "Ap dung cho don tu 150K tai Quan Bun Cha.",
-  "minOrderValue": 150000.0,
-  "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z"
-}
-```
-
-**Ghi chú:** Các voucher voucher_001 và voucher_004 có `isActive`, các voucher voucher_002 và voucher_003 không có trường này (mặc định false theo code).
-
----
-
-### 2.10. `reviews`
-
-**Mục đích sử dụng:** Lưu trữ đánh giá của khách hàng về các quán ăn, bao gồm sao, bình luận, và hình ảnh kèm theo.
-
-**Đường dẫn:** `/reviews/{reviewId}`
-
-**Các trường (Fields):**
-
-| STT | Tên trường      | Kiểu dữ liệu         | Bắt buộc | Mô tả                           |
-| --- | --------------- | -------------------- | -------- | ------------------------------- |
-| 1   | `id`            | String               | Có       | ID document từ Firestore        |
-| 2   | `storeId`       | String               | Có       | ID quán được đánh giá           |
-| 3   | `userId`        | String               | Có       | ID người đánh giá               |
-| 4   | `userName`      | String               | Có       | Tên người đánh giá              |
-| 5   | `userAvatarUrl` | String               | Có       | URL avatar người đánh giá        |
-| 6   | `starRating`    | Number               | Có       | Điểm sao (1-5)                  |
-| 7   | `comment`       | String               | Có       | Nội dung bình luận              |
-| 8   | `imageUrls`     | ArrayString          | Không    | Danh sách URL hình ảnh kèm theo |
-| 9   | `createdAt`     | Timestamp            | Có       | Thời điểm tạo đánh giá          |
-| 10  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật              |
-
+| STT | Tên trường      | Kiểu dữ liệu          | Bắt buộc | Mô tả                               |
+| --- | --------------- | -------------------- | -------- | ----------------------------------- |
+| 1   | `id`            | String               | Có       | ID document từ Firestore            |
+| 2   | `orderId`       | String (nullable)    | Không    | ID đơn hàng liên quan (nullable)   |
+| 3   | `storeId`       | String               | Có       | ID quán được đánh giá              |
+| 4   | `userId`        | String               | Có       | ID người đánh giá                  |
+| 5   | `userName`      | String               | Có       | Tên người đánh giá                 |
+| 6   | `userAvatarUrl` | String (nullable)    | Không    | URL avatar người đánh giá           |
+| 7   | `starRating`    | Number               | Có       | Điểm sao (1-5)                     |
+| 8   | `comment`       | String               | Có       | Nội dung bình luận                 |
+| 9   | `imageUrls`     | ArrayString          | Không    | Danh sách URL hình ảnh kèm theo    |
+| 10  | `replyComment`  | String (nullable)    | Không    | Phản hồi từ cửa hàng (nullable)   |
+| 11  | `repliedAt`     | Timestamp (nullable) | Không    | Thời điểm phản hồi (nullable)      |
+| 12  | `createdAt`     | Timestamp            | Có       | Thời điểm tạo đánh giá            |
+| 13  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật gần nhất       |
 **Dữ liệu mẫu (Mock Data):**
 
 ```json
 {
   "id": "rev_001",
+  "orderId": "order_001",
+  "itemId": "item_001",
+  "foodId": "prod_001",
   "storeId": "store_001",
   "userId": "user_001",
   "userName": "Khoi",
@@ -642,12 +215,14 @@ Firestore Root
     "https://example.com/review/rev001_1.jpg",
     "https://example.com/review/rev001_2.jpg"
   ],
+  "replyComment": null,
+  "repliedAt": null,
   "createdAt": "2026-04-07T00:00:00Z",
   "updatedAt": "2026-04-07T00:00:00Z"
 }
 ```
 
-**Tổng số đánh giá mẫu:** 9 đánh giá, phân bổ cho 5 quán.
+**Tổng số đánh giá mẫu:** 9 đánh giá, phân bổ cho 7 sản phẩm từ 5 quán.
 
 ---
 
@@ -659,35 +234,37 @@ Firestore Root
 
 **Các trường (Fields):**
 
-| STT | Tên trường        | Kiểu dữ liệu         | Bắt buộc | Mô tả                                           |
-| --- | ----------------- | -------------------- | -------- | ----------------------------------------------- |
-| 1   | `id`              | String               | Có       | ID document từ Firestore                        |
-| 2   | `userId`          | String               | Có       | ID người đặt hàng                               |
-| 3   | `storeId`         | String               | Có       | ID quán chuẩn bị đơn                            |
-| 4   | `storeName`       | String               | Có       | Tên quán                                        |
-| 5   | `code`            | String               | Không    | Mã đơn hàng (VD: "FG-20260531-ABC")            |
-| 6   | `items`           | ArrayObject          | Có       | Danh sách món ăn trong đơn                      |
-| 7   | `totalAmount`     | Number               | Có       | Tổng tiền đơn hàng (VND)                        |
-| 8   | `deliveryFee`     | Number               | Có       | Phí giao hàng (VND)                             |
-| 9   | `discountAmount` | Number               | Không    | Số tiền giảm giá (VND)                              |
-| 10  | `finalAmount`   | Number               | Không    | Số tiền thực trả = totalAmount + deliveryFee - discountAmount (VND) |
-| 11  | `status`          | Number               | Có       | Trạng thái đơn hàng (0-4)                       |
-| 12  | `deliveryAddress` | String               | Có       | Địa chỉ giao hàng                               |
-| 13  | `addressId`      | String               | Có       | ID địa chỉ giao hàng của khách                 |
-| 14  | `receiverName`    | String               | Có       | Tên người nhận hàng                             |
-| 15  | `receiverPhone`   | String               | Có       | SĐT người nhận hàng                             |
-| 16  | `deliveryLat`    | Number (nullable)    | Không    | Vĩ độ điểm giao (từ address)                  |
-| 17  | `deliveryLng`    | Number (nullable)    | Không    | Kinh độ điểm giao (từ address)                 |
-| 18  | `paymentMethod`   | Number               | Có       | Phương thức thanh toán: 1=momo, 2=cash, 3=zalo, 4=card |
-| 19  | `note`           | String (nullable)     | Không    | Ghi chú đơn hàng (từ khách hàng)               |
-| 20  | `driverId`        | String (nullable)     | Không    | ID tài xế nhận đơn                              |
-| 21  | `driverName`      | String (nullable)     | Không    | Tên tài xế                                      |
-| 22  | `driverPhone`     | String (nullable)     | Không    | SĐT tài xế                                      |
-| 23  | `vehiclePlate`    | String (nullable)     | Không    | Biển số xe                                      |
-| 24  | `idempotencyKey` | String (nullable)     | Không    | Khóa chống đặt trùng (do client gửi lên)       |
-| 25  | `createdAt`       | Timestamp            | Có       | Thời điểm tạo đơn                               |
-| 26  | `updatedAt`       | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
-| 27  | `deletedAt`       | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
+| STT | Tên trường            | Kiểu dữ liệu         | Bắt buộc | Mô tả                                           |
+| --- | --------------------- | -------------------- | -------- | ----------------------------------------------- |
+| 1   | `id`                  | String               | Có       | ID document từ Firestore                        |
+| 2   | `userId`              | String               | Có       | ID người đặt hàng                               |
+| 3   | `storeId`             | String               | Có       | ID quán chuẩn bị đơn                            |
+| 4   | `storeName`           | String               | Có       | Tên quán                                        |
+| 5   | `code`                | String (nullable)     | Không    | Mã đơn hàng (VD: "FG-20260531-ABC")            |
+| 6   | `items`               | ArrayObject          | Có       | Danh sách món ăn trong đơn                      |
+| 7   | `totalAmount`         | Number               | Có       | Tổng tiền đơn hàng (VND)                        |
+| 8   | `deliveryFee`         | Number               | Có       | Phí giao hàng (VND)                             |
+| 9   | `discountAmount`     | Number               | Không    | Số tiền giảm giá từ voucher (VND)              |
+| 10  | `shopDiscountAmount` | Number               | Không    | Số tiền giảm từ cửa hàng (VND)                |
+| 11  | `freeshipDiscountAmount` | Number           | Không    | Số tiền giảm phí giao hàng (VND)               |
+| 12  | `finalAmount`        | Number               | Có       | Số tiền thực trả = totalAmount + deliveryFee - discountAmount - shopDiscountAmount - freeshipDiscountAmount (VND) |
+| 13  | `status`             | Number               | Có       | Trạng thái đơn hàng (0-4)                       |
+| 14  | `deliveryAddress`    | String               | Có       | Địa chỉ giao hàng                               |
+| 15  | `addressId`          | String               | Có       | ID địa chỉ giao hàng của khách                 |
+| 16  | `receiverName`       | String               | Có       | Tên người nhận hàng                             |
+| 17  | `receiverPhone`       | String               | Có       | SĐT người nhận hàng                             |
+| 18  | `deliveryLat`        | Number (nullable)    | Không    | Vĩ độ điểm giao (từ address)                  |
+| 19  | `deliveryLng`        | Number (nullable)    | Không    | Kinh độ điểm giao (từ address)                 |
+| 20  | `paymentMethod`      | Number               | Có       | Phương thức thanh toán: 1=momo, 2=cash, 3=zalo, 4=card |
+| 21  | `note`               | String (nullable)     | Không    | Ghi chú đơn hàng (từ khách hàng)               |
+| 22  | `driverId`           | String (nullable)     | Không    | ID tài xế nhận đơn                              |
+| 23  | `driverName`         | String (nullable)     | Không    | Tên tài xế                                      |
+| 24  | `driverPhone`        | String (nullable)     | Không    | SĐT tài xế                                      |
+| 25  | `vehiclePlate`        | String (nullable)     | Không    | Biển số xe                                      |
+| 26  | `idempotencyKey`     | String (nullable)     | Không    | Khóa chống đặt trùng (do client gửi lên)       |
+| 27  | `createdAt`           | Timestamp            | Có       | Thời điểm tạo đơn                               |
+| 28  | `updatedAt`           | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
+| 29  | `deletedAt`           | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
 
 **Các giá trị status:**
 
@@ -749,6 +326,8 @@ Firestore Root
   "totalAmount": 140000.0,
   "deliveryFee": 15000.0,
   "discountAmount": 20000.0,
+  "shopDiscountAmount": 5000.0,
+  "freeshipDiscountAmount": 5000.0,
   "finalAmount": 135000.0,
   "status": 2,
   "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
@@ -787,8 +366,8 @@ Firestore Root
 | 1   | `id`             | String       | Có       | ID document (trùng với userId)                      |
 | 2   | `loyaltyPoints`  | Number       | Có       | Điểm tích lũy hiện tại                              |
 | 3   | `membershipTier` | Number       | Có       | Hạng thành viên: 0=Đồng, 1=Bạc, 2=Vàng, 3=Kim Cương |
-| 4   | `createdAt`      | Timestamp    | Có       | Thời điểm tạo                                       |
-| 5   | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật                                 |
+| 4   | `createdAt`      | Timestamp    | Có       | Thời điểm tạo (Instant)                              |
+| 5   | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật (Instant)                             |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -836,6 +415,9 @@ Firestore Root
   "vehicleType": "Honda Wave Alpha",
   "driverLicense": "DL123456789",
   "isActive": true,
+  "isAvailable": true,
+  "currentOrderId": null,
+  "fcmToken": "dGVzdC1tZXNzYWdpbmctdG9rZW4tZm9yLWRyaXZlcg",
   "rating": 4.9,
   "totalTrips": 150,
   "createdAt": "2026-04-07T00:00:00Z",
@@ -991,8 +573,9 @@ Firestore Root
 | 6   | `lat`           | Number               | Có       | Vĩ độ (latitude)                          |
 | 7   | `lng`           | Number               | Có       | Kinh độ (longitude)                       |
 | 8   | `isDefault`     | Boolean              | Có       | Có phải địa chỉ mặc định không            |
-| 9   | `createdAt`     | Timestamp            | Có       | Thời điểm tạo                             |
-| 10  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật                        |
+| 9   | `createdAt`     | Timestamp            | Có       | Thời điểm tạo (Instant)                   |
+| 10  | `updatedAt`     | Timestamp            | Có       | Thời điểm cập nhật (Instant)              |
+| 11  | `deletedAt`     | Timestamp (nullable) | Không    | Thời điểm xóa mềm (null = chưa xóa)    |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -1006,6 +589,7 @@ Firestore Root
   "lat": 10.8455,
   "lng": 106.7939,
   "isDefault": true,
+  "deletedAt": null,
   "createdAt": "2026-04-07T00:00:00Z",
   "updatedAt": "2026-04-07T00:00:00Z"
 }
@@ -1026,14 +610,16 @@ Firestore Root
 | STT | Tên trường    | Kiểu dữ liệu      | Bắt buộc | Mô tả                                                   |
 | --- | ------------- | ----------------- | -------- | ------------------------------------------------------- |
 | 1   | `id`          | String            | Có       | ID document từ Firestore                                |
-| 2   | `type`        | Number            | Có       | Loại: 1=Tiền mặt, 2=Ví điện tử, 3=Thẻ ngân hàng       |
-| 3   | `isDefault`   | Boolean           | Có       | Có phải phương thức mặc định không                      |
-| 4   | `cardBrand`   | String (nullable) | Không    | Thương hiệu thẻ (nếu type=3): "visa", "mastercard"     |
-| 5   | `last4Digits` | String (nullable) | Không    | 4 chữ số cuối thẻ (nếu type=3)                          |
-| 6   | `walletBrand` | String (nullable) | Không    | Thương hiệu ví (nếu type=2): "momo", "zalopay", "vnpay" |
-| 7   | `isLinked`    | Boolean           | Có       | Đã liên kết chưa (nếu type=2)                           |
-| 8   | `createdAt`   | Timestamp         | Có       | Thời điểm tạo                                           |
-| 9   | `updatedAt`   | Timestamp         | Có       | Thời điểm cập nhật                                      |
+| 2   | `name`        | String            | Có       | Tên phương thức thanh toán (VD: "Ví MoMo", "Thẻ Visa") |
+| 3   | `type`        | Number            | Có       | Loại: 1=Tiền mặt, 2=Ví điện tử, 3=Thẻ ngân hàng     |
+| 4   | `details`     | String            | Không    | Mô tả chi tiết (VD: "Thanh toán qua ví MoMo")          |
+| 5   | `isDefault`   | Boolean           | Có       | Có phải phương thức mặc định không                      |
+| 6   | `cardBrand`   | String (nullable) | Không    | Thương hiệu thẻ (nếu type=3): "visa", "mastercard"     |
+| 7   | `last4Digits` | String (nullable) | Không    | 4 chữ số cuối thẻ (nếu type=3)                          |
+| 8   | `walletBrand` | String (nullable) | Không    | Thương hiệu ví (nếu type=2): "momo", "zalopay", "vnpay" |
+| 9   | `isLinked`    | Boolean           | Có       | Đã liên kết chưa (nếu type=2)                           |
+| 10  | `createdAt`   | Timestamp         | Có       | Thời điểm tạo                                           |
+| 11  | `updatedAt`   | Timestamp         | Có       | Thời điểm cập nhật                                      |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -1041,8 +627,9 @@ Firestore Root
 // Ví điện tử
 {
   "id": "pm_001",
+  "name": "Ví MoMo",
   "type": 2,
-  "isDefault": true,
+  "details": "Thanh toán qua ví MoMo",
   "cardBrand": null,
   "last4Digits": null,
   "walletBrand": "momo",
@@ -1054,8 +641,9 @@ Firestore Root
 // Thẻ ngân hàng
 {
   "id": "pm_002",
+  "name": "Thẻ Visa",
   "type": 3,
-  "isDefault": false,
+  "details": "Thanh toán qua thẻ Visa",
   "cardBrand": "Visa",
   "last4Digits": "1234",
   "walletBrand": null,
@@ -1134,30 +722,48 @@ Firestore Root
 
 **Các trường (Fields):**
 
-| STT | Tên trường  | Kiểu dữ liệu      | Bắt buộc | Mô tả                             |
-| --- | ----------- | ----------------- | -------- | --------------------------------- |
-| 1   | `id`        | String            | Có       | ID document từ Firestore          |
-| 2   | `storeId`   | String            | Có       | ID quán chứa sản phẩm             |
-| 3   | `foodId`    | String            | Có       | ID sản phẩm (món ăn)              |
-| 4   | `name`      | String            | Có       | Tên món ăn                        |
-| 5   | `price`     | Number            | Có       | Đơn giá (đã bao gồm size/topping) |
-| 6   | `quantity`  | Number            | Có       | Số lượng                          |
-| 7   | `size`      | String (nullable) | Không    | Kích thước đã chọn (VD: "M", "L") |
-| 8   | `sizePrice` | Number (nullable) | Không    | Giá thêm của size                 |
-| 9   | `toppings`  | ArrayObject       | Không    | Danh sách topping đã chọn          |
-| 10  | `note`      | String (nullable) | Không    | Ghi chú cho quán                  |
-| 11  | `imageUrl`  | String (nullable) | Không    | URL ảnh món ăn                    |
-| 12  | `createdAt` | Timestamp         | Có       | Thời điểm tạo                     |
-| 13  | `updatedAt` | Timestamp         | Có       | Thời điểm cập nhật                |
+| STT | Tên trường        | Kiểu dữ liệu      | Bắt buộc | Mô tả                                              |
+| --- | ----------------- | ----------------- | -------- | -------------------------------------------------- |
+| 1   | `id`              | String            | Có       | ID document từ Firestore                           |
+| 2   | `storeId`         | String            | Có       | ID quán chứa sản phẩm                              |
+| 3   | `foodId`          | String            | Có       | ID sản phẩm (món ăn)                              |
+| 4   | `name`            | String            | Có       | Tên món ăn                                         |
+| 5   | `price`           | Number            | Có       | Đơn giá (đã bao gồm size/topping)                  |
+| 6   | `quantity`         | Number            | Có       | Số lượng                                           |
+| 7   | `selectedOptions` | Array (Object)    | Không    | Danh sách nhóm tùy chọn đã chọn (thay thế size/sizePrice/toppings) |
+| 8   | `note`            | String (nullable) | Không    | Ghi chú cho quán                                   |
+| 9   | `imageUrl`         | String (nullable) | Không    | URL ảnh món ăn                                     |
+| 10  | `createdAt`        | Timestamp         | Có       | Thời điểm tạo                                      |
+| 11  | `updatedAt`        | Timestamp         | Có       | Thời điểm cập nhật                                 |
 
-**Cấu trúc toppings:**
+> **Giải thích trường `selectedOptions`:**
+> Cấu trúc `selectedOptions` là cấu trúc mới thay thế cho các trường `size`, `sizePrice`, `toppings` đã bị đánh dấu DEPRECATED.
 
 ```json
-"toppings": [
-  {"name": "Trân châu trắng", "price": 10000.0},
-  {"name": "Thạch trái cây", "price": 8000.0}
+"selectedOptions": [
+  {
+    "name": "Kích thước",
+    "isSingleSelect": true,
+    "options": [
+      {"name": "M"},
+      {"name": "L"}
+    ]
+  },
+  {
+    "name": "Topping",
+    "isSingleSelect": false,
+    "options": [
+      {"name": "Trân châu trắng"},
+      {"name": "Thạch"}
+    ]
+  }
 ]
 ```
+
+> **Giải thích:**
+> - `name`: Tên nhóm tùy chọn ("Kích thước", "Topping", ...)
+> - `options`: Danh sách tùy chọn đã chọn, mỗi option chỉ gồm `name`
+> - `isSingleSelect` = true (size): chọn 1 option; `isSingleSelect` = false (topping): chọn nhiều option
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -1167,7 +773,7 @@ Firestore Root
   "storeId": "store_001",
   "foodId": "prod_001",
   "name": "Com tam suon bi cha",
-  "price": 45000.0,
+  "price": 90000.0,
   "quantity": 2,
   "imageUrl": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80",
   "createdAt": "2026-04-07T00:00:00Z",
@@ -1175,7 +781,7 @@ Firestore Root
 }
 ```
 
-**Ghi chú:** Có 2 item mẫu: cart_item_001 (Com tam, không có tùy chọn) và cart_item_002 (Tra sua trach tang, có `size="L"`, `sizePrice=5000`, `toppings` và `note="It duong"`). Giá trị `price` trong cart đã bao gồm tổng giá = (basePrice + sizePrice + toppingPrice) * quantity.
+**Ghi chú:** Có 2 item mẫu: cart_item_001 (Com tam, không có tùy chọn) và cart_item_002 (Tra sua trach tang, có `selectedOptions`). Giá trị `price` trong cart đã bao gồm tổng giá = (basePrice + sizePrice + toppingPrice) * quantity.
 
 ---
 
@@ -1187,21 +793,23 @@ Firestore Root
 
 **Các trường (Fields):**
 
-| STT | Tên trường       | Kiểu dữ liệu | Bắt buộc | Mô tả                                      |
-| --- | ---------------- | ------------ | -------- | ------------------------------------------ |
-| 1   | `id`             | String       | Có       | ID document từ Firestore                   |
-| 2   | `title`          | String       | Có       | Tiêu đề voucher                            |
-| 3   | `subtitle`        | String       | Có       | Mô tả ngắn gọn                             |
-| 4   | `code`           | String       | Có       | Mã voucher                                  |
-| 5   | `description`    | String       | Có       | Mô tả chi tiết                             |
-| 6   | `expiryDate`     | String       | Có       | Ngày hết hạn (ISO 8601, VD: "2027-12-31T23:59:59Z") |
-| 7   | `type`           | Number       | Có       | Loại giảm giá: 1=% (phần trăm), 2=VND     |
-| 8   | `value`          | Number       | Có       | Giá trị giảm (type=1: %; type=2: VND)      |
-| 9   | `minOrderValue`  | Number       | Có       | Đơn hàng tối thiểu (VND)                  |
-| 10  | `isActive`       | Boolean      | Có       | Voucher có đang kích hoạt không              |
-| 11  | `isFreeship`     | Boolean      | Có       | Có phải voucher freeship không              |
-| 12  | `createdAt`      | Timestamp    | Có       | Thời điểm tạo                              |
-| 13  | `updatedAt`      | Timestamp    | Có       | Thời điểm cập nhật                         |
+| STT | Tên trường     | Kiểu dữ liệu | Bắt buộc | Mô tả                                        |
+| --- | -------------- | ------------ | -------- | -------------------------------------------- |
+| 1   | `id`           | String       | Có       | ID document từ Firestore                     |
+| 2   | `title`        | String       | Có       | Tiêu đề voucher                              |
+| 3   | `subtitle`     | String       | Có       | Mô tả ngắn gọn                               |
+| 4   | `code`         | String       | Có       | Mã voucher                                   |
+| 5   | `description`   | String       | Có       | Mô tả chi tiết                               |
+| 6   | `imageUrl`     | String       | Không    | URL ảnh voucher                              |
+| 7   | `expiryDate`   | String       | Có       | Ngày hết hạn (ISO 8601, VD: "2027-12-31T23:59:59Z") |
+| 8   | `type`         | Number       | Có       | Loại giảm giá: 1=% (phần trăm), 2=VND     |
+| 9   | `value`        | Number       | Có       | Giá trị giảm (type=1: %; type=2: VND)      |
+| 10  | `minOrderValue`| Number       | Có       | Đơn hàng tối thiểu (VND)                  |
+| 11  | `terms`        | String       | Không    | Điều khoản sử dụng                         |
+| 12  | `isActive`     | Boolean      | Có       | Voucher có đang kích hoạt không              |
+| 13  | `isFreeship`   | Boolean      | Có       | Có phải voucher freeship không              |
+| 14  | `createdAt`    | Timestamp    | Có       | Thời điểm tạo                              |
+| 15  | `updatedAt`    | Timestamp    | Có       | Thời điểm cập nhật                         |
 
 **Dữ liệu mẫu (Mock Data):**
 
@@ -1212,10 +820,12 @@ Firestore Root
   "subtitle": "Áp dụng cho đơn từ 100K",
   "code": "FREESHIP20",
   "description": "Áp dụng cho đơn từ 100K",
+  "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80",
   "expiryDate": "2027-12-31T23:59:59Z",
   "type": 2,
   "value": 20000.0,
   "minOrderValue": 50000.0,
+  "terms": "Áp dụng cho đơn từ 100K. Không áp dụng đồng thời với voucher khác.",
   "isActive": true,
   "isFreeship": true,
   "createdAt": "2026-04-07T00:00:00Z",
@@ -1318,7 +928,7 @@ Firestore Root
 | 1   | `id`        | String       | Có       | ID document từ Firestore               |
 | 2   | `keyword`   | String       | Có       | Từ khóa tìm kiếm                      |
 | 3   | `keywordNormalized` | String | Có       | Từ khóa đã chuẩn hóa (VD: viết thường, bỏ dấu) |
-| 4   | `createdAt` | Timestamp    | Có       | Thời điểm tìm kiếm (hoặc cập nhật lại) |
+| 4   | `createdAt` | Timestamp    | Có       | Thời điểm tìm kiếm (Instant, hoặc cập nhật lại) |
 
 **Ghi chú:** Trong code, `search_history` nằm trong `users/{userId}/search_history`, là sub-collection của bảng `users` chứ không phải `customer_profiles`.
 
@@ -1355,4 +965,4 @@ Dưới đây là bảng tổng hợp các kiểu dữ liệu được sử dụ
 | 2026-05-31 | Cập nhật MyVoucher: thêm title, subtitle, imageUrl, terms, isActive, isFreeship; cập nhật VoucherRepository parse/save MyVoucher, cập nhật seeder data |
 | 2026-05-31 | Đồng bộ FirebaseDataSeeder: thêm `system_vouchers`, thêm `isEmailVerified` vào users, cập nhật cấu trúc `vouchers` (loại bỏ name/isFreeship/expiryDate/validityDays, thêm storeId), cập nhật `my_vouchers`, bổ sung mock data đầy đủ 4 vouchers, thêm 5 quán / 17 sản phẩm / 9 đánh giá / 8 đơn hàng |
 | 2026-05-31 | Đổi kiểu dữ liệu từ String sang int cho: orders.paymentMethod (1-4) |
-| 2026-05-31 | Cập nhật đồng bộ với code thực tế: orders bổ sung code, addressId, receiverName/Phone, discountAmount, finalAmount, note, deliveryLat/Lng, idempotencyKey, deletedAt; transactions: đổi type/status về String; wallets.role về String; my_vouchers bổ sung title/subtitle/imageUrl/terms/isActive/isFreeship; driver_profiles bổ sung isAvailable/currentOrderId/fcmToken; customer notifications thêm type=13; driver notifications thêm type=13; bổ sung section order_requests; loại bỏ system_vouchers (không tồn tại - system vouchers được lưu trong vouchers với storeId=null) |
+| 2026-06-01 | Cập nhật đồng bộ với code thực tế lần 2: users thêm createdAt, bỏ isEmailVerified; stores thêm description; products thêm isSingleSelect vào optionGroups; reviews thêm orderId, replyComment, repliedAt; orders thêm shopDiscountAmount, freeshipDiscountAmount, sửa finalAmount formula; addresses thêm deletedAt; payment_methods thêm name, details; cart thay size/sizePrice/toppings bằng selectedOptions; my_vouchers thêm imageUrl, terms, sắp xếp thứ tự fields; driver_profiles mock data thêm isAvailable, currentOrderId, fcmToken; vouchers sửa STT 14-16 bị gãy; wallets mock data role đổi thành int; transactions status đổi thành số (0/1/2); order_requests STT sửa trùng 13

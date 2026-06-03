@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import com.google.cloud.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -319,7 +320,7 @@ public class VoucherRepository {
         data.put("subtitle", myVoucher.getSubtitle());
         data.put("code", myVoucher.getCode());
         data.put("description", myVoucher.getDescription());
-        data.put("expiryDate", myVoucher.getExpiryDate() != null ? FieldValue.serverTimestamp() : null);
+        data.put("expiryDate", myVoucher.getExpiryDate() != null ? Timestamp.ofTimeSecondsAndNanos(myVoucher.getExpiryDate().toInstant().getEpochSecond(), 0) : null);
         data.put("type", myVoucher.getType());
         data.put("value", myVoucher.getValue());
         data.put("imageUrl", myVoucher.getImageUrl());

@@ -1,6 +1,7 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.*;
+import com.example.be_foodgo.exception.TokenInvalidException;
 import com.example.be_foodgo.model.RefreshToken;
 import com.example.be_foodgo.model.User;
 import com.example.be_foodgo.repository.UserRepository;
@@ -298,14 +299,14 @@ public class AuthService {
         RefreshToken oldRefreshToken = refreshTokenService.xacThucRefreshToken(refreshTokenValue);
         if (oldRefreshToken == null) {
             log.warn("Refresh token khong hop le hoac da bi thu hoi");
-            throw new IllegalArgumentException("Refresh token khong hop le hoac da bi thu hoi.");
+            throw new TokenInvalidException("Refresh token khong hop le hoac da bi thu hoi.");
         }
 
         String userId = oldRefreshToken.getUserId();
         User user = userRepository.timTheoId(userId);
         if (user == null) {
             log.warn("Khong tim thay tai khoan voi userId: {}", userId);
-            throw new IllegalArgumentException("Tai khoan khong ton tai.");
+            throw new TokenInvalidException("Tai khoan khong ton tai.");
         }
 
         String newAccessToken = jwtTokenProvider.taoToken(userId);
@@ -446,6 +447,26 @@ public class AuthService {
         return result;
     }
 
+    public UserResponse getCurrentUser(String authHeader) throws Exception {
+        if (authHeader == null || !authHeader.startsWith(jwtTokenProvider.getBearerPrefix() + " ")) {
+            throw new IllegalArgumentException("Token khong hop le.");
+        }
+        String token = jwtTokenProvider.layTokenTuHeader(authHeader);
+        if (token == null || !jwtTokenProvider.xacThucToken(token)) {
+            throw new IllegalArgumentException("Token da het han hoac khong hop le.");
+        }
+        String userId = jwtTokenProvider.layUserIdTuToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Token khong hop le.");
+        }
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Tai khoan khong ton tai.");
+        }
+        log.info("Lay thong tin nguoi dung hien tai - UserId: {}", userId);
+        return mapToUserResponse(user);
+    }
+
     public Map<String, Object> checkAdminProfile(String uid) throws Exception {
         Map<String, Object> result = new HashMap<>();
         result.put("isAdmin", false);
@@ -461,8 +482,6 @@ public class AuthService {
         }
         return result;
     }
-
-
     public String layUserIdHienTai(String authHeader) {
         if (authHeader == null || !authHeader.startsWith(jwtTokenProvider.getBearerPrefix() + " ")) {
             return null;

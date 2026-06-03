@@ -200,6 +200,16 @@ public class DeliveryOrderService {
             if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
                 Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
+                String storeId = (String) orderData.get("storeId");
+                Double finalAmount = toDouble(orderData.get("finalAmount"));
+                Double totalAmount = toDouble(orderData.get("totalAmount"));
+                
+                Double merchantIncome = 0.0;
+                if (finalAmount != null && finalAmount > 0) {
+                    merchantIncome = finalAmount - (deliveryFee != null ? deliveryFee : 0.0);
+                } else if (totalAmount != null) {
+                    merchantIncome = totalAmount;
+                }
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
@@ -216,6 +226,14 @@ public class DeliveryOrderService {
 
                 if (deliveryFee != null && deliveryFee > 0) {
                     walletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
+                }
+
+                if (storeId != null && merchantIncome != null && merchantIncome > 0) {
+                    String orderCode = (String) orderData.get("code");
+                    if (orderCode == null || orderCode.trim().isEmpty()) {
+                        orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
+                    }
+                    walletService.createMerchantIncomeTransaction(storeId, orderId, orderCode, merchantIncome);
                 }
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);
@@ -291,6 +309,42 @@ public class DeliveryOrderService {
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi lay don hien tai: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    public List<DeliveryOrderDTO> getActiveOrders(String userId) {
+        log.info("Bat dau lay don hang active cua tai xe: {}", userId);
+        try {
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
+                    .findByDriverIdAndStatus(userId, 2);
+            List<DeliveryOrderDTO> orders = new ArrayList<>();
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                Map<String, Object> data = doc.getData();
+                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
+
+                if (data.get("storeId") != null) {
+                    Map<String, Object> storeData = statsRepository
+                            .findStoreById(data.get("storeId").toString());
+                    if (storeData != null) {
+                        dto.setStoreAddress((String) storeData.get("address"));
+                        dto.setStoreLat(toDouble(storeData.get("lat")));
+                        dto.setStoreLng(toDouble(storeData.get("lng")));
+                    }
+                }
+
+                orders.add(dto);
+            }
+
+            log.info("Tim thay {} don hang active", orders.size());
+            return orders;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay don hang active: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay don hang active: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }

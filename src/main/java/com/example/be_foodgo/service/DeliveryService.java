@@ -2,15 +2,23 @@ package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.DeliveryProfileDTO;
 import com.example.be_foodgo.dto.DeliveryProfileRequest;
+import com.example.be_foodgo.dto.DeliveryStatusRequest;
 import com.example.be_foodgo.dto.DeliveryVehicleRequest;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -22,11 +30,19 @@ public class DeliveryService {
     private static final Logger log = LoggerFactory.getLogger(DeliveryService.class);
 
     private static final String RDB_ACTIVE_DRIVERS = "active_drivers";
+    private static final long LOCATION_TIMEOUT_MS = 60_000L;
+    private static final long LOCATION_CHECK_INTERVAL_MS = 30_000L;
 
     private final WalletRepository walletRepository;
+    private final RestTemplate restTemplate;
+    private final String firebaseDatabaseUrl;
 
-    public DeliveryService(WalletRepository walletRepository) {
+    public DeliveryService(WalletRepository walletRepository,
+                          RestTemplate restTemplate,
+                          @Autowired(required = false) String firebaseDatabaseUrl) {
         this.walletRepository = walletRepository;
+        this.restTemplate = restTemplate;
+        this.firebaseDatabaseUrl = firebaseDatabaseUrl;
     }
 
     public DeliveryProfileDTO getDriverProfile(String userId) {
@@ -108,12 +124,29 @@ public class DeliveryService {
     }
 
     public DeliveryProfileDTO updateDriverStatus(String userId, Boolean isActive) {
+        return updateDriverStatus(userId, isActive, null);
+    }
+
+    public DeliveryProfileDTO updateDriverStatus(String userId, Boolean isActive, DeliveryStatusRequest statusRequest) {
         log.info("Bat dau cap nhat trang thai tai xe: {}, isActive={}", userId, isActive);
         try {
             Map<String, Object> profileData = walletRepository.findDriverProfileById(userId);
             if (profileData == null) {
                 log.warn("Ho so tai xe chua ton tai: {}", userId);
                 throw BusinessException.hoSoTaiXeChuaTonTai(userId);
+            }
+
+            if (isActive) {
+                log.info("[FIREBASE] updateDriverStatus called with isActive=true for driverId={}, lat={}, lng={}", userId, statusRequest.getLat(), statusRequest.getLng());
+                if (statusRequest.getLat() == null || statusRequest.getLng() == null) {
+                    log.warn("Tai xe {} bat dau hoat dong nhung khong co vi tri", userId);
+                    throw BusinessException.loiDinhVi("Vui lòng gửi vị trí GPS khi bật trạng thái hoạt động.");
+                }
+                Double lat = statusRequest.getLat();
+                Double lng = statusRequest.getLng();
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    throw BusinessException.loiDinhVi("Vị trí GPS không hợp lệ. Vui lòng bật GPS và thử lại.");
+                }
             }
 
             Map<String, Object> updates = new HashMap<>();
@@ -124,6 +157,15 @@ public class DeliveryService {
 
             if (!isActive) {
                 xoaKhoiRealtimeDatabase(userId);
+            } else {
+                log.info("[FIREBASE] Calling updateDriverLocation for userId={}", userId);
+                updateDriverLocation(
+                        userId,
+                        statusRequest.getLat(),
+                        statusRequest.getLng(),
+                        statusRequest.getHeading(),
+                        statusRequest.getSpeed()
+                );
             }
 
             log.info("Cap nhat trang thai tai xe thanh cong: {}", userId);
@@ -137,6 +179,21 @@ public class DeliveryService {
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi cap nhat trang thai tai xe: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    public void deactivateDriverDueToTimeout(String driverId) {
+        log.warn("Tai xe {} bi tu dong tat trang thai do khong cap nhat vi tri", driverId);
+        try {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("isActive", false);
+            updates.put("isAvailable", false);
+            updates.put("updatedAt", Instant.now());
+            walletRepository.updateDriverProfileFields(driverId, updates);
+            xoaKhoiRealtimeDatabase(driverId);
+            log.info("Da tu dong tat trang thai tai xe {} do het thoi gian cap nhat vi tri", driverId);
+        } catch (Exception e) {
+            log.error("Loi khi tu dong tat trang thai tai xe {}: {}", driverId, e.getMessage());
         }
     }
 
@@ -176,9 +233,11 @@ public class DeliveryService {
     }
 
     public void updateDriverLocation(String driverId, Double lat, Double lng, Double heading, Double speed) {
-        DatabaseReference ref = FirebaseDatabase.getInstance()
-                .getReference(RDB_ACTIVE_DRIVERS)
-                .child(driverId);
+        if (firebaseDatabaseUrl == null || firebaseDatabaseUrl.isBlank()) {
+            log.warn("FirebaseDatabase URL chua duoc cau hinh, bo qua ghi location.");
+            return;
+        }
+        String url = firebaseDatabaseUrl + "/active_drivers/" + driverId + ".json";
 
         Map<String, Object> locationData = new HashMap<>();
         locationData.put("driverId", driverId);
@@ -187,27 +246,35 @@ public class DeliveryService {
         locationData.put("heading", heading != null ? heading : 0.0);
         locationData.put("speed", speed != null ? speed : 0.0);
         locationData.put("updatedAt", System.currentTimeMillis());
+        locationData.put("lastLocationUpdate", System.currentTimeMillis());
         locationData.put("isActive", true);
 
-        ref.setValue(locationData, (error, refIgnored) -> {
-            if (error != null) {
-                log.warn("Loi ghi location len Realtime Database: {} - {}", driverId, error.getMessage());
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(locationData, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("[FIREBASE REST] Da ghi location thanh cong vao active_drivers/{} - lat={}, lng={}", driverId, lat, lng);
+            } else {
+                log.error("[FIREBASE REST] Loi ghi Firebase cho {}: status={}, body={}", driverId, response.getStatusCode(), response.getBody());
             }
-        });
+        } catch (Exception e) {
+            log.error("[FIREBASE REST] Exception khi ghi Firebase cho {}: {}", driverId, e.getMessage(), e);
+        }
     }
 
     private void xoaKhoiRealtimeDatabase(String driverId) {
+        if (firebaseDatabaseUrl == null || firebaseDatabaseUrl.isBlank()) {
+            log.warn("FirebaseDatabase URL chua duoc cau hinh, bo qua xoa khoi Realtime Database.");
+            return;
+        }
         try {
-            DatabaseReference ref = FirebaseDatabase.getInstance()
-                    .getReference(RDB_ACTIVE_DRIVERS)
-                    .child(driverId);
-            ref.removeValue((error, ref12) -> {
-                if (error != null) {
-                    log.warn("Loi khi xoa khoi Realtime Database: {}", error.getMessage());
-                } else {
-                    log.info("Da xoa tai xe {} khoi Realtime Database", driverId);
-                }
-            });
+            String url = firebaseDatabaseUrl + "/active_drivers/" + driverId + ".json";
+            restTemplate.delete(url);
+            log.info("Da xoa tai xe {} khoi Realtime Database", driverId);
         } catch (Exception e) {
             log.warn("Khong the xoa khoi Realtime Database: {}", e.getMessage());
         }

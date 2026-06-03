@@ -2,6 +2,7 @@ package com.example.be_foodgo.seeder;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +11,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-// @Component
+@Component
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);
@@ -512,7 +514,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                                 )
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_002"),
@@ -526,7 +530,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_003"),
@@ -540,7 +546,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_004"),
@@ -573,7 +581,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                                 )
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_005"),
@@ -587,7 +597,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_006"),
@@ -601,7 +613,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", true),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 3.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_007"),
@@ -667,7 +681,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", true),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_011"),
@@ -695,7 +711,9 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_013"),
@@ -865,7 +883,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         v1.put("minOrderValue", 100000.0);
         v1.put("limitCount", 200);
         v1.put("usedCount", 0);
-        v1.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        v1.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         v1.put("isFreeship", false);
         v1.put("createdAt", FieldValue.serverTimestamp());
         v1.put("updatedAt", FieldValue.serverTimestamp());
@@ -888,7 +906,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         v2.put("minOrderValue", 50000.0);
         v2.put("limitCount", 100);
         v2.put("usedCount", 0);
-        v2.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        v2.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         v2.put("isFreeship", true);
         v2.put("createdAt", FieldValue.serverTimestamp());
         v2.put("updatedAt", FieldValue.serverTimestamp());
@@ -911,7 +929,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         v3.put("minOrderValue", 200000.0);
         v3.put("limitCount", 100);
         v3.put("usedCount", 0);
-        v3.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        v3.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         v3.put("isFreeship", false);
         v3.put("createdAt", FieldValue.serverTimestamp());
         v3.put("updatedAt", FieldValue.serverTimestamp());
@@ -933,7 +951,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         sv1.put("minOrderValue", 100000.0);
         sv1.put("limitCount", 200);
         sv1.put("usedCount", 0);
-        sv1.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        sv1.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         sv1.put("isFreeship", false);
         sv1.put("createdAt", FieldValue.serverTimestamp());
         sv1.put("updatedAt", FieldValue.serverTimestamp());
@@ -955,7 +973,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         sv2.put("minOrderValue", 150000.0);
         sv2.put("limitCount", 150);
         sv2.put("usedCount", 0);
-        sv2.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        sv2.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         sv2.put("isFreeship", false);
         sv2.put("createdAt", FieldValue.serverTimestamp());
         sv2.put("updatedAt", FieldValue.serverTimestamp());
@@ -977,7 +995,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         sv3.put("minOrderValue", 80000.0);
         sv3.put("limitCount", 500);
         sv3.put("usedCount", 0);
-        sv3.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        sv3.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         sv3.put("isFreeship", true);
         sv3.put("createdAt", FieldValue.serverTimestamp());
         sv3.put("updatedAt", FieldValue.serverTimestamp());
@@ -999,7 +1017,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         sv4.put("minOrderValue", 50000.0);
         sv4.put("limitCount", 1000);
         sv4.put("usedCount", 0);
-        sv4.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        sv4.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         sv4.put("isFreeship", false);
         sv4.put("createdAt", FieldValue.serverTimestamp());
         sv4.put("updatedAt", FieldValue.serverTimestamp());
@@ -1021,7 +1039,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         sv5.put("minOrderValue", 200000.0);
         sv5.put("limitCount", 300);
         sv5.put("usedCount", 0);
-        sv5.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        sv5.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         sv5.put("isFreeship", false);
         sv5.put("createdAt", FieldValue.serverTimestamp());
         sv5.put("updatedAt", FieldValue.serverTimestamp());
@@ -1044,7 +1062,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         v4.put("minOrderValue", 150000.0);
         v4.put("limitCount", 100);
         v4.put("usedCount", 0);
-        v4.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        v4.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         v4.put("isFreeship", false);
         v4.put("createdAt", FieldValue.serverTimestamp());
         v4.put("updatedAt", FieldValue.serverTimestamp());
@@ -1060,6 +1078,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev1 = new HashMap<>();
         rev1.put("id", "rev_001");
         rev1.put("orderId", "order_001");
+        rev1.put("itemId", "item_001");
+        rev1.put("foodId", "prod_001");
         rev1.put("storeId", "store_001");
         rev1.put("userId", "user_001");
         rev1.put("userName", "Khôi");
@@ -1079,6 +1099,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev2 = new HashMap<>();
         rev2.put("id", "rev_002");
         rev2.put("orderId", "order_002");
+        rev2.put("itemId", "item_002");
+        rev2.put("foodId", "prod_001");
         rev2.put("storeId", "store_001");
         rev2.put("userId", "user_002");
         rev2.put("userName", "Quản Trị Viên");
@@ -1095,6 +1117,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev3 = new HashMap<>();
         rev3.put("id", "rev_003");
         rev3.put("orderId", "order_002");
+        rev3.put("itemId", "item_003");
+        rev3.put("foodId", "prod_004");
         rev3.put("storeId", "store_002");
         rev3.put("userId", "user_001");
         rev3.put("userName", "Khôi");
@@ -1113,6 +1137,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev4 = new HashMap<>();
         rev4.put("id", "rev_004");
         rev4.put("orderId", "order_003");
+        rev4.put("itemId", "item_004");
+        rev4.put("foodId", "prod_006");
         rev4.put("storeId", "store_003");
         rev4.put("userId", "user_002");
         rev4.put("userName", "Quản Trị Viên");
@@ -1129,6 +1155,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev5 = new HashMap<>();
         rev5.put("id", "rev_005");
         rev5.put("orderId", "order_004");
+        rev5.put("itemId", "item_005");
+        rev5.put("foodId", "prod_010");
         rev5.put("storeId", "store_004");
         rev5.put("userId", "user_001");
         rev5.put("userName", "Khôi");
@@ -1148,6 +1176,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev6 = new HashMap<>();
         rev6.put("id", "rev_006");
         rev6.put("orderId", "order_001");
+        rev6.put("itemId", "item_006");
+        rev6.put("foodId", "prod_002");
         rev6.put("storeId", "store_001");
         rev6.put("userId", "user_003");
         rev6.put("userName", "Lê Văn B");
@@ -1164,6 +1194,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev7 = new HashMap<>();
         rev7.put("id", "rev_007");
         rev7.put("orderId", "order_002");
+        rev7.put("itemId", "item_007");
+        rev7.put("foodId", "prod_005");
         rev7.put("storeId", "store_002");
         rev7.put("userId", "user_003");
         rev7.put("userName", "Lê Văn B");
@@ -1182,6 +1214,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev8 = new HashMap<>();
         rev8.put("id", "rev_008");
         rev8.put("orderId", "order_007");
+        rev8.put("itemId", "item_008");
+        rev8.put("foodId", "prod_006");
         rev8.put("storeId", "store_003");
         rev8.put("userId", "user_001");
         rev8.put("userName", "Khôi");
@@ -1198,6 +1232,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> rev9 = new HashMap<>();
         rev9.put("id", "rev_009");
         rev9.put("orderId", "order_008");
+        rev9.put("itemId", "item_009");
+        rev9.put("foodId", "prod_012");
         rev9.put("storeId", "store_005");
         rev9.put("userId", "user_001");
         rev9.put("userName", "Khôi");
@@ -1711,7 +1747,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         mv1.put("subtitle", "Áp dụng cho đơn từ 100K");
         mv1.put("code", "FREESHIP20");
         mv1.put("description", "Áp dụng cho đơn từ 100K");
-        mv1.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        mv1.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         mv1.put("type", 2);
         mv1.put("value", 20000.0);
         mv1.put("minOrderValue", 50000.0);
@@ -1728,7 +1764,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         mv2.put("subtitle", "Giảm 10% cho mọi đơn hàng");
         mv2.put("code", "SAVE10");
         mv2.put("description", "Giảm 10% cho mọi đơn hàng");
-        mv2.put("expiryDate", java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        mv2.put("expiryDate", Timestamp.ofTimeSecondsAndNanos(Instant.now().plus(30, ChronoUnit.DAYS).getEpochSecond(), 0));
         mv2.put("type", 1);
         mv2.put("value", 10.0);
         mv2.put("minOrderValue", 50000.0);

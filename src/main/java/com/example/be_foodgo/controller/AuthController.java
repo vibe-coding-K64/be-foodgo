@@ -376,4 +376,29 @@ public class AuthController {
                             400, e.getMessage()));
         }
     }
+
+    @GetMapping("/me")
+    @Operation(
+            summary = "Lay thong tin nguoi dung hien tai",
+            description = "Tra ve thong tin tai khoan cua nguoi dung dang nhap hien tai. Dung de kiem tra " +
+                    "token con hop le hay khong khi mo ung dung."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Lay thong tin thanh cong",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token khong hop le hoac da het han")
+    })
+    public ResponseEntity<?> getMe(
+            @Parameter(description = "Header Authorization chua access token", example = "Bearer eyJhbGciOiJIUzI1NiJ9...")
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            UserResponse user = authService.getCurrentUser(authHeader);
+            return ResponseEntity.ok(
+                    com.example.be_foodgo.exception.ApiResponse.thatSuccess(user, "Lay thong tin nguoi dung thanh cong."));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(
+                    com.example.be_foodgo.exception.ApiResponse.thatError(
+                            401, e.getMessage()));
+        }
+    }
 }

@@ -28,6 +28,16 @@ public class OrderRequestRepository {
         return ref.get().getId();
     }
 
+    public String savePerDriver(String driverId, Map<String, Object> data) throws ExecutionException, InterruptedException {
+        Map<String, Object> dataToSave = convertInstants(data);
+        ApiFuture<DocumentReference> ref = firestore
+                .collection(COLLECTION_ORDER_REQUESTS)
+                .document(driverId)
+                .collection("requests")
+                .add(dataToSave);
+        return ref.get().getId();
+    }
+
     public void updateFields(String orderId, Map<String, Object> fields) throws ExecutionException, InterruptedException {
         if (fields == null || fields.isEmpty()) return;
         Map<String, Object> converted = convertInstants(fields);
