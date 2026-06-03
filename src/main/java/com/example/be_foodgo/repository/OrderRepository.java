@@ -69,8 +69,17 @@ public class OrderRepository {
     }
 
     public List<Order> findAllOrders() throws ExecutionException, InterruptedException {
-        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).orderBy("createdAt", Query.Direction.DESCENDING).get();
-        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<QueryDocumentSnapshot> documents;
+        try {
+            // Thử query có orderBy (yêu cầu Firestore index)
+            ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                    .orderBy("createdAt", Query.Direction.DESCENDING).get();
+            documents = future.get().getDocuments();
+        } catch (Exception e) {
+            // Fallback: lấy tất cả không có orderBy nếu chưa có index
+            ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
+            documents = future.get().getDocuments();
+        }
         List<Order> orders = new ArrayList<>();
         for (DocumentSnapshot document : documents) {
             Order order = document.toObject(Order.class);

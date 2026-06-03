@@ -70,10 +70,14 @@ public class VoucherController extends BaseController {
 
     @GetMapping
     @Operation(summary = "Lấy danh sách voucher", description = "Lấy danh sách voucher theo userId và storeId")
-    public ResponseEntity<ApiResponse<VoucherListResponse>> getVouchers(
-            @RequestParam String userId,
+    public ResponseEntity<?> getVouchers(
+            @RequestParam(required = false) String userId,
             @RequestParam(required = false) String storeId) {
         try {
+            if (userId == null || userId.trim().isEmpty()) {
+                java.util.List<Voucher> data = voucherService.getAllVouchers(storeId);
+                return ResponseEntity.ok(data);
+            }
             VoucherListResponse data = voucherService.getAvailableVouchers(userId, storeId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(data, "Lấy danh sách voucher thành công"));
         } catch (ExecutionException | InterruptedException e) {

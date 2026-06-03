@@ -42,7 +42,17 @@ public class SystemConfigController extends BaseController {
         try {
             Map<String, Object> config = walletRepository.findSystemConfig();
             if (config != null) {
-                return ResponseEntity.ok(ApiResponse.thatSuccess(config, "Lay cau hinh he thong thanh cong."));
+                Map<String, Object> cleanConfig = new java.util.HashMap<>(config);
+                for (Map.Entry<String, Object> entry : cleanConfig.entrySet()) {
+                    if (entry.getValue() instanceof com.google.cloud.Timestamp) {
+                        entry.setValue(((com.google.cloud.Timestamp) entry.getValue()).toDate().toInstant().toString());
+                    } else if (entry.getValue() instanceof java.util.Date) {
+                        entry.setValue(((java.util.Date) entry.getValue()).toInstant().toString());
+                    } else if (entry.getValue() instanceof java.time.Instant) {
+                        entry.setValue(entry.getValue().toString());
+                    }
+                }
+                return ResponseEntity.ok(ApiResponse.thatSuccess(cleanConfig, "Lay cau hinh he thong thanh cong."));
             } else {
                 return ResponseEntity.ok(ApiResponse.thatError(404, "Khong tim thay tai lieu cau hinh."));
             }

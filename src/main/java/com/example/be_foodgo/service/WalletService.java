@@ -314,18 +314,38 @@ public class WalletService {
         log.info("Admin bat dau lay danh sach cac yeu cau rut tien dang cho");
         try {
             com.google.cloud.firestore.Firestore firestore = walletRepository.getFirestore();
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = firestore.collection("transactions")
-                    .whereEqualTo("type", "withdrawal")
-                    .whereEqualTo("status", "pending")
-                    .orderBy("createdAt", com.google.cloud.firestore.Query.Direction.DESCENDING)
-                    .get()
-                    .get()
-                    .getDocuments();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs;
+            try {
+                docs = firestore.collection("transactions")
+                        .whereEqualTo("type", "withdrawal")
+                        .whereEqualTo("status", "pending")
+                        .orderBy("createdAt", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                        .get()
+                        .get()
+                        .getDocuments();
+            } catch (Exception e) {
+                log.warn("Loi index Firestore khi lay pending withdrawals, thuc hien fallback khong orderBy va tu sap xep in-memory: {}", e.getMessage());
+                docs = firestore.collection("transactions")
+                        .whereEqualTo("type", "withdrawal")
+                        .whereEqualTo("status", "pending")
+                        .get()
+                        .get()
+                        .getDocuments();
+            }
 
             List<TransactionDTO> result = new java.util.ArrayList<>();
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 result.add(mapToTransactionDTO(doc.getId(), doc.getData()));
             }
+            
+            // Sap xep in-memory giam dan theo createdAt
+            result.sort((a, b) -> {
+                if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                if (a.getCreatedAt() == null) return 1;
+                if (b.getCreatedAt() == null) return -1;
+                return b.getCreatedAt().compareTo(a.getCreatedAt());
+            });
+            
             log.info("Tim thay {} yeu cau rut tien pending", result.size());
             return result;
         } catch (InterruptedException e) {
