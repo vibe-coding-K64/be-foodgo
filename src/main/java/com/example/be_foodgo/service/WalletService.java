@@ -293,14 +293,30 @@ public class WalletService {
                 walletId = wallets.get(0).getId();
             }
 
+            double driverCommissionPercentage = 80.0;
+            try {
+                Map<String, Object> config = walletRepository.findSystemConfig();
+                if (config != null && config.get("driverCommissionPercentage") != null) {
+                    Object val = config.get("driverCommissionPercentage");
+                    if (val instanceof Number) {
+                        driverCommissionPercentage = ((Number) val).doubleValue();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi đọc driverCommissionPercentage từ system_configs: {}", e.getMessage());
+            }
+
+            double netAmount = deliveryFee * (driverCommissionPercentage / 100.0);
+            double fee = deliveryFee - netAmount;
+
             Map<String, Object> transData = new HashMap<>();
             transData.put("walletId", walletId);
             transData.put("userId", driverId);
             transData.put("type", 2);
             transData.put("amount", deliveryFee);
-            transData.put("fee", 0.0);
-            transData.put("netAmount", deliveryFee);
-            transData.put("description", "Thu nhap giao hang cho don hang [" + orderId + "]");
+            transData.put("fee", fee);
+            transData.put("netAmount", netAmount);
+            transData.put("description", "Thu nhập giao hàng cho đơn hàng [" + orderId + "]");
             transData.put("orderId", orderId);
             transData.put("status", 1);
             transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
@@ -310,16 +326,17 @@ public class WalletService {
             if (walletId != null) {
                 Map<String, Object> walletUpdates = new HashMap<>();
                 walletUpdates.put("balance",
-                        com.google.cloud.firestore.FieldValue.increment(deliveryFee));
+                        com.google.cloud.firestore.FieldValue.increment(netAmount));
                 walletUpdates.put("totalEarned",
-                        com.google.cloud.firestore.FieldValue.increment(deliveryFee));
+                        com.google.cloud.firestore.FieldValue.increment(netAmount));
                 walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
                 walletRepository.updateWalletFields(walletId, walletUpdates);
             }
 
-            log.info("Da tao giao dich thu nhap: driverId={}, orderId={}, amount={}", driverId, orderId, deliveryFee);
+            log.info("Đã tạo giao dịch thu nhập tài xế: driverId={}, orderId={}, gross={}, net={}, fee={}",
+                    driverId, orderId, deliveryFee, netAmount, fee);
         } catch (Exception e) {
-            log.warn("Loi khi tao giao dich thu nhap: {}", e.getMessage());
+            log.warn("Lỗi khi tạo giao dịch thu nhập: {}", e.getMessage());
         }
     }
 
@@ -346,10 +363,21 @@ public class WalletService {
                 walletId = wallets.get(0).getId();
             }
 
-            double platformFeePercentage = 0.0;
+            double platformFeePercentage = 15.0;
+            try {
+                Map<String, Object> config = walletRepository.findSystemConfig();
+                if (config != null && config.get("platformFeePercentage") != null) {
+                    Object val = config.get("platformFeePercentage");
+                    if (val instanceof Number) {
+                        platformFeePercentage = ((Number) val).doubleValue();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi đọc platformFeePercentage từ system_configs: {}", e.getMessage());
+            }
 
-            double fee = 0.0;
-            double netAmount = amount;
+            double fee = amount * (platformFeePercentage / 100.0);
+            double netAmount = amount - fee;
 
             Map<String, Object> transData = new HashMap<>();
             transData.put("walletId", walletId);
@@ -371,9 +399,55 @@ public class WalletService {
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             walletRepository.updateWalletFields(walletId, walletUpdates);
 
-            log.info("Đã cộng doanh thu cho gian hàng: merchantId={}, orderId={}, amount={}", merchantId, orderId, amount);
+            log.info("Đã cộng doanh thu cho gian hàng: merchantId={}, orderId={}, gross={}, net={}, fee={}",
+                    merchantId, orderId, amount, netAmount, fee);
         } catch (Exception e) {
             log.warn("Lỗi khi tạo giao dịch thu nhập cho gian hàng: {}", e.getMessage());
+        }
+    }
+
+    public void createDriverCodDebitTransaction(String driverId, String orderId, String orderCode, double amount) {
+        try {
+            String walletId = null;
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = walletRepository
+                    .findDriverWalletByUserIdAndRole(driverId, 2);
+            if (!wallets.isEmpty()) {
+                walletId = wallets.get(0).getId();
+            }
+
+            Map<String, Object> transData = new HashMap<>();
+            transData.put("walletId", walletId);
+            transData.put("userId", driverId);
+            transData.put("type", 5); // 5 = COD Debit
+            transData.put("amount", amount);
+            transData.put("fee", 0.0);
+            transData.put("netAmount", -amount);
+            transData.put("description", "Thu tiền mặt COD cho đơn hàng " + orderCode);
+            transData.put("orderId", orderId);
+            transData.put("status", 1);
+            transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+
+            walletRepository.createTransaction(transData);
+
+            if (walletId != null) {
+                Map<String, Object> walletUpdates = new HashMap<>();
+                walletUpdates.put("balance",
+                        com.google.cloud.firestore.FieldValue.increment(-amount));
+                walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+                walletRepository.updateWalletFields(walletId, walletUpdates);
+            }
+
+            log.info("Đã khấu trừ ví tài xế cho đơn COD: driverId={}, orderId={}, amount={}", driverId, orderId, amount);
+        } catch (Exception e) {
+            log.warn("Lỗi khi khấu trừ ví tài xế cho đơn COD: {}", e.getMessage());
+        }
+    }
+
+    public void createRefundTransaction(Map<String, Object> transData) {
+        try {
+            walletRepository.createTransaction(transData);
+        } catch (Exception e) {
+            log.warn("Lỗi khi tạo giao dịch hoàn tiền: {}", e.getMessage());
         }
     }
 

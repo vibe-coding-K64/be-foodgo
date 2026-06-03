@@ -21,6 +21,8 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 public class OrderService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OrderService.class);
+
     @Autowired
     private OrderRepository orderRepository;
 
@@ -169,6 +171,40 @@ public class OrderService {
         merchantNotif.setOrderId(orderId);
         notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
 
+        // Kiểm tra hoàn tiền cho đơn thanh toán online (không phải tiền mặt)
+        if (!isCashPayment(order.getPaymentMethod())) {
+            try {
+                double refundAmount = order.getFinalAmount();
+                if (refundAmount > 0) {
+                    Map<String, Object> transData = new HashMap<>();
+                    transData.put("walletId", null);
+                    transData.put("userId", userId);
+                    transData.put("type", 4); // 4 = Refund
+                    transData.put("amount", refundAmount);
+                    transData.put("fee", 0.0);
+                    transData.put("netAmount", refundAmount);
+                    transData.put("description", "Hoàn tiền đơn hàng " + orderCode + " do hủy đơn");
+                    transData.put("orderId", orderId);
+                    transData.put("status", 1); // 1 = Completed
+                    transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+
+                    walletService.createRefundTransaction(transData);
+
+                    // Gửi thông báo hoàn tiền thành công cho khách hàng
+                    NotificationDTO refundNotif = new NotificationDTO();
+                    refundNotif.setTitle("Hoàn tiền thành công đơn " + orderCode);
+                    refundNotif.setBody("Bạn đã được hoàn trả số tiền " + String.format("%,.0f", refundAmount) + " VND cho đơn hàng #" + orderCode + ".");
+                    refundNotif.setType(1);
+                    refundNotif.setOrderId(orderId);
+                    notificationService.createNotification("customer_profiles", userId, refundNotif);
+
+                    log.info("Đã tạo giao dịch hoàn tiền giả lập: orderId={}, amount={}", orderId, refundAmount);
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi xử lý hoàn tiền đơn online: {}", e.getMessage());
+            }
+        }
+
         return new CancelOrderResponse(orderId, 4, updatedAtStr);
     }
 
@@ -310,5 +346,17 @@ public class OrderService {
             }
         }
         return sb.toString();
+    }
+
+    private boolean isCashPayment(Object paymentMethodObj) {
+        if (paymentMethodObj == null) {
+            return true;
+        }
+        if (paymentMethodObj instanceof Number) {
+            int val = ((Number) paymentMethodObj).intValue();
+            return val == 1 || val == 0;
+        }
+        String pmStr = paymentMethodObj.toString().toLowerCase().trim();
+        return pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat") || pmStr.equals("1") || pmStr.equals("0");
     }
 }
