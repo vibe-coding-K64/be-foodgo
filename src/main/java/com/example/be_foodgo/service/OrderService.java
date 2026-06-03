@@ -211,7 +211,8 @@ public class OrderService {
         dto.setFreeshipDiscountAmount(entity.getFreeshipDiscountAmount());
         dto.setFinalAmount(entity.getFinalAmount());
         dto.setPaymentMethod(entity.getPaymentMethodString());
-        dto.setStatus(entity.getStatus());
+        // dto.setStatus(entity.getStatus());
+        dto.setStatus(entity.getStatusText());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
         dto.setNote(entity.getNote());
