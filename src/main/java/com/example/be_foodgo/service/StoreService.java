@@ -143,6 +143,41 @@ public class StoreService {
         return dtos;
     }
 
+    /**
+     * Admin duyet cua hang: cap nhat approvalStatus = "approved", isOpen = true
+     */
+    public void approveStore(String storeId) throws Exception {
+        com.google.cloud.firestore.DocumentReference docRef = firestore.collection("stores").document(storeId);
+        com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Cua hang khong ton tai: " + storeId);
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("approvalStatus", "approved");
+        updates.put("isOpen", true);
+        updates.put("updatedAt", new java.util.Date());
+        docRef.update(updates).get();
+        log.info("Admin da duyet cua hang: {}", storeId);
+    }
+
+    /**
+     * Admin tu choi cua hang: cap nhat approvalStatus = "rejected", isOpen = false
+     */
+    public void rejectStore(String storeId, String reason) throws Exception {
+        com.google.cloud.firestore.DocumentReference docRef = firestore.collection("stores").document(storeId);
+        com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Cua hang khong ton tai: " + storeId);
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("approvalStatus", "rejected");
+        updates.put("rejectReason", reason != null ? reason : "Khong dat yeu cau");
+        updates.put("isOpen", false);
+        updates.put("updatedAt", new java.util.Date());
+        docRef.update(updates).get();
+        log.info("Admin da tu choi cua hang: {} - Ly do: {}", storeId, reason);
+    }
+
 
     private StoreDTO mapToDTO(Store store) {
         StoreDTO dto = new StoreDTO();

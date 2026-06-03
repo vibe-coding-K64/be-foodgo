@@ -112,6 +112,37 @@ public class StoreController {
         }
     }
 
+    @PostMapping("/{id}/approve")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Duyệt cửa hàng", description = "Admin duyệt cửa hàng, cập nhật approvalStatus = approved và mở cửa hàng")
+    public ResponseEntity<?> approveStore(@PathVariable String id) {
+        try {
+            storeService.approveStore(id);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Da duyet cua hang thanh cong.", "storeId", id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi duyet cua hang {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Da xay ra loi khi duyet cua hang."));
+        }
+    }
+
+    @PostMapping("/{id}/reject")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Từ chối cửa hàng", description = "Admin từ chối cửa hàng kèm lý do, cập nhật approvalStatus = rejected")
+    public ResponseEntity<?> rejectStore(@PathVariable String id, @RequestBody Map<String, String> body) {
+        try {
+            String reason = body != null ? body.get("reason") : null;
+            storeService.rejectStore(id, reason);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Da tu choi cua hang.", "storeId", id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi tu choi cua hang {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Da xay ra loi khi tu choi cua hang."));
+        }
+    }
+
     @GetMapping("/nearby")
     @Operation(summary = "Lấy danh sách cửa hàng lân cận", description = "Tìm các cửa hàng trong bán kính cho trước")
     public ResponseEntity<Map<String, Object>> getNearbyStores(
