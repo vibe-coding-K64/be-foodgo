@@ -228,18 +228,28 @@ public class DeliveryOrderService {
                     walletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
                 }
 
-                if (storeId != null && merchantIncome != null && merchantIncome > 0) {
-                    String orderCode = (String) orderData.get("code");
-                    if (orderCode == null || orderCode.trim().isEmpty()) {
-                        orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
+                String orderCode = (String) orderData.get("code");
+                if (orderCode == null || orderCode.trim().isEmpty()) {
+                    orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
+                }
+
+                // Nếu là đơn COD (tiền mặt), tài xế giữ tiền mặt nên ta trừ số dư ví điện tử của tài xế
+                if (isCashPayment(orderData.get("paymentMethod"))) {
+                    Double codAmount = finalAmount != null ? finalAmount : (totalAmount != null ? totalAmount : 0.0);
+                    if (codAmount > 0) {
+                        walletService.createDriverCodDebitTransaction(userId, orderId, orderCode, codAmount);
                     }
+                }
+
+                if (storeId != null && merchantIncome != null && merchantIncome > 0) {
                     walletService.createMerchantIncomeTransaction(storeId, orderId, orderCode, merchantIncome);
                 }
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);
             } else {
+                // Sửa logic tài xế hủy đơn giao: Reset trạng thái đơn về 1 (Đang chờ tài xế nhận) thay vì 4 (Đã hủy)
                 Map<String, Object> orderUpdates = new HashMap<>();
-                orderUpdates.put("status", 4);
+                orderUpdates.put("status", 1);
                 orderUpdates.put("driverId", null);
                 orderUpdates.put("driverName", null);
                 orderUpdates.put("driverPhone", null);
@@ -248,7 +258,7 @@ public class DeliveryOrderService {
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 walletRepository.updateDriverProfileFields(userId, driverUpdates);
-                log.info("Don hang da bi huy boi tai xe: orderId={}", orderId);
+                log.info("Don hang da bi tai xe tu choi giao hang. Reset ve cho tai xe (status 1) - orderId={}", orderId);
             }
 
             Map<String, Object> updatedOrderData = statsRepository.findOrderRawById(orderId);
@@ -615,5 +625,17 @@ public class DeliveryOrderService {
         if (value instanceof java.util.Date) return ((java.util.Date) value).toInstant();
         if (value instanceof Long) return Instant.ofEpochMilli((Long) value);
         return null;
+    }
+
+    private boolean isCashPayment(Object paymentMethodObj) {
+        if (paymentMethodObj == null) {
+            return true;
+        }
+        if (paymentMethodObj instanceof Number) {
+            int val = ((Number) paymentMethodObj).intValue();
+            return val == 1 || val == 0;
+        }
+        String pmStr = paymentMethodObj.toString().toLowerCase().trim();
+        return pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat") || pmStr.equals("1") || pmStr.equals("0");
     }
 }
