@@ -222,6 +222,25 @@ public class StatsService {
                 weeklyRevenue.add(val);
             }
 
+            // Top 5 stores theo reviewCount
+            List<Map<String, Object>> topStores = new ArrayList<>();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> storeDocs = firestore.collection("stores").get().get().getDocuments();
+            for (com.google.cloud.firestore.QueryDocumentSnapshot storeDoc : storeDocs) {
+                Map<String, Object> storeData = new HashMap<>();
+                storeData.put("id", storeDoc.getId());
+                storeData.put("name", storeDoc.getString("name") != null ? storeDoc.getString("name") : "N/A");
+                Long reviewCount = storeDoc.getLong("reviewCount");
+                storeData.put("reviewCount", reviewCount != null ? reviewCount : 0L);
+                Double rating = storeDoc.getDouble("rating");
+                storeData.put("rating", rating != null ? rating : 0.0);
+                topStores.add(storeData);
+            }
+            topStores.sort((a, b) -> Long.compare(
+                    ((Number) b.getOrDefault("reviewCount", 0L)).longValue(),
+                    ((Number) a.getOrDefault("reviewCount", 0L)).longValue()
+            ));
+            if (topStores.size() > 5) topStores = topStores.subList(0, 5);
+
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalRevenue", totalRevenue);
             stats.put("totalOrders", totalOrders);
@@ -229,6 +248,7 @@ public class StatsService {
             stats.put("totalDrivers", totalDrivers);
             stats.put("totalCustomers", totalCustomers);
             stats.put("weeklyRevenue", weeklyRevenue);
+            stats.put("topStores", topStores);
 
             return stats;
         } catch (InterruptedException e) {
