@@ -213,6 +213,12 @@ public class DeliveryOrderService {
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
+                
+                Integer currentPaymentStatus = toInt(orderData.get("paymentStatus"));
+                if (currentPaymentStatus == null || currentPaymentStatus == 1) {
+                    orderUpdates.put("paymentStatus", 2);
+                }
+                
                 orderUpdates.put("updatedAt", Instant.now());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
