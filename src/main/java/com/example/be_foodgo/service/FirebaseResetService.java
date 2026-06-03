@@ -259,6 +259,61 @@ public class FirebaseResetService {
     }
 
     private void seedUsers() {
+        // Tu dong dang ky cac tai khoan mau vao Firebase Authentication neu chua ton tai
+        try {
+            com.google.firebase.auth.FirebaseAuth firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance();
+            
+            // 1. Seed tài khoản Admin
+            try {
+                firebaseAuth.getUserByEmail("admin@foodgo.com");
+                log.info("Tai khoan admin@foodgo.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_002") // Truoc sau nhu mot voi Firestore ID
+                        .setEmail("admin@foodgo.com")
+                        .setPassword("admin123")
+                        .setDisplayName("Quan Tri Vien")
+                        .setPhoneNumber("+84987654321")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Admin admin@foodgo.com len Firebase Auth.");
+            }
+
+            // 2. Seed tài khoản Khách Hàng
+            try {
+                firebaseAuth.getUserByEmail("khachhang@gmail.com");
+                log.info("Tai khoan khachhang@gmail.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_001")
+                        .setEmail("khachhang@gmail.com")
+                        .setPassword("password123")
+                        .setDisplayName("Khoi")
+                        .setPhoneNumber("+84123456789")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Khach Hang khachhang@gmail.com len Firebase Auth.");
+            }
+
+            // 3. Seed tài khoản Tài Xế
+            try {
+                firebaseAuth.getUserByEmail("taixe@gmail.com");
+                log.info("Tai khoan taixe@gmail.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_003")
+                        .setEmail("taixe@gmail.com")
+                        .setPassword("driver123")
+                        .setDisplayName("Le Van B")
+                        .setPhoneNumber("+84912345678")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Tai Xe taixe@gmail.com len Firebase Auth.");
+            }
+        } catch (Exception e) {
+            log.error("Loi khi seed du lieu Firebase Auth: {}", e.getMessage());
+        }
+
         List<Map<String, Object>> users = Arrays.asList(
                 Map.ofEntries(
                         Map.entry("id", "user_001"), Map.entry("email", "khachhang@gmail.com"),

@@ -79,6 +79,8 @@ public class Order {
     public void setFreeshipDiscountAmount(double freeshipDiscountAmount) { this.freeshipDiscountAmount = freeshipDiscountAmount; }
     public double getFinalAmount() { return finalAmount; }
     public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
+    public Object getPaymentMethod() { return paymentMethod; }
+    public int getPaymentMethodAsInt() {
 
     public int getPaymentMethod() {
         if (paymentMethod instanceof Number) {
@@ -92,6 +94,21 @@ public class Order {
         }
         return 0;
     }
+    public String getPaymentMethodString() {
+        if (paymentMethod == null) return "Tiền mặt";
+        if (paymentMethod instanceof Number) {
+            int val = ((Number) paymentMethod).intValue();
+            if (val == 0) return "Tiền mặt";
+            if (val == 1) return "Ví điện tử";
+            return "Tiền mặt";
+        }
+        String str = paymentMethod.toString();
+        if ("0".equals(str) || "cash".equalsIgnoreCase(str)) return "Tiền mặt";
+        if ("1".equals(str) || "momo".equalsIgnoreCase(str) || "e-wallet".equalsIgnoreCase(str)) return "Ví điện tử";
+        return str;
+    }
+    public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getStatus() {
     public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public Object getStatus() {

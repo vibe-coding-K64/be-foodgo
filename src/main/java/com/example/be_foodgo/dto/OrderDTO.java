@@ -27,9 +27,9 @@ public class OrderDTO {
     private double shopDiscountAmount;
     private double freeshipDiscountAmount;
     private double finalAmount;
-    private int paymentMethod;
+    private String paymentMethod;
     
-    private int status;
+    private String status;
     private Date createdAt;
     private Date updatedAt;
 
@@ -77,10 +77,10 @@ public class OrderDTO {
     public void setFreeshipDiscountAmount(double freeshipDiscountAmount) { this.freeshipDiscountAmount = freeshipDiscountAmount; }
     public double getFinalAmount() { return finalAmount; }
     public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
-    public int getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(int paymentMethod) { this.paymentMethod = paymentMethod; }
-    public int getStatus() { return status; }
-    public void setStatus(int status) { this.status = status; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
     public Date getUpdatedAt() { return updatedAt; }
