@@ -88,6 +88,39 @@ public class NotificationService {
         }
     }
 
+    public NotificationDTO markAsReadByProfile(String profileCollection, String profileId, String notifId) {
+        log.info("Bắt đầu đánh dấu đã đọc thông báo: collection={}, profileId={}, notifId={}", profileCollection, profileId, notifId);
+        try {
+            com.google.cloud.firestore.DocumentReference docRef = firestore
+                    .collection(profileCollection)
+                    .document(profileId)
+                    .collection("notifications")
+                    .document(notifId);
+                    
+            com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+
+            if (!doc.exists()) {
+                throw BusinessException.thongBaoKhongTimThay(notifId);
+            }
+
+            docRef.update("isRead", true).get();
+
+            Map<String, Object> updatedData = doc.getData();
+            if (updatedData == null) {
+                updatedData = new HashMap<>();
+            }
+            updatedData.put("isRead", true);
+            
+            log.info("Đánh dấu đã đọc thông báo thành công: profileId={}, notifId={}", profileId, notifId);
+            return mapToDTO(doc.getId(), updatedData);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Lỗi khi đánh dấu đã đọc thông báo: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     public int markAllAsRead(String driverId) throws Exception {
         return markAllAsReadByProfile("driver_profiles", driverId);
     }

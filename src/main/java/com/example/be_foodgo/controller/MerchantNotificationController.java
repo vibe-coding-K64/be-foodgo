@@ -57,10 +57,7 @@ public class MerchantNotificationController extends BaseController {
 
         try {
             NotificationDTO notification =
-                    notificationService.markAsRead(holder.userId, notifId); // Wait, this uses hardcoded driver!
-            // I need to use a profile-aware markAsRead or just update the doc directly!
-            // Actually, NotificationService.markAsRead uses NotificationRepository.markAsRead which hardcodes driver_profiles.
-            // For now, let's fix that next.
+                    notificationService.markAsReadByProfile("merchant_profiles", holder.userId, notifId); 
             return ResponseEntity.ok(ApiResponse.thatSuccess(notification, "Thành công."));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
