@@ -256,15 +256,16 @@ Firestore Root
 | 18  | `deliveryLat`        | Number (nullable)    | Không    | Vĩ độ điểm giao (từ address)                  |
 | 19  | `deliveryLng`        | Number (nullable)    | Không    | Kinh độ điểm giao (từ address)                 |
 | 20  | `paymentMethod`      | Number               | Có       | Phương thức thanh toán: 1=momo, 2=cash, 3=zalo, 4=card |
-| 21  | `note`               | String (nullable)     | Không    | Ghi chú đơn hàng (từ khách hàng)               |
-| 22  | `driverId`           | String (nullable)     | Không    | ID tài xế nhận đơn                              |
-| 23  | `driverName`         | String (nullable)     | Không    | Tên tài xế                                      |
-| 24  | `driverPhone`        | String (nullable)     | Không    | SĐT tài xế                                      |
-| 25  | `vehiclePlate`        | String (nullable)     | Không    | Biển số xe                                      |
-| 26  | `idempotencyKey`     | String (nullable)     | Không    | Khóa chống đặt trùng (do client gửi lên)       |
-| 27  | `createdAt`           | Timestamp            | Có       | Thời điểm tạo đơn                               |
-| 28  | `updatedAt`           | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
-| 29  | `deletedAt`           | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
+| 21  | `paymentStatus`      | Number               | Có       | Trạng thái thanh toán: 1=Chưa thanh toán, 2=Đã thanh toán, đơn hàng hoàn thành thì trạng thái sẽ là đã thanh toán |
+| 22  | `note`               | String (nullable)     | Không    | Ghi chú đơn hàng (từ khách hàng)               |
+| 23  | `driverId`           | String (nullable)     | Không    | ID tài xế nhận đơn                              |
+| 24  | `driverName`         | String (nullable)     | Không    | Tên tài xế                                      |
+| 25  | `driverPhone`        | String (nullable)     | Không    | SĐT tài xế                                      |
+| 26  | `vehiclePlate`        | String (nullable)     | Không    | Biển số xe                                      |
+| 27  | `idempotencyKey`     | String (nullable)     | Không    | Khóa chống đặt trùng (do client gửi lên)       |
+| 28  | `createdAt`           | Timestamp            | Có       | Thời điểm tạo đơn                               |
+| 29  | `updatedAt`           | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
+| 30  | `deletedAt`           | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
 
 **Các giá trị status:**
 
@@ -337,6 +338,7 @@ Firestore Root
   "deliveryLat": 10.8455,
   "deliveryLng": 106.7939,
   "paymentMethod": 1,
+  "paymentStatus": 2,
   "note": "It duong",
   "driverId": "user_001",
   "driverName": "Le Van B",

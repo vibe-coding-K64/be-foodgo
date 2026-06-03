@@ -80,6 +80,9 @@ public class OrderService {
         Order order = orderRepository.findById(id);
         if (order != null) {
             order.setStatus(status);
+            if (status == 3) {
+                order.setPaymentStatus(2);
+            }
             String result = orderRepository.update(id, order);
             
             // Gửi thông báo theo từng trạng thái
@@ -247,6 +250,7 @@ public class OrderService {
         dto.setFreeshipDiscountAmount(entity.getFreeshipDiscountAmount());
         dto.setFinalAmount(entity.getFinalAmount());
         dto.setPaymentMethod(entity.getPaymentMethodString());
+        dto.setPaymentStatus(entity.getPaymentStatus());
         // dto.setStatus(entity.getStatus());
         dto.setStatus(entity.getStatusText());
         dto.setCreatedAt(entity.getCreatedAt());
@@ -289,6 +293,7 @@ public class OrderService {
         entity.setFreeshipDiscountAmount(dto.getFreeshipDiscountAmount());
         entity.setFinalAmount(dto.getFinalAmount());
         entity.setPaymentMethod(dto.getPaymentMethod());
+        entity.setPaymentStatus(dto.getPaymentStatus());
         entity.setStatus(dto.getStatus());
         entity.setCreatedAt(dto.getCreatedAt());
         entity.setUpdatedAt(dto.getUpdatedAt());

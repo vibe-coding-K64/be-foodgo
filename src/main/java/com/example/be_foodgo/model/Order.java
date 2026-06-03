@@ -108,6 +108,16 @@ public class Order {
 
     public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
 
+    private Integer paymentStatus;
+
+    public Integer getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(Integer paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
     public Object getStatus() {
         return status;
     }

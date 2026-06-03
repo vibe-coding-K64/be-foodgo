@@ -217,6 +217,7 @@ public class CheckoutService {
                 .paymentMethod(paymentMethodName)
                 .deliveryAddress(diaChi.getAddress())
                 .status(0)
+                .paymentStatus(1)
                 .createdAt(Instant.now())
                 .note(request.getNote())
                 .build();
@@ -652,6 +653,7 @@ public class CheckoutService {
         orderData.put("receiverName", diaChi.getReceiverName() != null ? diaChi.getReceiverName() : "");
         orderData.put("receiverPhone", diaChi.getReceiverPhone() != null ? diaChi.getReceiverPhone() : "");
         orderData.put("status", 0);
+        orderData.put("paymentStatus", 1);
         orderData.put("note", request.getNote() != null ? request.getNote() : "");
         orderData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
         orderData.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());

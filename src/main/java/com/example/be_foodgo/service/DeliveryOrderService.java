@@ -577,6 +577,7 @@ public class DeliveryOrderService {
                 .totalAmount(toDouble(data.get("totalAmount")))
                 .deliveryFee(toDouble(data.get("deliveryFee") != null ? data.get("deliveryFee") : data.get("shippingFee")))
                 .status(getOrderStatusValueFromMap(data))
+                .paymentStatus(toIntPrimitive(data.get("paymentStatus")))
                 .deliveryAddress((String) data.get("deliveryAddress"))
                 .paymentMethod(toIntPrimitive(data.get("paymentMethod")))
                 .createdAt(toInstant(data.get("createdAt")))

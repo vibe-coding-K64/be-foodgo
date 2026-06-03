@@ -49,6 +49,9 @@ public class DeliveryOrderDTO {
     @Schema(description = "Trang thai don hang (0-4)", example = "2")
     private Integer status;
 
+    @Schema(description = "Trang thai thanh toan (1 = Chua TT, 2 = Da TT)", example = "1")
+    private Integer paymentStatus;
+
     @Schema(description = "Dia chi giao hang", example = "Ky tuc xa UTC2, Quan 9, TP.HCM")
     private String deliveryAddress;
 
