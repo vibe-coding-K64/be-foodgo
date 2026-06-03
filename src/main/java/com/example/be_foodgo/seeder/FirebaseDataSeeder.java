@@ -227,7 +227,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("password", "$2a$10$o2RRBNQzzEn2zXiKJ9g2Z.m.UybDFl4pduE85Z5RCdtI5NQl3D8Q."),
                         Map.entry("fullName", "Khoi"),
                         Map.entry("phoneNumber", "0123456789"),
-                        Map.entry("photoUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("roles", Arrays.asList(1, 2, 3)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -239,7 +239,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("password", "$2a$10$tjUxP9PIZuJs4Q648Ojkneu.tDJ.QFd3SBs4rP9bgtbJINXm70iBW"),
                         Map.entry("fullName", "Quan Tri Vien"),
                         Map.entry("phoneNumber", "0987654321"),
-                        Map.entry("photoUrl", "https://example.com/avatar/admin.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=admin.jpg"),
                         Map.entry("roles", Arrays.asList(4)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -251,7 +251,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("password", "$2a$10$Ml9G9qbGlknmSXigd4LyJOnMuSoD8uGpiupnUn8D3Dd5jpjfzvp0a"),
                         Map.entry("fullName", "Le Van B"),
                         Map.entry("phoneNumber", "0912345678"),
-                        Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver001.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -263,7 +263,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("password", "$2a$10$OX1yl/AJRIlkBcFVn8jwhu.NowCl1ZO9y70TNU5r0kAbTd916UACu"),
                         Map.entry("fullName", "Nguyen Van C"),
                         Map.entry("phoneNumber", "0923456789"),
-                        Map.entry("photoUrl", "https://example.com/avatar/driver002.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver002.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -275,7 +275,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("password", "$2a$10$wi/S7awfTrfZMIoiczESfO9H2nQbEY6/DoajfGwUAWas2YMM96U/u"),
                         Map.entry("fullName", "Tran Van D"),
                         Map.entry("phoneNumber", "0934567890"),
-                        Map.entry("photoUrl", "https://example.com/avatar/driver003.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver003.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -1083,12 +1083,12 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev1.put("storeId", "store_001");
         rev1.put("userId", "user_001");
         rev1.put("userName", "Khôi");
-        rev1.put("userAvatarUrl", "https://example.com/avatar/user001.jpg");
+        rev1.put("userAvatarUrl", "https://placehold.co/150?text=user001.jpg");
         rev1.put("starRating", 5);
         rev1.put("comment", "Đồ ăn rất ngon, giao hàng nhanh, đóng gói kỹ lưỡng.");
         rev1.put("imageUrls", List.of(
-                "https://example.com/review/rev001_1.jpg",
-                "https://example.com/review/rev001_2.jpg"
+                "https://placehold.co/600x400?text=rev001_1.jpg",
+                "https://placehold.co/600x400?text=rev001_2.jpg"
         ));
         rev1.put("replyComment", null);
         rev1.put("repliedAt", null);
@@ -1104,7 +1104,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev2.put("storeId", "store_001");
         rev2.put("userId", "user_002");
         rev2.put("userName", "Quản Trị Viên");
-        rev2.put("userAvatarUrl", "https://example.com/avatar/admin.jpg");
+        rev2.put("userAvatarUrl", "https://placehold.co/150?text=admin.jpg");
         rev2.put("starRating", 4);
         rev2.put("comment", "Món ăn ngon, nhưng giao hàng trễ hơn 15 phút.");
         rev2.put("imageUrls", List.of());
@@ -1122,11 +1122,11 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev3.put("storeId", "store_002");
         rev3.put("userId", "user_001");
         rev3.put("userName", "Khôi");
-        rev3.put("userAvatarUrl", "https://example.com/avatar/user001.jpg");
+        rev3.put("userAvatarUrl", "https://placehold.co/150?text=user001.jpg");
         rev3.put("starRating", 5);
         rev3.put("comment", "Trà sữa rất ngon, topping nhiều, uống lạnh.");
         rev3.put("imageUrls", List.of(
-                "https://example.com/review/rev003_1.jpg"
+                "https://placehold.co/600x400?text=rev003_1.jpg"
         ));
         rev3.put("replyComment", null);
         rev3.put("repliedAt", null);
@@ -1142,7 +1142,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev4.put("storeId", "store_003");
         rev4.put("userId", "user_002");
         rev4.put("userName", "Quản Trị Viên");
-        rev4.put("userAvatarUrl", "https://example.com/avatar/admin.jpg");
+        rev4.put("userAvatarUrl", "https://placehold.co/150?text=admin.jpg");
         rev4.put("starRating", 4);
         rev4.put("comment", "Gà rán giòn, ăn biếu như hâm thịt ngọt.");
         rev4.put("imageUrls", List.of());
@@ -1160,12 +1160,12 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev5.put("storeId", "store_004");
         rev5.put("userId", "user_001");
         rev5.put("userName", "Khôi");
-        rev5.put("userAvatarUrl", "https://example.com/avatar/user001.jpg");
+        rev5.put("userAvatarUrl", "https://placehold.co/150?text=user001.jpg");
         rev5.put("starRating", 5);
         rev5.put("comment", "Bún bò Huế ngon chuẩn, nước dùng ngọt thanh.");
         rev5.put("imageUrls", List.of(
-                "https://example.com/review/rev005_1.jpg",
-                "https://example.com/review/rev005_2.jpg"
+                "https://placehold.co/600x400?text=rev005_1.jpg",
+                "https://placehold.co/600x400?text=rev005_2.jpg"
         ));
         rev5.put("replyComment", null);
         rev5.put("repliedAt", null);
@@ -1181,7 +1181,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev6.put("storeId", "store_001");
         rev6.put("userId", "user_003");
         rev6.put("userName", "Lê Văn B");
-        rev6.put("userAvatarUrl", "https://example.com/avatar/driver001.jpg");
+        rev6.put("userAvatarUrl", "https://placehold.co/150?text=driver001.jpg");
         rev6.put("starRating", 4);
         rev6.put("comment", "Cơm tấm ngon, phần ăn vừa đủ.");
         rev6.put("imageUrls", List.of());
@@ -1199,11 +1199,11 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev7.put("storeId", "store_002");
         rev7.put("userId", "user_003");
         rev7.put("userName", "Lê Văn B");
-        rev7.put("userAvatarUrl", "https://example.com/avatar/driver001.jpg");
+        rev7.put("userAvatarUrl", "https://placehold.co/150?text=driver001.jpg");
         rev7.put("starRating", 5);
         rev7.put("comment", "Quán này bán trà sữa ngon lắm, giao hàng cũng nhanh.");
         rev7.put("imageUrls", List.of(
-                "https://example.com/review/rev007_1.jpg"
+                "https://placehold.co/600x400?text=rev007_1.jpg"
         ));
         rev7.put("replyComment", null);
         rev7.put("repliedAt", null);
@@ -1219,7 +1219,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev8.put("storeId", "store_003");
         rev8.put("userId", "user_001");
         rev8.put("userName", "Khôi");
-        rev8.put("userAvatarUrl", "https://example.com/avatar/user001.jpg");
+        rev8.put("userAvatarUrl", "https://placehold.co/150?text=user001.jpg");
         rev8.put("starRating", 3);
         rev8.put("comment", "Ăn cũng được nhưng giá cả hơi cao.");
         rev8.put("imageUrls", List.of());
@@ -1237,7 +1237,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         rev9.put("storeId", "store_005");
         rev9.put("userId", "user_001");
         rev9.put("userName", "Khôi");
-        rev9.put("userAvatarUrl", "https://example.com/avatar/user001.jpg");
+        rev9.put("userAvatarUrl", "https://placehold.co/150?text=user001.jpg");
         rev9.put("starRating", 5);
         rev9.put("comment", "Bún chả siêu ngon, thịt nướng thơm, nước chấm đậm đà!");
         rev9.put("imageUrls", List.of());
@@ -1833,29 +1833,68 @@ public class FirebaseDataSeeder implements ApplicationRunner {
     }
 
     private void seedDriverNotifications() {
-        String userId = "user_001";
-        String collectionName = "driver_profiles/" + userId + "/notifications";
-        List<Map<String, Object>> notifications = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "dnotif_001"),
-                        Map.entry("type", 11),
-                        Map.entry("title", "Yêu cầu nhận đơn mới"),
-                        Map.entry("body", "Ban co don hang moi cho nhan: order_001"),
-                        Map.entry("referenceId", "order_001"),
-                        Map.entry("isRead", false),
-                        Map.entry("createdAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "dnotif_002"),
-                        Map.entry("type", 12),
-                        Map.entry("title", "Thông báo giao hàng"),
-                        Map.entry("body", "Don hang order_001 da duoc giao thanh cong"),
-                        Map.entry("referenceId", "order_001"),
-                        Map.entry("isRead", true),
-                        Map.entry("createdAt", FieldValue.serverTimestamp())
-                )
-        );
-        kiemTraVaSeed(collectionName, notifications);
+        // Seed driver notifications for user_001
+        {
+            String userId = "user_001";
+            String collectionName = "driver_profiles/" + userId + "/notifications";
+            List<Map<String, Object>> notifications = Arrays.asList(
+                    Map.ofEntries(
+                            Map.entry("id", "dnotif_001"),
+                            Map.entry("type", 11),
+                            Map.entry("title", "Yêu cầu nhận đơn mới"),
+                            Map.entry("body", "Ban co don hang moi cho nhan: order_001"),
+                            Map.entry("referenceId", "order_001"),
+                            Map.entry("isRead", false),
+                            Map.entry("createdAt", FieldValue.serverTimestamp())
+                    ),
+                    Map.ofEntries(
+                            Map.entry("id", "dnotif_002"),
+                            Map.entry("type", 12),
+                            Map.entry("title", "Thông báo giao hàng"),
+                            Map.entry("body", "Don hang order_001 da duoc giao thanh cong"),
+                            Map.entry("referenceId", "order_001"),
+                            Map.entry("isRead", true),
+                            Map.entry("createdAt", FieldValue.serverTimestamp())
+                    )
+            );
+            kiemTraVaSeed(collectionName, notifications);
+        }
+
+        // Seed driver notifications for user_002 (Admin UID) to support test notifications
+        {
+            String userId = "user_002";
+            String collectionName = "driver_profiles/" + userId + "/notifications";
+            List<Map<String, Object>> notifications = Arrays.asList(
+                    Map.ofEntries(
+                            Map.entry("id", "dnotif_admin_001"),
+                            Map.entry("type", 11),
+                            Map.entry("title", "Đơn hàng mới phát sinh #FG008"),
+                            Map.entry("body", "Khách hàng Khôi vừa đặt đơn hàng trị giá 170.000đ tại Quán Bún Chả."),
+                            Map.entry("referenceId", "order_008"),
+                            Map.entry("isRead", false),
+                            Map.entry("createdAt", FieldValue.serverTimestamp())
+                    ),
+                    Map.ofEntries(
+                            Map.entry("id", "dnotif_admin_002"),
+                            Map.entry("type", 12),
+                            Map.entry("title", "Yêu cầu rút tiền từ Cửa hàng"),
+                            Map.entry("body", "Quán Cơm Tấm Phúc Lộc Thọ gửi yêu cầu duyệt rút 500.000đ về ví liên kết."),
+                            Map.entry("referenceId", "wallet_trans_001"),
+                            Map.entry("isRead", false),
+                            Map.entry("createdAt", FieldValue.serverTimestamp())
+                    ),
+                    Map.ofEntries(
+                            Map.entry("id", "dnotif_admin_003"),
+                            Map.entry("type", 11),
+                            Map.entry("title", "Đánh giá 5 sao toàn sàn"),
+                            Map.entry("body", "Khách hàng Khôi vừa gửi đánh giá 5 sao cho sản phẩm của Quán Bún Chả."),
+                            Map.entry("referenceId", "order_008"),
+                            Map.entry("isRead", true),
+                            Map.entry("createdAt", FieldValue.serverTimestamp())
+                    )
+            );
+            kiemTraVaSeed(collectionName, notifications);
+        }
     }
 
     private void seedMerchantProfiles() {
