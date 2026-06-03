@@ -49,6 +49,7 @@ public class CheckoutService {
     private final StoreRepository storeRepository;
     private final VoucherRepository voucherRepository;
     private final Firestore firestore;
+    private final NotificationService notificationService;
 
     public CheckoutService(
             AddressRepository addressRepository,
@@ -56,7 +57,8 @@ public class CheckoutService {
             ProductRepository productRepository,
             StoreRepository storeRepository,
             VoucherRepository voucherRepository,
-            Firestore firestore
+            Firestore firestore,
+            NotificationService notificationService
     ) {
         this.addressRepository = addressRepository;
         this.paymentRepository = paymentRepository;
@@ -64,6 +66,7 @@ public class CheckoutService {
         this.storeRepository = storeRepository;
         this.voucherRepository = voucherRepository;
         this.firestore = firestore;
+        this.notificationService = notificationService;
     }
 
     public CheckoutResponse thucHienDatHang(CheckoutRequestV2 request, String authenticatedUserId) {
@@ -200,6 +203,17 @@ public class CheckoutService {
         }
 
         log.info("Dat hang thanh cong - orderId: [{}], orderCode: [{}].", orderId, orderCode);
+
+        String receiverName = diaChi.getReceiverName() != null ? diaChi.getReceiverName() : "Khách hàng";
+        int itemCount = request.getItems().stream().mapToInt(CheckoutRequestV2.CheckoutItem::getQuantity).sum();
+        com.example.be_foodgo.dto.NotificationDTO notif = com.example.be_foodgo.dto.NotificationDTO.builder()
+                .type(21)
+                .title("🛒 Đơn hàng mới từ " + receiverName)
+                .body(orderCode + " · " + itemCount + " món · " + String.format("%,.0f", tongThanhToan) + "đ")
+                .orderId(orderId)
+                .referenceId(orderId)
+                .build();
+        notificationService.notifyMerchantByStoreId(storeId, notif);
 
         return CheckoutResponse.builder()
                 .orderId(orderId)
