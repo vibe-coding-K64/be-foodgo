@@ -414,6 +414,16 @@ public class ReviewService {
             }
         }
         dto.setStoreId(review.getStoreId());
+        if (review.getStoreId() != null) {
+            try {
+                Store store = storeRepository.getStoreById(review.getStoreId());
+                if (store != null) {
+                    dto.setStoreName(store.getName());
+                }
+            } catch (Exception e) {
+                log.error("Loi lay thong tin cua hang de lay ten", e);
+            }
+        }
         dto.setUserId(review.getUserId());
         dto.setUserName(review.getUserName());
         dto.setUserAvatarUrl(review.getUserAvatarUrl());

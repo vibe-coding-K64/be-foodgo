@@ -235,4 +235,19 @@ public class NotificationService {
             log.error("Lỗi khi tìm merchant bằng storeId {}: {}", storeId, e.getMessage());
         }
     }
+
+    public void notifyAdmins(NotificationDTO dto) {
+        try {
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = notificationRepository.getFirestore()
+                    .collection("admin_profiles")
+                    .get().get().getDocuments();
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                String adminId = doc.getId();
+                createNotification("driver_profiles", adminId, dto);
+            }
+            log.info("Đã gửi thông báo hệ thống tới {} quản trị viên.", docs.size());
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo tới các admin: {}", e.getMessage());
+        }
+    }
 }

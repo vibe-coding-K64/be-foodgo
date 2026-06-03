@@ -73,6 +73,14 @@ public class OrderService {
         merchantNotif.setOrderId(orderId);
         notificationService.notifyMerchantByStoreId(dto.getStoreId(), merchantNotif);
 
+        // Gửi thông báo đến Admin khi có đơn hàng mới phát sinh toàn sàn
+        NotificationDTO adminNotif = new NotificationDTO();
+        adminNotif.setTitle("Đơn hàng mới: #" + orderCode);
+        adminNotif.setBody("Khách hàng " + (dto.getReceiverName() != null ? dto.getReceiverName() : "Khách lạ") + " vừa đặt đơn hàng trị giá " + String.format("%,.0f", dto.getFinalAmount()) + "đ tại " + order.getStoreName() + ".");
+        adminNotif.setType(11); // 11 = order type
+        adminNotif.setOrderId(orderId);
+        notificationService.notifyAdmins(adminNotif);
+
         return orderId;
     }
 
@@ -101,6 +109,14 @@ public class OrderService {
                 userNotif.setTitle("Đơn hàng " + orderCode + " đang chuẩn bị");
                 userNotif.setBody("Quán đang chuẩn bị món ăn cho đơn hàng của bạn.");
                 notificationService.createNotification("customer_profiles", order.getUserId(), userNotif);
+
+                // Thông báo Admin
+                NotificationDTO adminNotif = new NotificationDTO();
+                adminNotif.setOrderId(id);
+                adminNotif.setType(11);
+                adminNotif.setTitle("Đơn hàng #" + orderCode + " đã được xác nhận");
+                adminNotif.setBody("Cửa hàng " + order.getStoreName() + " đã xác nhận và đang chuẩn bị món ăn.");
+                notificationService.notifyAdmins(adminNotif);
             } else if (status == 2) {
                 // Đang giao -> Shipper đã lấy hàng
                 String driverName = (order.getDriverName() != null && !order.getDriverName().isEmpty()) ? order.getDriverName() : "Tài xế";
@@ -111,6 +127,14 @@ public class OrderService {
                 merchantNotif.setTitle("Tài xế đang giao đơn " + orderCode);
                 merchantNotif.setBody(driverName + " đã lấy món (" + itemsSummary + ") và đang giao cho khách.");
                 notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
+
+                // Thông báo Admin
+                NotificationDTO adminNotif = new NotificationDTO();
+                adminNotif.setOrderId(id);
+                adminNotif.setType(11);
+                adminNotif.setTitle("Đơn hàng #" + orderCode + " đang được giao");
+                adminNotif.setBody("Tài xế " + driverName + " đã lấy món tại " + order.getStoreName() + " và đang đi giao.");
+                notificationService.notifyAdmins(adminNotif);
             } else if (status == 3) {
                 double merchantIncome = order.getTotalAmount() - order.getShopDiscountAmount();
 
@@ -126,6 +150,14 @@ public class OrderService {
                 merchantNotif.setTitle("Đơn hàng " + orderCode + " hoàn thành");
                 merchantNotif.setBody("Đơn hàng #" + orderCode + " (" + itemsSummary + ") đã giao thành công và tiền đã được cộng vào ví.");
                 notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
+
+                // Thông báo Admin
+                NotificationDTO adminNotif = new NotificationDTO();
+                adminNotif.setOrderId(id);
+                adminNotif.setType(11);
+                adminNotif.setTitle("Đơn hàng #" + orderCode + " hoàn thành");
+                adminNotif.setBody("Đơn giao thành công cho khách hàng " + (order.getReceiverName() != null ? order.getReceiverName() : "Khách") + ".");
+                notificationService.notifyAdmins(adminNotif);
             }
 
             return result;
@@ -173,6 +205,14 @@ public class OrderService {
         merchantNotif.setType(1);
         merchantNotif.setOrderId(orderId);
         notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
+
+        // Thông báo hủy đơn cho Admin
+        NotificationDTO adminNotif = new NotificationDTO();
+        adminNotif.setOrderId(orderId);
+        adminNotif.setType(13); // 13 = cancel type
+        adminNotif.setTitle("Đơn hàng #" + orderCode + " bị hủy");
+        adminNotif.setBody("Đơn hàng #" + orderCode + " đã bị khách hàng hủy. Lý do: " + (reason != null && !reason.trim().isEmpty() ? reason : "Không có lý do cụ thể."));
+        notificationService.notifyAdmins(adminNotif);
 
         // Kiểm tra hoàn tiền cho đơn thanh toán online (không phải tiền mặt)
         if (!isCashPayment(order.getPaymentMethod())) {
