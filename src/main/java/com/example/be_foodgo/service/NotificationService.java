@@ -219,9 +219,12 @@ public class NotificationService {
             log.error("Lỗi khi tạo thông báo cho {} ({}): {}", profileCollection, profileId, e.getMessage());
         }
     }
-
+    @SuppressWarnings("unchecked")
     public void notifyMerchantByStoreId(String storeId, NotificationDTO dto) {
         try {
+            log.info("notifyMerchantByStoreId - Tìm merchant với storeId: {}", storeId);
+            
+            // Cách 1: Query whereArrayContains
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = notificationRepository.getFirestore()
                     .collection("merchant_profiles")
                     .whereArrayContains("storeIds", storeId)
@@ -229,10 +232,32 @@ public class NotificationService {
                     .get().get().getDocuments();
             if (!docs.isEmpty()) {
                 String merchantId = docs.get(0).getId();
+                log.info("notifyMerchantByStoreId - Tìm thấy merchant (qua whereArrayContains): {}", merchantId);
                 createNotification("merchant_profiles", merchantId, dto);
+                return;
             }
+            
+            // Cách 2: Duyệt tất cả merchant_profiles, check storeIds thủ công
+            log.warn("notifyMerchantByStoreId - whereArrayContains không tìm thấy, duyệt toàn bộ merchant_profiles");
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> allDocs = notificationRepository.getFirestore()
+                    .collection("merchant_profiles")
+                    .get().get().getDocuments();
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : allDocs) {
+                Object storeIdsObj = doc.get("storeIds");
+                if (storeIdsObj instanceof List) {
+                    List<String> storeIds = (List<String>) storeIdsObj;
+                    if (storeIds.contains(storeId)) {
+                        String merchantId = doc.getId();
+                        log.info("notifyMerchantByStoreId - Tìm thấy merchant (qua duyệt thủ công): {}", merchantId);
+                        createNotification("merchant_profiles", merchantId, dto);
+                        return;
+                    }
+                }
+            }
+            
+            log.warn("notifyMerchantByStoreId - Không tìm thấy merchant nào cho storeId: {}", storeId);
         } catch (Exception e) {
-            log.error("Lỗi khi tìm merchant bằng storeId {}: {}", storeId, e.getMessage());
+            log.error("Lỗi khi tìm merchant bằng storeId {}: {}", storeId, e.getMessage(), e);
         }
     }
 
