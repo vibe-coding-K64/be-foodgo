@@ -200,9 +200,9 @@ public class OrderService {
         String orderCode = getOrderCodeDisplay(order);
         // Thông báo hủy đơn cho Quán
         NotificationDTO merchantNotif = new NotificationDTO();
-        merchantNotif.setTitle("Đơn hàng " + orderCode + " bị hủy");
+        merchantNotif.setTitle("Đơn hàng #" + orderCode + " đã bị hủy");
         merchantNotif.setBody("Khách hàng đã hủy đơn hàng #" + orderCode + ". Lý do: " + (reason != null ? reason : "Không có"));
-        merchantNotif.setType(1);
+        merchantNotif.setType(4);
         merchantNotif.setOrderId(orderId);
         notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
 
