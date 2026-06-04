@@ -83,7 +83,10 @@ public class StoreRepository {
             if (store != null) {
                 store.setId(doc.getId());
                 store.setIsOpen(doc.getBoolean("isOpen") != null && doc.getBoolean("isOpen"));
-                stores.add(store);
+                String status = store.getApprovalStatus();
+                if (status == null || "approved".equals(status)) {
+                    stores.add(store);
+                }
             }
         }
         return stores;

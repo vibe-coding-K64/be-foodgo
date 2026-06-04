@@ -19,6 +19,9 @@ public class CategoryRepository {
     private Firestore firestore;
 
     public List<Category> findAll(String storeId) throws ExecutionException, InterruptedException {
+        if (storeId == null || storeId.isEmpty() || "null".equalsIgnoreCase(storeId) || "system".equalsIgnoreCase(storeId)) {
+            return findAllSystemCategories();
+        }
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("storeId", storeId)
                 .get();
@@ -43,6 +46,9 @@ public class CategoryRepository {
     }
 
     public Category findByOrder(String storeId, int order) throws ExecutionException, InterruptedException {
+        if (storeId == null || storeId.isEmpty() || "null".equalsIgnoreCase(storeId) || "system".equalsIgnoreCase(storeId)) {
+            return findSystemCategoryByOrder(order);
+        }
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("storeId", storeId)
                 .whereEqualTo("order", order).get();
@@ -81,7 +87,8 @@ public class CategoryRepository {
         List<Category> categories = new ArrayList<>();
         for (QueryDocumentSnapshot document : documents) {
             Category cat = document.toObject(Category.class);
-            if (cat.getStoreId() == null) {
+            boolean isSys = cat.getStoreId() == null || cat.getStoreId().isEmpty() || "null".equalsIgnoreCase(cat.getStoreId()) || "system".equalsIgnoreCase(cat.getStoreId());
+            if (isSys) {
                 categories.add(cat);
             }
         }
@@ -109,7 +116,8 @@ public class CategoryRepository {
         List<String> ids = new ArrayList<>();
         for (QueryDocumentSnapshot doc : documents) {
             Category cat = doc.toObject(Category.class);
-            if (cat.getStoreId() == null) {
+            boolean isSys = cat.getStoreId() == null || cat.getStoreId().isEmpty() || "null".equalsIgnoreCase(cat.getStoreId()) || "system".equalsIgnoreCase(cat.getStoreId());
+            if (isSys) {
                 ids.add(doc.getId());
             }
         }
@@ -134,7 +142,8 @@ public class CategoryRepository {
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         for (QueryDocumentSnapshot doc : documents) {
             Category cat = doc.toObject(Category.class);
-            if (cat.getStoreId() == null && order == cat.getOrder()) {
+            boolean isSys = cat.getStoreId() == null || cat.getStoreId().isEmpty() || "null".equalsIgnoreCase(cat.getStoreId()) || "system".equalsIgnoreCase(cat.getStoreId());
+            if (isSys && cat.getOrder() != null && order == cat.getOrder()) {
                 return cat;
             }
         }

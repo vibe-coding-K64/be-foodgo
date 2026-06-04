@@ -17,6 +17,8 @@ public class Store {
     private String avtUrl;
     private String backUrl;
     private boolean isOpen;
+    private String approvalStatus; // "pending" | "approved" | "rejected"
+    private String rejectReason;
 
     @PropertyName("isOpen")
     @JsonProperty("isOpen")
