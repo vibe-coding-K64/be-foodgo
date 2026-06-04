@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -50,20 +51,63 @@ public class AdminStatsController extends BaseController {
                     responseCode = "403",
                     description = "Khong co quyen truy cap (khong phai Admin)")
     })
-    public ResponseEntity<?> getSystemStats(HttpServletRequest httpRequest) {
+    public ResponseEntity<?> getSystemStats(
+            HttpServletRequest httpRequest,
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
         ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
         if (holder.isAuthError) {
             return ResponseEntity.status(401).body(holder.errorResponse);
         }
 
-        // Kiem tra quyen Admin (chung ta co the check role hoac user profile)
-        // O day, de don gian, tat ca api duoi /api/admin se kiem tra qua quy trinh thong thuong.
-        // Neu can, co the check role cua user trong database users: role == 4 (Admin)
         try {
-            Map<String, Object> stats = statsService.getSystemStats();
+            Map<String, Object> stats;
+            if (period != null && !period.isBlank()) {
+                stats = statsService.getSystemStatsByPeriod(period, from, to);
+            } else {
+                stats = statsService.getSystemStats();
+            }
             return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke he thong thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay thong ke he thong: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
+    @GetMapping("/stats/period")
+    @Operation(
+            summary = "Lay thong ke he thong theo khoang thoi gian",
+            description = "Lay thong ke doanh thu, don hang theo period (today/week/month/custom) va so sanh voi ky truoc."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lay thong ke thanh cong",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Chua xac thuc"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Khong co quyen truy cap (khong phai Admin)")
+    })
+    public ResponseEntity<?> getStatsByPeriod(
+            HttpServletRequest httpRequest,
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            Map<String, Object> stats = statsService.getSystemStatsByPeriod(period, from, to);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke theo period thanh cong."));
+        } catch (Exception e) {
+            log.error("Loi khi lay thong ke theo period: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(
                     ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
         }

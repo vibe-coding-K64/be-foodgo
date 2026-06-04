@@ -261,6 +261,153 @@ public class StatsService {
         }
     }
 
+    public Map<String, Object> getSystemStatsByPeriod(String period, String from, String to) {
+        log.info("Bat dau lay thong ke he thong theo period={}, from={}, to={}", period, from, to);
+        try {
+            com.google.cloud.firestore.Firestore firestore = walletRepository.getFirestore();
+
+            ZoneId zone = ZoneId.systemDefault();
+            LocalDate today = LocalDate.now(zone);
+
+            LocalDate periodStart;
+            LocalDate periodEnd;
+
+            switch (period.toLowerCase()) {
+                case "today":
+                    periodStart = today;
+                    periodEnd = today;
+                    break;
+                case "week":
+                    periodStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+                    periodEnd = periodStart.plusDays(6);
+                    break;
+                case "month":
+                    periodStart = today.withDayOfMonth(1);
+                    periodEnd = YearMonth.from(today).atEndOfMonth();
+                    break;
+                case "custom":
+                    periodStart = LocalDate.parse(from);
+                    periodEnd = LocalDate.parse(to);
+                    break;
+                default:
+                    periodStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+                    periodEnd = periodStart.plusDays(6);
+            }
+
+            Instant fromInstant = periodStart.atStartOfDay(zone).toInstant();
+            Instant toInstant = periodEnd.plusDays(1).atStartOfDay(zone).toInstant();
+
+            long periodLength = periodEnd.toEpochDay() - periodStart.toEpochDay() + 1;
+            LocalDate prevPeriodStart = periodStart.minusDays(periodLength);
+            LocalDate prevPeriodEnd = periodStart.minusDays(1);
+            Instant prevFromInstant = prevPeriodStart.atStartOfDay(zone).toInstant();
+            Instant prevToInstant = prevPeriodEnd.plusDays(1).atStartOfDay(zone).toInstant();
+
+            // Lay tat ca don hang hoan thanh (status=3)
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> completedOrders = firestore.collection("orders")
+                    .whereEqualTo("status", 3)
+                    .get()
+                    .get()
+                    .getDocuments();
+
+            // Tinh period stats
+            double periodRevenue = 0.0;
+            long periodOrders = 0L;
+            double prevPeriodRevenue = 0.0;
+            long prevPeriodOrders = 0L;
+
+            // Daily revenue map for chart
+            Map<LocalDate, Double> dailyRevenueMap = new HashMap<>();
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : completedOrders) {
+                Instant orderTime = toInstant(doc.get("createdAt"));
+                if (orderTime == null) continue;
+                Double amount = doc.getDouble("totalAmount");
+                double amt = amount != null ? amount : 0.0;
+
+                // Period
+                if (!orderTime.isBefore(fromInstant) && orderTime.isBefore(toInstant)) {
+                    periodRevenue += amt;
+                    periodOrders++;
+                    LocalDate orderDate = orderTime.atZone(zone).toLocalDate();
+                    dailyRevenueMap.merge(orderDate, amt, Double::sum);
+                }
+
+                // Previous period
+                if (!orderTime.isBefore(prevFromInstant) && orderTime.isBefore(prevToInstant)) {
+                    prevPeriodRevenue += amt;
+                    prevPeriodOrders++;
+                }
+            }
+
+            // Revenue growth %
+            double revenueGrowth = prevPeriodRevenue == 0.0 ? 0.0
+                    : (periodRevenue - prevPeriodRevenue) / prevPeriodRevenue * 100.0;
+
+            // Build daily revenue list for chart (one entry per day in the period)
+            List<Double> periodDailyRevenue = new ArrayList<>();
+            LocalDate cursor = periodStart;
+            while (!cursor.isAfter(periodEnd)) {
+                periodDailyRevenue.add(dailyRevenueMap.getOrDefault(cursor, 0.0));
+                cursor = cursor.plusDays(1);
+            }
+
+            // Global stats
+            long totalOrders = firestore.collection("orders").get().get().size();
+            long totalStores = firestore.collection("stores").get().get().size();
+            long totalDrivers = firestore.collection("users").whereEqualTo("role", 2).get().get().size();
+            long totalCustomers = firestore.collection("users").whereEqualTo("role", 1).get().get().size();
+
+            double totalRevenue = 0.0;
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : completedOrders) {
+                Double amount = doc.getDouble("totalAmount");
+                if (amount != null) totalRevenue += amount;
+            }
+
+            // Top 5 stores theo reviewCount
+            List<Map<String, Object>> topStores = new ArrayList<>();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> storeDocs = firestore.collection("stores").get().get().getDocuments();
+            for (com.google.cloud.firestore.QueryDocumentSnapshot storeDoc : storeDocs) {
+                Map<String, Object> storeData = new HashMap<>();
+                storeData.put("id", storeDoc.getId());
+                storeData.put("name", storeDoc.getString("name") != null ? storeDoc.getString("name") : "N/A");
+                Long reviewCount = storeDoc.getLong("reviewCount");
+                storeData.put("reviewCount", reviewCount != null ? reviewCount : 0L);
+                Double rating = storeDoc.getDouble("rating");
+                storeData.put("rating", rating != null ? rating : 0.0);
+                topStores.add(storeData);
+            }
+            topStores.sort((a, b) -> Long.compare(
+                    ((Number) b.getOrDefault("reviewCount", 0L)).longValue(),
+                    ((Number) a.getOrDefault("reviewCount", 0L)).longValue()
+            ));
+            if (topStores.size() > 5) topStores = topStores.subList(0, 5);
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("periodRevenue", periodRevenue);
+            stats.put("periodOrders", periodOrders);
+            stats.put("prevPeriodRevenue", prevPeriodRevenue);
+            stats.put("prevPeriodOrders", prevPeriodOrders);
+            stats.put("revenueGrowth", revenueGrowth);
+            stats.put("periodDailyRevenue", periodDailyRevenue);
+            stats.put("totalRevenue", totalRevenue);
+            stats.put("totalOrders", totalOrders);
+            stats.put("totalStores", totalStores);
+            stats.put("totalDrivers", totalDrivers);
+            stats.put("totalCustomers", totalCustomers);
+            stats.put("topStores", topStores);
+
+            return stats;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay thong ke theo period: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay thong ke theo period: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     private Double toDouble(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).doubleValue();

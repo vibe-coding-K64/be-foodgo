@@ -226,4 +226,12 @@ public class UserRepository {
         }
         return obj.toString();
     }
+
+    public void capNhatRoles(String userId, List<Integer> roles) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("roles", roles);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
 }

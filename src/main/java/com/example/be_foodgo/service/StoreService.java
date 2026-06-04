@@ -57,6 +57,8 @@ public class StoreService {
         store.setAvtUrl(storeDTO.getAvtUrl());
         store.setBackUrl(storeDTO.getBackUrl());
         store.setIsOpen(false);
+        store.setApprovalStatus("pending");
+        store.setRejectReason("");
         store.setDeliveryTime(storeDTO.getDeliveryTime() != null ? storeDTO.getDeliveryTime() : "20-30 phút");
         store.setDeliveryFee(storeDTO.getDeliveryFee() != null ? storeDTO.getDeliveryFee() : 15000.0);
         store.setCategoryIds(storeDTO.getCategoryIds() != null ? storeDTO.getCategoryIds() : new java.util.ArrayList<>());
@@ -122,6 +124,12 @@ public class StoreService {
         store.setAvtUrl(storeDTO.getAvtUrl());
         store.setBackUrl(storeDTO.getBackUrl());
         store.setIsOpen(storeDTO.getIsOpen());
+        if (storeDTO.getApprovalStatus() != null) {
+            store.setApprovalStatus(storeDTO.getApprovalStatus());
+        }
+        if (storeDTO.getRejectReason() != null) {
+            store.setRejectReason(storeDTO.getRejectReason());
+        }
         store.setDeliveryTime(storeDTO.getDeliveryTime());
         store.setDeliveryFee(storeDTO.getDeliveryFee());
         store.setCategoryIds(storeDTO.getCategoryIds());
@@ -190,6 +198,8 @@ public class StoreService {
         dto.setAvtUrl(store.getAvtUrl());
         dto.setBackUrl(store.getBackUrl());
         dto.setIsOpen(store.getIsOpen());
+        dto.setApprovalStatus(store.getApprovalStatus());
+        dto.setRejectReason(store.getRejectReason());
         dto.setDeliveryTime(store.getDeliveryTime());
         dto.setDeliveryFee(store.getDeliveryFee());
         dto.setCategoryIds(store.getCategoryIds());

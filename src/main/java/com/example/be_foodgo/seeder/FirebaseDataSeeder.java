@@ -329,15 +329,15 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         String collectionName = "categories";
         List<Map<String, Object>> categories = Arrays.asList(
                 createCategoryMap("syscate_001", null, "Cơm", "restaurant", 1, "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
-                createCategoryMap("syscate_002", null, "Phở/Bún", "restaurant", 2, "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
+                createCategoryMap("syscate_002", null, "Phở/Bún", "restaurant", 2, "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400&q=80"),
                 createCategoryMap("syscate_003", null, "Trà sữa", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                 createCategoryMap("syscate_004", null, "Ăn vặt", "fastfood", 4, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                 createCategoryMap("syscate_005", null, "Gà rán", "fastfood", 5, "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                 createCategoryMap("syscate_006", null, "Món Hàn", "restaurant", 6, "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400&q=80"),
-                createCategoryMap("syscate_007", null, "Món Nhật", "restaurant", 7, "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
-                createCategoryMap("syscate_008", null, "Bánh mì", "bakery_dining", 8, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
+                createCategoryMap("syscate_007", null, "Món Nhật", "restaurant", 7, "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&q=80"),
+                createCategoryMap("syscate_008", null, "Bánh mì", "bakery_dining", 8, "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&q=80"),
                 createCategoryMap("syscate_009", null, "Lẩu/Buffet", "restaurant", 9, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
-                createCategoryMap("syscate_010", null, "Trà cây", "local_cafe", 10, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80")
+                createCategoryMap("syscate_010", null, "Trà cây", "local_cafe", 10, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80")
         );
         kiemTraVaSeed(collectionName, categories);
     }

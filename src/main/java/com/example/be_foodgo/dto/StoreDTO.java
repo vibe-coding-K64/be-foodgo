@@ -17,6 +17,8 @@ public class StoreDTO {
     private String avtUrl;
     private String backUrl;
     private boolean isOpen;
+    private String approvalStatus;
+    private String rejectReason;
 
     @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
     public boolean getIsOpen() {

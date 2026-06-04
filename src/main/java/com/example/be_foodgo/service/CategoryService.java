@@ -53,7 +53,7 @@ public class CategoryService {
     }
 
     public String createCategory(CategoryDTO dto) throws ExecutionException, InterruptedException {
-        boolean isSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty();
+        boolean isSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty() || "null".equalsIgnoreCase(dto.getStoreId()) || "system".equalsIgnoreCase(dto.getStoreId());
 
         if (isSystem) {
             Category existing = categoryRepository.findSystemCategoryByOrder(dto.getOrder());
@@ -69,7 +69,7 @@ public class CategoryService {
 
         Category category = new Category();
         category.setId(generateNextCategoryId(isSystem));
-        category.setStoreId(dto.getStoreId());
+        category.setStoreId(isSystem ? null : dto.getStoreId());
         category.setName(dto.getName());
         category.setIcon(dto.getIcon());
         category.setOrder(dto.getOrder());
@@ -103,7 +103,7 @@ public class CategoryService {
     public String updateCategory(String id, CategoryDTO dto) throws ExecutionException, InterruptedException {
         Category category = categoryRepository.findById(id);
         if (category != null) {
-            boolean newIsSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty();
+            boolean newIsSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty() || "null".equalsIgnoreCase(dto.getStoreId()) || "system".equalsIgnoreCase(dto.getStoreId());
 
             if (!category.getOrder().equals(dto.getOrder())) {
                 Category existing;
@@ -113,7 +113,9 @@ public class CategoryService {
                     existing = categoryRepository.findStoreCategoryByOrder(dto.getStoreId(), dto.getOrder());
                 }
                 if (existing != null && !existing.getId().equals(id)) {
-                    throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại. Vui lòng chọn vị trí khác.");
+                    // Tự động đổi chỗ vị trí (Swap)
+                    existing.setOrder(category.getOrder());
+                    categoryRepository.save(existing);
                 }
             }
 
@@ -121,6 +123,7 @@ public class CategoryService {
             category.setIcon(dto.getIcon());
             category.setOrder(dto.getOrder());
             category.setImageUrl(dto.getImageUrl());
+            category.setStoreId(newIsSystem ? null : dto.getStoreId());
             category.setUpdatedAt(Timestamp.now());
             return categoryRepository.save(category);
         }
