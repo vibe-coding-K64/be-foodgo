@@ -142,6 +142,37 @@ public class StoreController {
         }
     }
 
+    @PostMapping("/{id}/lock")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Tạm khóa cửa hàng", description = "Admin tạm khóa cửa hàng kèm lý do")
+    public ResponseEntity<?> lockStore(@PathVariable String id, @RequestBody Map<String, String> body) {
+        try {
+            String reason = body != null ? body.get("reason") : null;
+            storeService.lockStore(id, reason);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Đã tạm khóa cửa hàng.", "storeId", id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi tam khoa cua hang {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Đã xảy ra lỗi khi tạm khóa cửa hàng."));
+        }
+    }
+
+    @PostMapping("/{id}/unlock")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Mở khóa cửa hàng", description = "Admin mở khóa cửa hàng")
+    public ResponseEntity<?> unlockStore(@PathVariable String id) {
+        try {
+            storeService.unlockStore(id);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Đã mở khóa cửa hàng thành công.", "storeId", id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Loi khi mo khoa cua hang {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Đã xảy ra lỗi khi mở khóa cửa hàng."));
+        }
+    }
+
     @GetMapping("/nearby")
     @Operation(summary = "Lấy danh sách cửa hàng lân cận", description = "Tìm các cửa hàng trong bán kính cho trước")
     public ResponseEntity<Map<String, Object>> getNearbyStores(

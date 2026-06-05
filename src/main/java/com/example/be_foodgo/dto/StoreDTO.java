@@ -19,6 +19,7 @@ public class StoreDTO {
     private boolean isOpen;
     private String approvalStatus;
     private String rejectReason;
+    private String adminLockedReason;
 
     @com.fasterxml.jackson.annotation.JsonProperty("isOpen")
     public boolean getIsOpen() {

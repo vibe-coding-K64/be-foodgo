@@ -435,7 +435,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_001"), Map.entry("name", "Com tam Phuc Loc Tho"),
                         Map.entry("address", "123 Le Van Viet, TP. Thu Duc"),
-                        Map.entry("rating", 4.8), Map.entry("reviewCount", 500),
+                        Map.entry("rating", 4.3), Map.entry("reviewCount", 3),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "20-30 phut"),
@@ -456,7 +456,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_002"), Map.entry("name", "Tra sua Tocotoco"),
                         Map.entry("address", "456 Nguyen Thi Dinh, TP. Thu Duc"),
-                        Map.entry("rating", 4.6), Map.entry("reviewCount", 300),
+                        Map.entry("rating", 5.0), Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1557992260-ec58fa23b80b?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "15-25 phut"),
@@ -469,7 +469,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_003"), Map.entry("name", "Ga ran KFC Nguyen Cuu"),
                         Map.entry("address", "789 Nguyen Cuu, TP. Thu Duc"),
-                        Map.entry("rating", 4.5), Map.entry("reviewCount", 800),
+                        Map.entry("rating", 3.5), Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "25-35 phut"),
@@ -482,13 +482,39 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_004"), Map.entry("name", "Bun bo Hue Ba Le"),
                         Map.entry("address", "101 Pho Hue, Q.1, TP.HCM"),
-                        Map.entry("rating", 4.7), Map.entry("reviewCount", 450),
+                        Map.entry("rating", 5.0), Map.entry("reviewCount", 1),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "30-40 phut"),
                         Map.entry("deliveryFee", 20000.0),
                         Map.entry("categoryIds", Arrays.asList("cate_002")),
                         Map.entry("lat", 10.8460), Map.entry("lng", 106.7880),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "store_005"),
+                        Map.entry("name", "Quan Bun Cha"),
+                        Map.entry("description", "Bun cha Ha Noi chuan vi voi thit nuong than hoa thom lung."),
+                        Map.entry("address", "Le Van Viet"),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1),
+                        Map.entry("avtUrl", "https://tse3.mm.bing.net/th?id=OIF.k%2fmH6P9NM9GRsGE1VREFSw&pid=Api&P=0&h=180"),
+                        Map.entry("backUrl", "https://tse3.mm.bing.net/th?id=OIF.0%2fwhOkeGa%2brJy%2f4BHVY9RA&pid=Api&P=0&h=180"),
+                        Map.entry("isOpen", true),
+                        Map.entry("deliveryTime", "20-30 phut"),
+                        Map.entry("deliveryFee", 20000.0),
+                        Map.entry("categoryIds", Arrays.asList("cate_002")),
+                        Map.entry("lat", 10.8510),
+                        Map.entry("lng", 106.7860),
+                        Map.entry("restaurant_categories", Map.of(
+                                "rest_cate_003", Map.of(
+                                        "name", "Bun cha",
+                                        "order", 1,
+                                        "createdAt", FieldValue.serverTimestamp(),
+                                        "updatedAt", FieldValue.serverTimestamp()
+                                )
+                        )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -697,6 +723,30 @@ public class FirebaseResetService {
                         Map.entry("basePrice", 15000.0),
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "prod_016"),
+                        Map.entry("storeId", "store_005"),
+                        Map.entry("categoryId", "cate_002"),
+                        Map.entry("categoryName", "Pho/Bun"),
+                        Map.entry("name", "Bun cha Ha Noi"),
+                        Map.entry("description", "Bun cha chuan vi Ha Noi voi thit nuong than hoa thom lung"),
+                        Map.entry("basePrice", 50000.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
+                        Map.entry("isOutOfStock", false),
+                        Map.entry("isFeatured", true),
+                        Map.entry("optionGroups", List.of(
+                                Map.of(
+                                        "name", "Kich thuoc",
+                                        "isSingleSelect", true,
+                                        "options", List.of(
+                                                Map.of("name", "Phan nho", "price", 0.0),
+                                                Map.of("name", "Phan dac biet", "price", 15000.0)
+                                        )
+                                )
+                        )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -1096,6 +1146,46 @@ public class FirebaseResetService {
         order7.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order7);
 
+        List<Map<String, Object>> order8Items = new ArrayList<>();
+        Map<String, Object> order8Item1 = new HashMap<>();
+        order8Item1.put("foodId", "prod_016");
+        order8Item1.put("name", "Bún chả Hà Nội");
+        order8Item1.put("price", 65000.0);
+        order8Item1.put("quantity", 2);
+        order8Item1.put("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80");
+        List<Map<String, Object>> order8Item1Options = new ArrayList<>();
+        Map<String, Object> order8Item1Opt = new HashMap<>();
+        order8Item1Opt.put("name", "Phần đặc biệt");
+        order8Item1Opt.put("price", 15000.0);
+        order8Item1Options.add(order8Item1Opt);
+        order8Item1.put("options", order8Item1Options);
+        order8Items.add(order8Item1);
+
+        Map<String, Object> order8 = new HashMap<>();
+        order8.put("id", "order_008");
+        order8.put("userId", "user_001");
+        order8.put("storeId", "store_005");
+        order8.put("storeName", "Quán Bún Chả");
+        order8.put("code", "FG008");
+        order8.put("addressId", "addr_001");
+        order8.put("items", order8Items);
+        order8.put("totalAmount", 150000.0);
+        order8.put("deliveryFee", 20000.0);
+        order8.put("discountAmount", 0.0);
+        order8.put("shopDiscountAmount", 0.0);
+        order8.put("freeshipDiscountAmount", 0.0);
+        order8.put("finalAmount", 170000.0);
+        order8.put("status", 3);
+        order8.put("deliveryAddress", "123 Lê Văn Việt, TP Thủ Đức");
+        order8.put("receiverName", "Khôi");
+        order8.put("receiverPhone", "0123456789");
+        order8.put("paymentMethod", "momo");
+        order8.put("driverName", "Lê Văn B");
+        order8.put("driverPhone", "0912345678");
+        order8.put("createdAt", FieldValue.serverTimestamp());
+        order8.put("updatedAt", FieldValue.serverTimestamp());
+        orders.add(order8);
+
         seedDirect("orders", orders);
     }
 
@@ -1356,5 +1446,37 @@ public class FirebaseResetService {
                 )
         );
         seedDirect("admin_profiles", profiles);
+
+        List<Map<String, Object>> notifications = Arrays.asList(
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_001"),
+                        Map.entry("type", 11),
+                        Map.entry("title", "Đơn hàng mới phát sinh #FG008"),
+                        Map.entry("body", "Khách hàng Khôi vừa đặt đơn hàng trị giá 170.000đ tại Quán Bún Chả."),
+                        Map.entry("referenceId", "order_008"),
+                        Map.entry("orderId", "order_008"),
+                        Map.entry("isRead", false),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_002"),
+                        Map.entry("type", 12),
+                        Map.entry("title", "Yêu cầu rút tiền từ Cửa hàng"),
+                        Map.entry("body", "Quán Cơm Tấm Phúc Lộc Thọ gửi yêu cầu duyệt rút 500.000đ về ví liên kết."),
+                        Map.entry("referenceId", "wallet_trans_001"),
+                        Map.entry("isRead", false),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_003"),
+                        Map.entry("type", 31),
+                        Map.entry("title", "Đánh giá 5 sao toàn sàn"),
+                        Map.entry("body", "Khách hàng Khôi vừa gửi đánh giá 5 sao cho sản phẩm của Quán Bún Chả."),
+                        Map.entry("referenceId", "order_008"),
+                        Map.entry("isRead", true),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                )
+        );
+        seedSubCollection("admin_profiles/user_002/notifications", notifications);
     }
 }

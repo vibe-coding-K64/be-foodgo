@@ -19,6 +19,7 @@ public class Store {
     private boolean isOpen;
     private String approvalStatus; // "pending" | "approved" | "rejected"
     private String rejectReason;
+    private String adminLockedReason;
 
     @PropertyName("isOpen")
     @JsonProperty("isOpen")

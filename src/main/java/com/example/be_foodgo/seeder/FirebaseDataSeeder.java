@@ -378,8 +378,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Cơm Tấm Phúc Lộc Thọ"),
                         Map.entry("description", "Quán cơm tấm ngon nhất khu vực TP. Thủ Đức với sườn nướng và bì chả đậm đà."),
                         Map.entry("address", "123 Lê Văn Việt, TP. Thủ Đức"),
-                        Map.entry("rating", 4.8),
-                        Map.entry("reviewCount", 500),
+                        Map.entry("rating", 4.3),
+                        Map.entry("reviewCount", 3),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80"),
                         Map.entry("isOpen", true),
@@ -410,8 +410,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Trà Sữa Tocotoco"),
                         Map.entry("description", "Trà sữa và đồ uống ngon với nhiều loại topping phong phú."),
                         Map.entry("address", "456 Nguyễn Thi Định, TP. Thủ Đức"),
-                        Map.entry("rating", 4.6),
-                        Map.entry("reviewCount", 300),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1557992260-ec58fa23b80b?w=800&q=80"),
                         Map.entry("isOpen", true),
@@ -428,8 +428,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Gà Rán KFC Nguyễn Cửu"),
                         Map.entry("description", "Gà rán giòn rụm, đa dạng menu với giá cả hợp lý."),
                         Map.entry("address", "789 Nguyễn Cửu, TP. Thủ Đức"),
-                        Map.entry("rating", 4.5),
-                        Map.entry("reviewCount", 800),
+                        Map.entry("rating", 3.5),
+                        Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80"),
                         Map.entry("isOpen", true),
@@ -446,8 +446,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Bún Bò Huế Ba Lẻ"),
                         Map.entry("description", "Bún bò Huế chuẩn vị với nước dùng đậm đà, thịt bò tươi ngon."),
                         Map.entry("address", "101 Phố Huế, Q.1, TP.HCM"),
-                        Map.entry("rating", 4.7),
-                        Map.entry("reviewCount", 450),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80"),
                         Map.entry("isOpen", true),
@@ -465,7 +465,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("description", "Bún chả Hà Nội chuẩn vị với thịt nướng than hoa thơm lừng."),
                         Map.entry("address", "Lê Văn Việt"),
                         Map.entry("rating", 5.0),
-                        Map.entry("reviewCount", 120),
+                        Map.entry("reviewCount", 1),
                         Map.entry("avtUrl", "https://tse3.mm.bing.net/th?id=OIF.k%2fmH6P9NM9GRsGE1VREFSw&pid=Api&P=0&h=180"),
                         Map.entry("backUrl", "https://tse3.mm.bing.net/th?id=OIF.0%2fwhOkeGa%2brJy%2f4BHVY9RA&pid=Api&P=0&h=180"),
                         Map.entry("isOpen", true),
@@ -1860,22 +1860,23 @@ public class FirebaseDataSeeder implements ApplicationRunner {
             kiemTraVaSeed(collectionName, notifications);
         }
 
-        // Seed driver notifications for user_002 (Admin UID) to support test notifications
+        // Seed admin notifications for user_002 (Admin UID) to support test notifications
         {
             String userId = "user_002";
-            String collectionName = "driver_profiles/" + userId + "/notifications";
+            String collectionName = "admin_profiles/" + userId + "/notifications";
             List<Map<String, Object>> notifications = Arrays.asList(
                     Map.ofEntries(
-                            Map.entry("id", "dnotif_admin_001"),
+                            Map.entry("id", "anotif_admin_001"),
                             Map.entry("type", 11),
                             Map.entry("title", "Đơn hàng mới phát sinh #FG008"),
                             Map.entry("body", "Khách hàng Khôi vừa đặt đơn hàng trị giá 170.000đ tại Quán Bún Chả."),
                             Map.entry("referenceId", "order_008"),
+                            Map.entry("orderId", "order_008"),
                             Map.entry("isRead", false),
                             Map.entry("createdAt", FieldValue.serverTimestamp())
                     ),
                     Map.ofEntries(
-                            Map.entry("id", "dnotif_admin_002"),
+                            Map.entry("id", "anotif_admin_002"),
                             Map.entry("type", 12),
                             Map.entry("title", "Yêu cầu rút tiền từ Cửa hàng"),
                             Map.entry("body", "Quán Cơm Tấm Phúc Lộc Thọ gửi yêu cầu duyệt rút 500.000đ về ví liên kết."),
@@ -1884,8 +1885,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                             Map.entry("createdAt", FieldValue.serverTimestamp())
                     ),
                     Map.ofEntries(
-                            Map.entry("id", "dnotif_admin_003"),
-                            Map.entry("type", 11),
+                            Map.entry("id", "anotif_admin_003"),
+                            Map.entry("type", 31),
                             Map.entry("title", "Đánh giá 5 sao toàn sàn"),
                             Map.entry("body", "Khách hàng Khôi vừa gửi đánh giá 5 sao cho sản phẩm của Quán Bún Chả."),
                             Map.entry("referenceId", "order_008"),
