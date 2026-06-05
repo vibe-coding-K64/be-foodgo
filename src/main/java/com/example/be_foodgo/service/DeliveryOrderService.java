@@ -1,6 +1,8 @@
 package com.example.be_foodgo.service;
 
+import com.example.be_foodgo.constant.DeliveryOrderStatus;
 import com.example.be_foodgo.dto.DeliveryOrderDTO;
+import com.example.be_foodgo.dto.DriverOrderActionResultDTO;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.OrderRequestRepository;
 import com.example.be_foodgo.repository.StatsRepository;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class DeliveryOrderService {
@@ -44,18 +47,7 @@ public class DeliveryOrderService {
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
-
-                Object storeIdObj = data.get("storeId");
-                if (storeIdObj != null) {
-                    Map<String, Object> storeData = statsRepository.findStoreById(storeIdObj.toString());
-                    if (storeData != null) {
-                        dto.setStoreAddress((String) storeData.get("address"));
-                        dto.setStoreLat(toDouble(storeData.get("lat")));
-                        dto.setStoreLng(toDouble(storeData.get("lng")));
-                    }
-                }
-
+                DeliveryOrderDTO dto = buildDeliveryOrderDTO(doc.getId(), data);
                 orders.add(dto);
             }
 
@@ -67,6 +59,30 @@ public class DeliveryOrderService {
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi lay don hang kha dung: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    public DeliveryOrderDTO getOrderDetail(String orderId) {
+        log.info("Bat dau lay chi tiet don hang cho tai xe: orderId={}", orderId);
+        try {
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+            if (orderData == null) {
+                throw BusinessException.donHangKhongTimThay(orderId);
+            }
+
+            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, orderData);
+
+            log.info("Lay chi tiet don hang thanh cong: orderId={}", orderId);
+            return dto;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay chi tiet don hang cho tai xe: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay chi tiet don hang cho tai xe: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
@@ -112,16 +128,7 @@ public class DeliveryOrderService {
             }
 
             Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
-            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, orderData);
-
-            if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
-                if (storeData != null) {
-                    dto.setStoreAddress((String) storeData.get("address"));
-                    dto.setStoreLat(toDouble(storeData.get("lat")));
-                    dto.setStoreLng(toDouble(storeData.get("lng")));
-                }
-            }
+            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, orderData);
 
             log.info("Nhan don hang thanh cong: orderId={}, userId={}", orderId, userId);
             return dto;
@@ -137,7 +144,7 @@ public class DeliveryOrderService {
         }
     }
 
-    public void declineOrder(String orderId, String userId) {
+    public DriverOrderActionResultDTO declineOrder(String orderId, String userId) {
         log.info("Bat dau tu choi don hang: orderId={}, userId={}", orderId, userId);
         try {
             Map<String, Object> notifData = new HashMap<>();
@@ -159,6 +166,11 @@ public class DeliveryOrderService {
             }
 
             log.info("Tu choi don hang thanh cong: orderId={}, userId={}", orderId, userId);
+            return DriverOrderActionResultDTO.builder()
+                    .orderId(orderId)
+                    .requestId(null)
+                    .status("DECLINED")
+                    .build();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi tu choi don hang: {}", e.getMessage());
@@ -184,11 +196,11 @@ public class DeliveryOrderService {
                 throw BusinessException.khongPhaiChuDonHang(orderId);
             }
 
-            if (currentStatus != 2) {
+            if (currentStatus != DeliveryOrderStatus.DELIVERING) {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
             }
 
-            if (newStatus != 3 && newStatus != 4) {
+            if (newStatus != DeliveryOrderStatus.COMPLETED && newStatus != DeliveryOrderStatus.CANCELLED) {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
             }
 
@@ -197,7 +209,7 @@ public class DeliveryOrderService {
             driverUpdates.put("isAvailable", true);
             driverUpdates.put("updatedAt", Instant.now());
 
-            if (newStatus == 3) {
+            if (newStatus == DeliveryOrderStatus.COMPLETED) {
                 String customerId = (String) orderData.get("userId");
                 Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
                 String storeId = (String) orderData.get("storeId");
@@ -212,7 +224,7 @@ public class DeliveryOrderService {
                 }
 
                 Map<String, Object> orderUpdates = new HashMap<>();
-                orderUpdates.put("status", 3);
+                orderUpdates.put("status", DeliveryOrderStatus.COMPLETED);
                 
                 Integer currentPaymentStatus = toInt(orderData.get("paymentStatus"));
                 if (currentPaymentStatus == null || currentPaymentStatus == 1) {
@@ -255,7 +267,7 @@ public class DeliveryOrderService {
             } else {
                 // Sửa logic tài xế hủy đơn giao: Reset trạng thái đơn về 1 (Đang chờ tài xế nhận) thay vì 4 (Đã hủy)
                 Map<String, Object> orderUpdates = new HashMap<>();
-                orderUpdates.put("status", 1);
+                orderUpdates.put("status", DeliveryOrderStatus.WAITING_DRIVER);
                 orderUpdates.put("driverId", null);
                 orderUpdates.put("driverName", null);
                 orderUpdates.put("driverPhone", null);
@@ -268,16 +280,7 @@ public class DeliveryOrderService {
             }
 
             Map<String, Object> updatedOrderData = statsRepository.findOrderRawById(orderId);
-            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, updatedOrderData);
-
-            if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
-                if (storeData != null) {
-                    dto.setStoreAddress((String) storeData.get("address"));
-                    dto.setStoreLat(toDouble(storeData.get("lat")));
-                    dto.setStoreLng(toDouble(storeData.get("lng")));
-                }
-            }
+            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, updatedOrderData);
 
             log.info("Cap nhat trang thai don hang thanh cong: orderId={}, newStatus={}", orderId, newStatus);
             return dto;
@@ -293,32 +296,35 @@ public class DeliveryOrderService {
         }
     }
 
-    public List<DeliveryOrderDTO> getCurrentOrder(String userId) {
+    public DeliveryOrderDTO getCurrentOrder(String userId) {
         log.info("Bat dau lay don hien tai cua tai xe: {}", userId);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
-                    .findByDriverIdAndStatus(userId, 2);
-            List<DeliveryOrderDTO> orders = new ArrayList<>();
-
-            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
-                Map<String, Object> data = doc.getData();
-                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
-
-                if (data.get("storeId") != null) {
-                    Map<String, Object> storeData = statsRepository
-                            .findStoreById(data.get("storeId").toString());
-                    if (storeData != null) {
-                        dto.setStoreAddress((String) storeData.get("address"));
-                        dto.setStoreLat(toDouble(storeData.get("lat")));
-                        dto.setStoreLng(toDouble(storeData.get("lng")));
-                    }
-                }
-
-                orders.add(dto);
+                    .findByDriverIdAndStatus(userId, DeliveryOrderStatus.DELIVERING);
+            if (docs.isEmpty()) {
+                return null;
             }
 
-            log.info("Tim thay {} don hien tai", orders.size());
-            return orders;
+            com.google.cloud.firestore.QueryDocumentSnapshot selectedDoc = docs.get(0);
+            Instant selectedUpdatedAt = toInstant(selectedDoc.get("updatedAt"));
+            Instant selectedCreatedAt = toInstant(selectedDoc.get("createdAt"));
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                Instant candidateUpdatedAt = toInstant(doc.get("updatedAt"));
+                Instant candidateCreatedAt = toInstant(doc.get("createdAt"));
+                if (isMoreRecent(candidateUpdatedAt, selectedUpdatedAt, candidateCreatedAt, selectedCreatedAt)) {
+                    selectedDoc = doc;
+                    selectedUpdatedAt = candidateUpdatedAt;
+                    selectedCreatedAt = candidateCreatedAt;
+                }
+            }
+
+            if (docs.size() > 1) {
+                log.warn("Tai xe {} dang co {} don o trang thai DELIVERING, se tra ve don moi nhat {}",
+                        userId, docs.size(), selectedDoc.getId());
+            }
+
+            return buildDeliveryOrderDTO(selectedDoc.getId(), selectedDoc.getData());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi lay don hien tai: {}", e.getMessage());
@@ -333,23 +339,12 @@ public class DeliveryOrderService {
         log.info("Bat dau lay don hang active cua tai xe: {}", userId);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
-                    .findByDriverIdAndStatus(userId, 2);
+                    .findByDriverIdAndStatus(userId, DeliveryOrderStatus.DELIVERING);
             List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
-
-                if (data.get("storeId") != null) {
-                    Map<String, Object> storeData = statsRepository
-                            .findStoreById(data.get("storeId").toString());
-                    if (storeData != null) {
-                        dto.setStoreAddress((String) storeData.get("address"));
-                        dto.setStoreLat(toDouble(storeData.get("lat")));
-                        dto.setStoreLng(toDouble(storeData.get("lng")));
-                    }
-                }
-
+                DeliveryOrderDTO dto = buildDeliveryOrderDTO(doc.getId(), data);
                 orders.add(dto);
             }
 
@@ -369,24 +364,13 @@ public class DeliveryOrderService {
         log.info("Bat dau lay lich su don hang cua tai xe: {}", userId);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
-                    .findByDriverIdAndStatusOrderByCreatedAt(userId, 3,
+                    .findByDriverIdAndStatusOrderByCreatedAt(userId, DeliveryOrderStatus.COMPLETED,
                             com.google.cloud.firestore.Query.Direction.DESCENDING);
             List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 Map<String, Object> data = doc.getData();
-                DeliveryOrderDTO dto = mapToDeliveryOrderDTO(doc.getId(), data);
-
-                if (data.get("storeId") != null) {
-                    Map<String, Object> storeData = statsRepository
-                            .findStoreById(data.get("storeId").toString());
-                    if (storeData != null) {
-                        dto.setStoreAddress((String) storeData.get("address"));
-                        dto.setStoreLat(toDouble(storeData.get("lat")));
-                        dto.setStoreLng(toDouble(storeData.get("lng")));
-                    }
-                }
-
+                DeliveryOrderDTO dto = buildDeliveryOrderDTO(doc.getId(), data);
                 orders.add(dto);
             }
 
@@ -402,35 +386,33 @@ public class DeliveryOrderService {
         }
     }
 
-    public void respondDeclineOrder(String orderId, String userId) {
-        log.info("Tai xe tu choi don tu he thong push: orderId={}, userId={}", orderId, userId);
+    public DriverOrderActionResultDTO respondDeclineOrder(String orderId, String userId, String requestId) {
+        log.info("Tai xe tu choi don tu he thong push: orderId={}, userId={}, requestId={}", orderId, userId, requestId);
         try {
             Map<String, Object> orderRequest = orderRequestRepository.findByOrderId(orderId);
-            if (orderRequest == null) {
-                log.warn("Khong tim thay order_request cho don [{}]", orderId);
-                return;
+            Map<String, Object> driverRequest = xacThucDriverRequestTam(orderId, userId, requestId);
+
+            String requestStatus = (String) orderRequest.get("status");
+            if (!"pending".equals(requestStatus)) {
+                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, resolveOrderStatus(orderId), "tu choi");
             }
 
-            @SuppressWarnings("unchecked")
-            List<String> targetDrivers = (List<String>) orderRequest.get("targetDriverIds");
-            @SuppressWarnings("unchecked")
-            List<String> attemptedDrivers = (List<String>) orderRequest.get("attemptedDriverIds");
-            if (attemptedDrivers == null) attemptedDrivers = new ArrayList<>();
+            List<String> targetDrivers = toStringList(orderRequest.get("targetDriverIds"));
+            List<String> attemptedDrivers = toStringList(orderRequest.get("attemptedDriverIds"));
 
             if (targetDrivers == null || !targetDrivers.contains(userId)) {
-                log.warn("Tai xe [{}] khong nam trong danh sach yeu cau nhan don [{}]", userId, orderId);
-                return;
+                throw BusinessException.donHangDaCoTaiXe(orderId);
             }
 
             targetDrivers = new ArrayList<>(targetDrivers);
             targetDrivers.remove(userId);
-            attemptedDrivers = new ArrayList<>(attemptedDrivers);
+            attemptedDrivers = attemptedDrivers == null ? new ArrayList<>() : new ArrayList<>(attemptedDrivers);
             attemptedDrivers.add(userId);
 
             Map<String, Object> updates = new HashMap<>();
             updates.put("targetDriverIds", targetDrivers);
             updates.put("attemptedDriverIds", attemptedDrivers);
-            orderRequestRepository.updateFields(orderId, updates);
+            orderRequestRepository.updateFieldsByDocId((String) orderRequest.get("id"), updates);
 
             Map<String, Object> notifData = new HashMap<>();
             notifData.put("type", 13);
@@ -448,30 +430,37 @@ public class DeliveryOrderService {
                     .collection("notifications")
                     .add(notifData);
 
+            // Backend cleanup: xoa request tam trong order_requests/{driverId}/requests/{requestId}
+            xoaDriverRequestTam(userId, requestId, driverRequest);
+
             log.info("Tai xe [{}] da tu choi don [{}], {} tai xe con lai", userId, orderId, targetDrivers.size());
+            return DriverOrderActionResultDTO.builder()
+                    .orderId(orderId)
+                    .requestId(requestId)
+                    .status("DECLINED")
+                    .build();
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Loi khi xu ly tu choi don [{}]: {}", orderId, e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
 
-    public DeliveryOrderDTO respondAcceptOrder(String orderId, String userId) {
-        log.info("Tai xe chap nhan don tu he thong push: orderId={}, userId={}", orderId, userId);
+    public DeliveryOrderDTO respondAcceptOrder(String orderId, String userId, String requestId) {
+        log.info("Tai xe chap nhan don tu he thong push: orderId={}, userId={}, requestId={}", orderId, userId, requestId);
         try {
             Map<String, Object> orderRequest = orderRequestRepository.findByOrderId(orderId);
-            if (orderRequest == null) {
-                throw BusinessException.donHangKhongTimThay(orderId);
-            }
+            Map<String, Object> driverRequest = xacThucDriverRequestTam(orderId, userId, requestId);
 
-            @SuppressWarnings("unchecked")
-            List<String> targetDrivers = (List<String>) orderRequest.get("targetDriverIds");
+            List<String> targetDrivers = toStringList(orderRequest.get("targetDriverIds"));
             if (targetDrivers == null || !targetDrivers.contains(userId)) {
                 throw BusinessException.donHangDaCoTaiXe(orderId);
             }
 
             String requestStatus = (String) orderRequest.get("status");
             if (!"pending".equals(requestStatus)) {
-                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, 1, "nhan");
+                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, resolveOrderStatus(orderId), "nhan");
             }
 
             Map<String, Object> driverProfileData = walletRepository.findDriverProfileById(userId);
@@ -488,26 +477,40 @@ public class DeliveryOrderService {
             final String finalDriverPhone = driverPhone != null ? driverPhone : "";
             final String finalVehiclePlate = vehiclePlate != null ? vehiclePlate : "";
 
-            statsRepository.acceptOrderInTransaction(
-                    orderId, userId, finalDriverName, finalDriverPhone, finalVehiclePlate);
+            try {
+                statsRepository.acceptOrderInTransaction(
+                        orderId, userId, finalDriverName, finalDriverPhone, finalVehiclePlate);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw BusinessException.loiHeThong(e.getMessage());
+            } catch (java.util.concurrent.ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IllegalStateException) {
+                    String msg = cause.getMessage();
+                    if (msg != null && msg.startsWith("ORDER_NOT_FOUND:")) {
+                        throw BusinessException.donHangKhongTimThay(orderId);
+                    }
+                    if ("ORDER_STATUS_INVALID".equals(msg)) {
+                        throw BusinessException.trangThaiDonHangKhongHopLe(orderId, resolveOrderStatus(orderId), "nhan");
+                    }
+                    if ("ORDER_ALREADY_ASSIGNED".equals(msg)) {
+                        throw BusinessException.donHangDaCoTaiXe(orderId);
+                    }
+                }
+                throw BusinessException.loiHeThong(e.getMessage());
+            }
 
             Map<String, Object> reqUpdates = new HashMap<>();
             reqUpdates.put("status", "accepted");
             reqUpdates.put("acceptedDriverId", userId);
             reqUpdates.put("targetDriverIds", List.of());
-            orderRequestRepository.updateFields(orderId, reqUpdates);
+            orderRequestRepository.updateFieldsByDocId((String) orderRequest.get("id"), reqUpdates);
+
+            // Backend cleanup: xoa request tam trong order_requests/{driverId}/requests/{requestId}
+            xoaDriverRequestTam(userId, requestId, driverRequest);
 
             Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
-            DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, orderData);
-
-            if (dto.getStoreId() != null) {
-                Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
-                if (storeData != null) {
-                    dto.setStoreAddress((String) storeData.get("address"));
-                    dto.setStoreLat(toDouble(storeData.get("lat")));
-                    dto.setStoreLng(toDouble(storeData.get("lng")));
-                }
-            }
+            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, orderData);
 
             log.info("Tai xe [{}] da nhan don [{}] thanh cong tu he thong push", userId, orderId);
             return dto;
@@ -520,6 +523,47 @@ public class DeliveryOrderService {
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi nhan don: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
+    /**
+     * Xac thuc request tam co ton tai duoi dung driver, thuoc dung order dang xu ly.
+     */
+    private Map<String, Object> xacThucDriverRequestTam(String orderId, String driverId, String requestId)
+            throws ExecutionException, InterruptedException {
+        if (requestId == null || requestId.isBlank()) {
+            throw BusinessException.loiDinhVi("requestId khong duoc de trong");
+        }
+
+        Map<String, Object> driverRequest = orderRequestRepository.findDriverRequestById(driverId, requestId);
+        if (driverRequest == null) {
+            throw BusinessException.loiDinhVi("Khong tim thay request tam cua tai xe");
+        }
+
+        String driverRequestOrderId = String.valueOf(driverRequest.get("orderId"));
+        if (!orderId.equals(driverRequestOrderId)) {
+            throw BusinessException.loiDinhVi("requestId khong thuoc don hang dang xu ly");
+        }
+
+        return driverRequest;
+    }
+
+    /**
+     * Xoa document request tam cua driver tai order_requests/{driverId}/requests/{requestId}.
+     * Neu xoa that bai thi chi log warning, khong lam rollback business logic vi document
+     * nay la du lieu tam phuc vu realtime/UI, khong phai source of truth.
+     */
+    private void xoaDriverRequestTam(String driverId, String requestId, Map<String, Object> driverRequest) {
+        if (driverRequest == null) {
+            log.debug("Khong co driverRequest da xac thuc, bo qua xoa request tam cho driver [{}]", driverId);
+            return;
+        }
+        try {
+            orderRequestRepository.deleteDriverRequest(driverId, requestId);
+            log.info("Da xoa request tam [{}] cho driver [{}]", requestId, driverId);
+        } catch (Exception e) {
+            log.warn("Xoa request tam that bai nhung van tien hanh: driverId={}, requestId={}, loi={}",
+                    driverId, requestId, e.getMessage());
         }
     }
 
@@ -538,6 +582,31 @@ public class DeliveryOrderService {
         } catch (Exception e) {
             log.warn("Loi khi tao thong bao cho khach hang: {}", e.getMessage());
         }
+    }
+
+    private void enrichStoreLocation(DeliveryOrderDTO dto) throws ExecutionException, InterruptedException {
+        if (dto == null || dto.getStoreId() == null) {
+            return;
+        }
+
+        Map<String, Object> storeData = statsRepository.findStoreById(dto.getStoreId());
+        if (storeData == null) {
+            return;
+        }
+
+        dto.setStoreAddress((String) storeData.get("address"));
+        dto.setStoreLat(toDouble(storeData.get("lat")));
+        dto.setStoreLng(toDouble(storeData.get("lng")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private DeliveryOrderDTO buildDeliveryOrderDTO(String orderId, Map<String, Object> data)
+            throws ExecutionException, InterruptedException {
+        DeliveryOrderDTO dto = mapToDeliveryOrderDTO(orderId, data);
+        enrichStoreLocation(dto);
+        enrichCustomerInfo(dto, data);
+        enrichDerivedFields(dto, data);
+        return dto;
     }
 
     @SuppressWarnings("unchecked")
@@ -576,20 +645,196 @@ public class DeliveryOrderService {
 
         return DeliveryOrderDTO.builder()
                 .id(orderId)
+                .orderCode(resolveOrderCode(orderId, data))
                 .userId((String) data.get("userId"))
+                .recipientName((String) data.get("receiverName"))
+                .recipientPhone((String) data.get("receiverPhone"))
                 .storeId((String) data.get("storeId"))
                 .storeName((String) data.get("storeName"))
                 .items(orderItems)
                 .totalAmount(toDouble(data.get("totalAmount")))
+                .discountAmount(toDouble(data.get("discountAmount")))
                 .deliveryFee(toDouble(data.get("deliveryFee") != null ? data.get("deliveryFee") : data.get("shippingFee")))
+                .finalAmount(toDouble(data.get("finalAmount")))
                 .status(getOrderStatusValueFromMap(data))
                 .paymentStatus(toIntPrimitive(data.get("paymentStatus")))
                 .deliveryAddress((String) data.get("deliveryAddress"))
+                .deliveryLat(toDouble(data.get("deliveryLat")))
+                .deliveryLng(toDouble(data.get("deliveryLng")))
+                .distance(resolveDistanceKm(data))
                 .paymentMethod(toIntPrimitive(data.get("paymentMethod")))
+                .driverId((String) data.get("driverId"))
+                .driverName((String) data.get("driverName"))
+                .driverPhone((String) data.get("driverPhone"))
+                .vehiclePlate((String) data.get("vehiclePlate"))
+                .arrivedAtStoreAt(toInstant(data.get("arrivedAtStoreAt")))
+                .pickedUpAt(toInstant(data.get("pickedUpAt")))
+                .deliveredAt(toInstant(data.get("deliveredAt")))
                 .createdAt(toInstant(data.get("createdAt")))
                 .updatedAt(toInstant(data.get("updatedAt")))
                 .note((String) data.get("note"))
                 .build();
+    }
+
+    public DeliveryOrderDTO mapToDriverOrderRealtimeDTO(String orderId, String requestId, Instant expiresAt,
+                                                        Double estimatedEarning, Double deliveryHeading) {
+        DeliveryOrderDTO order = getOrderDetail(orderId);
+        order.setRequestId(requestId);
+        order.setEstimatedEarning(estimatedEarning);
+        order.setExpiresAt(expiresAt);
+        order.setExpiresInSeconds(calculateExpiresInSeconds(expiresAt));
+        order.setDeliveryHeading(deliveryHeading);
+        return order;
+    }
+
+    private void enrichCustomerInfo(DeliveryOrderDTO dto, Map<String, Object> data)
+            throws ExecutionException, InterruptedException {
+        if (dto == null || data == null) {
+            return;
+        }
+        String userId = dto.getUserId();
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+        Map<String, Object> customer = walletRepository.findUserById(userId);
+        if (customer == null) {
+            customer = statsRepository.findUserById(userId);
+        }
+        if (customer == null) {
+            return;
+        }
+        dto.setCustomerName((String) customer.get("fullName"));
+        dto.setCustomerPhone((String) customer.get("phoneNumber"));
+        dto.setCustomerAvatarUrl((String) customer.get("photoUrl"));
+    }
+
+    private void enrichDerivedFields(DeliveryOrderDTO dto, Map<String, Object> data) {
+        if (dto == null || data == null) {
+            return;
+        }
+
+        double itemsSubtotal = 0.0;
+        double optionsSubtotal = 0.0;
+        if (dto.getItems() != null) {
+            for (DeliveryOrderDTO.OrderItemData item : dto.getItems()) {
+                int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+                double price = item.getPrice() != null ? item.getPrice() : 0.0;
+                itemsSubtotal += price * quantity;
+                if (item.getOptions() != null) {
+                    for (DeliveryOrderDTO.OptionData option : item.getOptions()) {
+                        double optionPrice = option.getPrice() != null ? option.getPrice() : 0.0;
+                        optionsSubtotal += optionPrice * quantity;
+                    }
+                }
+            }
+        }
+
+        dto.setItemsSubtotal(roundCurrency(itemsSubtotal));
+        dto.setOptionsSubtotal(roundCurrency(optionsSubtotal));
+        dto.setDeliveryDistanceKm(dto.getDistance());
+        dto.setEstimatedDurationMinutes(estimateDurationMinutes(dto.getDeliveryDistanceKm()));
+        dto.setDriverCollectAmount(resolveDriverCollectAmount(dto));
+        dto.setStatusCode(DeliveryOrderStatus.getCode(dto.getStatus() != null ? dto.getStatus() : 0));
+        dto.setStatusDescription(DeliveryOrderStatus.getDescription(dto.getStatus() != null ? dto.getStatus() : 0));
+        dto.setDeliveryStep(resolveDeliveryStep(dto));
+    }
+
+    private String resolveOrderCode(String orderId, Map<String, Object> data) {
+        String code = data != null ? (String) data.get("code") : null;
+        if (code != null && !code.isBlank()) {
+            return code;
+        }
+        if (orderId == null || orderId.isBlank()) {
+            return null;
+        }
+        String suffix = orderId.length() > 6 ? orderId.substring(orderId.length() - 6) : orderId;
+        return "FG" + suffix.toUpperCase();
+    }
+
+    private Integer calculateExpiresInSeconds(Instant expiresAt) {
+        if (expiresAt == null) {
+            return null;
+        }
+        long seconds = java.time.Duration.between(Instant.now(), expiresAt).getSeconds();
+        return (int) Math.max(0, seconds);
+    }
+
+    private boolean isMoreRecent(Instant candidateUpdatedAt, Instant selectedUpdatedAt,
+                                 Instant candidateCreatedAt, Instant selectedCreatedAt) {
+        if (candidateUpdatedAt != null && selectedUpdatedAt != null) {
+            if (!candidateUpdatedAt.equals(selectedUpdatedAt)) {
+                return candidateUpdatedAt.isAfter(selectedUpdatedAt);
+            }
+        } else if (candidateUpdatedAt != null) {
+            return true;
+        } else if (selectedUpdatedAt != null) {
+            return false;
+        }
+
+        if (candidateCreatedAt != null && selectedCreatedAt != null) {
+            return candidateCreatedAt.isAfter(selectedCreatedAt);
+        }
+        return candidateCreatedAt != null && selectedCreatedAt == null;
+    }
+
+    private Double roundCurrency(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    private Double resolveDriverCollectAmount(DeliveryOrderDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        if (isCashPayment(dto.getPaymentMethod())) {
+            if (dto.getFinalAmount() != null) {
+                return dto.getFinalAmount();
+            }
+            if (dto.getTotalAmount() != null && dto.getDeliveryFee() != null) {
+                return dto.getTotalAmount() + dto.getDeliveryFee();
+            }
+            return dto.getTotalAmount();
+        }
+        return 0.0;
+    }
+
+    private Integer estimateDurationMinutes(Double deliveryDistanceKm) {
+        if (deliveryDistanceKm == null) {
+            return null;
+        }
+        double minutes = Math.max(5.0, deliveryDistanceKm * 4.0);
+        return (int) Math.round(minutes);
+    }
+
+    private String resolveDeliveryStep(DeliveryOrderDTO dto) {
+        if (dto == null || dto.getStatus() == null) {
+            return "UNKNOWN";
+        }
+        int status = dto.getStatus();
+        if (status == DeliveryOrderStatus.CANCELLED) {
+            return "CANCELLED";
+        }
+        if (status == DeliveryOrderStatus.COMPLETED) {
+            return "DELIVERED";
+        }
+        if (status == DeliveryOrderStatus.DELIVERING) {
+            if (dto.getDeliveredAt() != null) {
+                return "DELIVERED";
+            }
+            if (dto.getPickedUpAt() != null) {
+                return "ON_THE_WAY";
+            }
+            if (dto.getArrivedAtStoreAt() != null) {
+                return "ARRIVED_STORE";
+            }
+            return "WAITING_PICKUP";
+        }
+        if (status == DeliveryOrderStatus.WAITING_DRIVER) {
+            return "WAITING_DRIVER";
+        }
+        if (status == DeliveryOrderStatus.PENDING_STORE_CONFIRMATION) {
+            return "PENDING_STORE_CONFIRMATION";
+        }
+        return "UNKNOWN";
     }
 
     private int getOrderStatusValueFromMap(Map<String, Object> data) {
@@ -605,7 +850,43 @@ public class DeliveryOrderService {
     private Double toDouble(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).doubleValue();
+        if (value instanceof String str) {
+            try {
+                return Double.parseDouble(str);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
         return null;
+    }
+
+    private Double resolveDistanceKm(Map<String, Object> data) {
+        Double distance = toDouble(data.get("distance"));
+        if (distance != null) {
+            return distance;
+        }
+
+        Double storeLat = toDouble(data.get("storeLat"));
+        Double storeLng = toDouble(data.get("storeLng"));
+        Double deliveryLat = toDouble(data.get("deliveryLat"));
+        Double deliveryLng = toDouble(data.get("deliveryLng"));
+
+        if (storeLat == null || storeLng == null || deliveryLat == null || deliveryLng == null) {
+            return null;
+        }
+
+        return calculateDistanceKm(storeLat, storeLng, deliveryLat, deliveryLng);
+    }
+
+    private double calculateDistanceKm(double lat1, double lng1, double lat2, double lng2) {
+        final double earthRadiusKm = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(earthRadiusKm * c * 10.0) / 10.0;
     }
 
     private Long toLong(Object value) {
@@ -617,7 +898,38 @@ public class DeliveryOrderService {
     private Integer toInt(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).intValue();
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
         return null;
+    }
+
+    private List<String> toStringList(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    result.add(String.valueOf(item));
+                }
+            }
+            return result;
+        }
+        return null;
+    }
+
+    private Integer resolveOrderStatus(String orderId) throws ExecutionException, InterruptedException {
+        Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+        if (orderData == null) {
+            return null;
+        }
+        return getOrderStatusValueFromMap(orderData);
     }
 
     private int toIntPrimitive(Object value) {
@@ -631,6 +943,26 @@ public class DeliveryOrderService {
         if (value instanceof Timestamp) return ((Timestamp) value).toDate().toInstant();
         if (value instanceof java.util.Date) return ((java.util.Date) value).toInstant();
         if (value instanceof Long) return Instant.ofEpochMilli((Long) value);
+        if (value instanceof Number) return Instant.ofEpochMilli(((Number) value).longValue());
+        if (value instanceof Map<?, ?> map) {
+            Object seconds = map.get("_seconds");
+            Object nanoseconds = map.get("_nanoseconds");
+            if (seconds instanceof Number sec) {
+                long nanos = nanoseconds instanceof Number nano ? nano.longValue() : 0L;
+                return Instant.ofEpochSecond(sec.longValue(), nanos);
+            }
+            Object timestamp = map.get("timestamp");
+            if (timestamp != null) {
+                return toInstant(timestamp);
+            }
+        }
+        if (value instanceof String str) {
+            try {
+                return Instant.parse(str);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
         return null;
     }
 

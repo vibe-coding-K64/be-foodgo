@@ -9,6 +9,7 @@ import com.example.be_foodgo.repository.StoreRepository;
 import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FieldValue;
+import com.google.cloud.firestore.SetOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -290,7 +290,7 @@ public class StoreService {
                         .avtUrl(store.getAvtUrl())
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
-                        .distance(Math.round(distance * 10.0) / 10.0)
+                        .distance(Math.round((distance / 1000.0) * 10.0) / 10.0)
                         .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build());
@@ -316,7 +316,7 @@ public class StoreService {
         return result;
     }
 
-    public Map<String, Object> getPopularStores(int limit, String categoryId, double minRating) throws ExecutionException, InterruptedException {
+    public Map<String, Object> getPopularStores(int limit, String categoryId, double minRating, Double lat, Double lng) throws ExecutionException, InterruptedException {
         List<Store> allStores = storeRepository.findOpenStores();
 
         List<Store> filtered = new ArrayList<>();
@@ -347,21 +347,36 @@ public class StoreService {
             filtered = filtered.subList(0, limit);
         }
 
-        List<PopularStoreResponse> popularStores = filtered.stream().map(store ->
-                PopularStoreResponse.builder()
-                        .id(store.getId())
-                        .name(store.getName())
-                        .address(store.getAddress())
-                        .rating(store.getRating())
-                        .reviewCount(store.getReviewCount())
-                        .avtUrl(store.getAvtUrl())
-                        .backUrl(store.getBackUrl())
-                        .deliveryTime(store.getDeliveryTime())
-                        .deliveryFee(store.getDeliveryFee())
-                        .isOpen(store.getIsOpen())
-                        .categoryIds(store.getCategoryIds())
-                        .build()
-        ).collect(Collectors.toList());
+        List<PopularStoreResponse> popularStores = new ArrayList<>();
+        for (Store store : filtered) {
+            Double distance = null;
+            if (lat != null && lng != null && store.getLat() != null && store.getLng() != null) {
+                double dLat = Math.toRadians(store.getLat() - lat);
+                double dLng = Math.toRadians(store.getLng() - lng);
+                double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                        + Math.cos(Math.toRadians(lat)) * Math.cos(Math.toRadians(store.getLat()))
+                        * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                double earthRadius = 6371.0;
+                double distanceM = earthRadius * c * 1000.0;
+                distance = Math.round((distanceM / 1000.0) * 10.0) / 10.0;
+            }
+
+            popularStores.add(PopularStoreResponse.builder()
+                    .id(store.getId())
+                    .name(store.getName())
+                    .address(store.getAddress())
+                    .rating(store.getRating())
+                    .reviewCount(store.getReviewCount())
+                    .avtUrl(store.getAvtUrl())
+                    .backUrl(store.getBackUrl())
+                    .deliveryTime(store.getDeliveryTime())
+                    .deliveryFee(store.getDeliveryFee())
+                    .distance(distance)
+                    .isOpen(store.getIsOpen())
+                    .categoryIds(store.getCategoryIds())
+                    .build());
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
@@ -390,7 +405,7 @@ public class StoreService {
         profileData.put("createdAt", FieldValue.serverTimestamp());
         profileData.put("updatedAt", FieldValue.serverTimestamp());
 
-        firestore.collection("driver_profiles").document(userId).set(profileData).get();
+        firestore.collection("driver_profiles").document(userId).set(profileData, SetOptions.merge()).get();
         walletRepository.createDriverWallet(userId);
 
         log.info("Da tao driver profile va wallet cho tai xe: {}", userId);
