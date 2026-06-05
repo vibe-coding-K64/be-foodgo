@@ -31,9 +31,9 @@ public class Order {
     private Object paymentMethod;
 
     private Object status; // 0=Chờ xác nhận, 1=Đang chuẩn bị, 2=Đang giao, 3=Hoàn thành, 4=Đã hủy
-    private Date createdAt;
-    private Date updatedAt;
-    private Date deletedAt;
+    private Object createdAt;
+    private Object updatedAt;
+    private Object deletedAt;
 
     private Double deliveryHeading;
     private Double deliveryLat;
@@ -171,12 +171,27 @@ public class Order {
         return 0;
     }
     public void setStatus(Object status) { this.status = status; }
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
-    public Date getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
-    public Date getDeletedAt() { return deletedAt; }
-    public void setDeletedAt(Date deletedAt) { this.deletedAt = deletedAt; }
+    public Date getCreatedAt() { return parseDate(createdAt); }
+    public void setCreatedAt(Object createdAt) { this.createdAt = createdAt; }
+    public Date getUpdatedAt() { return parseDate(updatedAt); }
+    public void setUpdatedAt(Object updatedAt) { this.updatedAt = updatedAt; }
+    public Date getDeletedAt() { return parseDate(deletedAt); }
+    public void setDeletedAt(Object deletedAt) { this.deletedAt = deletedAt; }
+
+    private Date parseDate(Object val) {
+        if (val == null) return null;
+        if (val instanceof Date) return (Date) val;
+        if (val instanceof com.google.cloud.Timestamp) return ((com.google.cloud.Timestamp) val).toDate();
+        if (val instanceof java.util.Map) {
+            java.util.Map<?, ?> map = (java.util.Map<?, ?>) val;
+            if (map.containsKey("_seconds")) {
+                long sec = ((Number) map.get("_seconds")).longValue();
+                return new Date(sec * 1000);
+            }
+        }
+        if (val instanceof Long) return new Date((Long) val);
+        return null;
+    }
     public Double getDeliveryHeading() { return deliveryHeading; }
     public void setDeliveryHeading(Double deliveryHeading) { this.deliveryHeading = deliveryHeading; }
     public Double getDeliveryLat() { return deliveryLat; }
