@@ -23,7 +23,6 @@ public class CategoryDTO {
     @jakarta.validation.constraints.Size(min = 2, max = 50, message = "Tên danh mục phải từ 2 đến 50 ký tự")
     private String name;
 
-    @NotBlank(message = "Mã icon không được để trống")
     private String icon;
 
     @NotNull(message = "Thứ tự không được để trống")

@@ -25,10 +25,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final Firestore firestore;
+    private final FCMService fcmService;
 
-    public NotificationService(NotificationRepository notificationRepository, Firestore firestore) {
+    public NotificationService(NotificationRepository notificationRepository, Firestore firestore, FCMService fcmService) {
         this.notificationRepository = notificationRepository;
         this.firestore = firestore;
+        this.fcmService = fcmService;
     }
 
     public List<NotificationDTO> getNotifications(String driverId, Integer type) throws Exception {
@@ -240,6 +242,24 @@ public class NotificationService {
             if (dto.getImageUrl() != null) data.put("imageUrl", dto.getImageUrl());
             
             notificationRepository.addNotificationToCollection(profileCollection, profileId, data);
+
+            // Gửi Push Notification qua FCM
+            try {
+                com.google.cloud.firestore.DocumentSnapshot doc = firestore.collection(profileCollection).document(profileId).get().get();
+                if (doc.exists()) {
+                    String fcmToken = doc.getString("fcmToken");
+                    if (fcmToken != null && !fcmToken.isBlank()) {
+                        Map<String, String> dataPayload = new HashMap<>();
+                        if (dto.getOrderId() != null) dataPayload.put("orderId", dto.getOrderId());
+                        if (dto.getReferenceId() != null) dataPayload.put("referenceId", dto.getReferenceId());
+                        if (dto.getType() != null) dataPayload.put("type", String.valueOf(dto.getType()));
+                        
+                        fcmService.sendToDevice(fcmToken, dto.getTitle(), dto.getBody(), dataPayload);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Lỗi khi gửi FCM Push cho {} ({}): {}", profileCollection, profileId, e.getMessage());
+            }
         } catch (Exception e) {
             log.error("Lỗi khi tạo thông báo cho {} ({}): {}", profileCollection, profileId, e.getMessage());
         }
@@ -298,6 +318,34 @@ public class NotificationService {
             log.info("Đã gửi thông báo hệ thống tới {} quản trị viên.", docs.size());
         } catch (Exception e) {
             log.error("Lỗi khi gửi thông báo tới các admin: {}", e.getMessage());
+        }
+    }
+
+    public void broadcastNotification(String target, NotificationDTO dto) {
+        List<String> collections = new ArrayList<>();
+        if ("all".equalsIgnoreCase(target)) {
+            collections.add("customer_profiles");
+            collections.add("driver_profiles");
+            collections.add("merchant_profiles");
+        } else if ("customers".equalsIgnoreCase(target)) {
+            collections.add("customer_profiles");
+        } else if ("drivers".equalsIgnoreCase(target)) {
+            collections.add("driver_profiles");
+        } else if ("merchants".equalsIgnoreCase(target)) {
+            collections.add("merchant_profiles");
+        }
+
+        for (String coll : collections) {
+            try {
+                List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = firestore.collection(coll).get().get().getDocuments();
+                for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                    String profileId = doc.getId();
+                    createNotification(coll, profileId, dto);
+                }
+                log.info("Đã gửi broadcast tới collection={} gồm {} người dùng.", coll, docs.size());
+            } catch (Exception e) {
+                log.error("Lỗi khi gửi broadcast tới collection {}: {}", coll, e.getMessage());
+            }
         }
     }
 }

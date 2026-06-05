@@ -79,6 +79,31 @@ public class CloudinaryService {
         return url;
     }
 
+    @SuppressWarnings("unchecked")
+    public String uploadImage(MultipartFile file, String folder) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File khong duoc de trong.");
+        }
+
+        validateFile(file);
+
+        String cleanFolder = (folder == null || folder.isBlank()) ? "general" : folder.trim();
+        String suffix = UUID.randomUUID().toString();
+        String publicId = cleanFolder + "/" + suffix;
+
+        Map<String, Object> params = ObjectUtils.asMap(
+                "public_id", publicId,
+                "overwrite", true,
+                "folder", cleanFolder,
+                "transformation", "q_auto,f_auto"
+        );
+
+        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+        String secureUrl = (String) result.get("secure_url");
+        log.info("Upload anh len Cloudinary thanh cong. URL: {}", secureUrl);
+        return secureUrl;
+    }
+
     private void validateReviewImageFile(MultipartFile file) {
         if (file.getSize() > MAX_REVIEW_IMAGE_SIZE) {
             throw new IllegalArgumentException("Kích thước ảnh vượt quá giới hạn 10MB.");

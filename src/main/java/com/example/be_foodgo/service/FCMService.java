@@ -1,9 +1,11 @@
 package com.example.be_foodgo.service;
 
+import com.example.be_foodgo.model.User;
+import com.example.be_foodgo.repository.UserRepository;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
-import com.google.firebase.messaging.ApnsConfig;
-import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
@@ -11,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -19,9 +23,57 @@ public class FCMService {
     private static final Logger log = LoggerFactory.getLogger(FCMService.class);
 
     private final FirebaseMessaging firebaseMessaging;
+    private final UserRepository userRepository;
+    private final Firestore firestore;
 
-    public FCMService(FirebaseMessaging firebaseMessaging) {
+    public FCMService(FirebaseMessaging firebaseMessaging, UserRepository userRepository, Firestore firestore) {
         this.firebaseMessaging = firebaseMessaging;
+        this.userRepository = userRepository;
+        this.firestore = firestore;
+    }
+
+    public void registerFCMToken(String userId, String token) {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            log.warn("UserId hoac Token khong hop le de dang ky FCM.");
+            return;
+        }
+
+        try {
+            User user = userRepository.timTheoId(userId);
+            if (user == null) {
+                log.warn("Khong tim thay user voi id={}", userId);
+                return;
+            }
+
+            List<Integer> roles = user.getRoles();
+            if (roles == null || roles.isEmpty()) {
+                log.warn("User voi id={} khong co bat ky role nao.", userId);
+                return;
+            }
+
+            Map<String, Object> update = Map.of("fcmToken", token);
+
+            for (Integer role : roles) {
+                String collection = null;
+                if (role == 1) {
+                    collection = "customer_profiles";
+                } else if (role == 2) {
+                    collection = "driver_profiles";
+                } else if (role == 3) {
+                    collection = "merchant_profiles";
+                } else if (role == 4) {
+                    collection = "admin_profiles";
+                }
+
+                if (collection != null) {
+                    firestore.collection(collection).document(userId)
+                            .set(update, SetOptions.merge()).get();
+                    log.info("Da luu fcmToken cho userId={} vao collection={}", userId, collection);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Loi khi dang ky FCM token cho userId={}: {}", userId, e.getMessage(), e);
+        }
     }
 
     public void sendToDevice(String fcmToken, String title, String body, Map<String, String> data) {
@@ -62,10 +114,27 @@ public class FCMService {
             log.warn("DriverId rong, khong the gui push notification.");
             return;
         }
-        data = (data != null) ? data : Map.of();
-        if (!data.containsKey("driverId")) {
-            data.put("driverId", driverId);
+        
+        Map<String, String> dataMap = (data != null) ? new HashMap<>(data) : new HashMap<>();
+        if (!dataMap.containsKey("driverId")) {
+            dataMap.put("driverId", driverId);
         }
-        log.info("Gui push notification cho tai xe: driverId={}, title={}", driverId, title);
+        
+        try {
+            var doc = firestore.collection("driver_profiles").document(driverId).get().get();
+            if (doc.exists()) {
+                String fcmToken = doc.getString("fcmToken");
+                if (fcmToken != null && !fcmToken.isBlank()) {
+                    sendToDevice(fcmToken, title, body, dataMap);
+                    log.info("Gui push notification cho tai xe thanh cong: driverId={}, title={}", driverId, title);
+                } else {
+                    log.warn("Tai xe driverId={} khong co fcmToken.", driverId);
+                }
+            } else {
+                log.warn("Khong tim thay profile tai xe: driverId={}", driverId);
+            }
+        } catch (Exception e) {
+            log.error("Loi khi gui push cho tai xe: driverId={}, error={}", driverId, e.getMessage());
+        }
     }
 }

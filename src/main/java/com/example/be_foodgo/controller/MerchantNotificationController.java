@@ -77,4 +77,20 @@ public class MerchantNotificationController extends BaseController {
             return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
         }
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Xóa một thông báo của quán")
+    public ResponseEntity<?> deleteNotification(
+            HttpServletRequest httpRequest,
+            @PathVariable("id") String notifId) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) return ResponseEntity.status(401).body(holder.errorResponse);
+
+        try {
+            notificationService.deleteNotificationByProfile("merchant_profiles", holder.userId, notifId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Xóa thông báo thành công."));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
+        }
+    }
 }
