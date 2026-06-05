@@ -71,7 +71,7 @@ public class CategoryService {
         category.setId(generateNextCategoryId(isSystem));
         category.setStoreId(isSystem ? null : dto.getStoreId());
         category.setName(dto.getName());
-        category.setIcon(dto.getIcon());
+        category.setIcon(dto.getIcon() != null && !dto.getIcon().isBlank() ? dto.getIcon() : "default_icon");
         category.setOrder(dto.getOrder());
         category.setImageUrl(dto.getImageUrl());
         category.setCreatedAt(Timestamp.now());
@@ -120,7 +120,7 @@ public class CategoryService {
             }
 
             category.setName(dto.getName());
-            category.setIcon(dto.getIcon());
+            category.setIcon(dto.getIcon() != null && !dto.getIcon().isBlank() ? dto.getIcon() : "default_icon");
             category.setOrder(dto.getOrder());
             category.setImageUrl(dto.getImageUrl());
             category.setStoreId(newIsSystem ? null : dto.getStoreId());

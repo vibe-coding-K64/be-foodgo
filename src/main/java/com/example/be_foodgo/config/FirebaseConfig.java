@@ -13,7 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import org.springframework.web.client.RestTemplate;
+import java.util.List;
 
 import jakarta.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
@@ -33,6 +36,9 @@ public class FirebaseConfig {
 
     @Value("${firebase.database.url:#{null}}")
     private String configuredDatabaseUrl;
+
+    @Value("${firebase.storage.bucket:#{null}}")
+    private String storageBucket;
 
     @PostConstruct
     public void khoiTaoFirebase() {
@@ -185,5 +191,43 @@ if (FirebaseApp.getApps().isEmpty()) {
     @Bean
     public RestTemplate firebaseRestTemplate() {
         return new RestTemplate();
+    }
+
+    @Bean
+    public Storage firebaseStorage() {
+        try {
+            if (serviceAccountBytes == null || serviceAccountBytes.length == 0) {
+                log.error("Service account bytes rong! Doc lai tu file.");
+                InputStream rawStream = new ClassPathResource(FIREBASE_SERVICE_ACCOUNT_PATH).getInputStream();
+                serviceAccountBytes = rawStream.readAllBytes();
+                rawStream.close();
+            }
+            InputStream serviceAccountStream = new ByteArrayInputStream(serviceAccountBytes);
+            GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccountStream)
+                    .createScoped(List.of("https://www.googleapis.com/auth/cloud-platform"));
+            
+            String projectId = extractProjectId();
+            StorageOptions.Builder builder = StorageOptions.newBuilder()
+                    .setCredentials(credentials);
+            if (projectId != null) {
+                builder.setProjectId(projectId);
+            }
+            Storage storage = builder.build().getService();
+            log.info("Firebase Storage bean da duoc tao thanh cong. Project ID: {}", 
+                    projectId != null ? projectId : "(default)");
+            return storage;
+        } catch (IOException e) {
+            log.error("Khong the doc file firebase-service-account.json de khoi tao Storage: {}", e.getMessage());
+            throw new RuntimeException("Failed to initialize Firebase Storage", e);
+        }
+    }
+
+    @Bean
+    public String firebaseStorageBucket() {
+        if (storageBucket != null && !storageBucket.isBlank()) {
+            return storageBucket;
+        }
+        String projectId = extractProjectId();
+        return projectId != null ? projectId + ".appspot.com" : null;
     }
 }

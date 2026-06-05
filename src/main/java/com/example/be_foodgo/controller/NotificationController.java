@@ -26,7 +26,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/drivers/notifications")
-@Tag(name = "Notifications", description = "API quan ly thong bao cua tai xe")
+@Tag(name = "Driver Notifications", description = "API quản lý thông báo của tài xế (Driver only)")
 @SecurityRequirement(name = "bearerAuth")
 public class NotificationController extends BaseController {
 
