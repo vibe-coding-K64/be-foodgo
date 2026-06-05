@@ -113,6 +113,21 @@ public class ReviewService {
         merchantNotif.setReferenceId(reviewId);
         notificationService.notifyMerchantByStoreId(request.getStoreId(), merchantNotif);
 
+        // Gửi thông báo đến Admin nếu rating <= 2
+        if (request.getStarRating() <= 2) {
+            try {
+                NotificationDTO adminNotif = new NotificationDTO();
+                adminNotif.setTitle("Đánh giá thấp cần xử lý");
+                adminNotif.setBody("Người dùng " + userName + " vừa đánh giá " + request.getStarRating() + " sao cho đơn hàng #" + orderCode + ". Bình luận: " + (request.getComment() != null && !request.getComment().trim().isEmpty() ? request.getComment() : "Không có."));
+                adminNotif.setType(31); // 31 = bad review type for admin
+                adminNotif.setOrderId(request.getOrderId());
+                adminNotif.setReferenceId(reviewId);
+                notificationService.notifyAdmins(adminNotif);
+            } catch (Exception e) {
+                log.warn("Lỗi khi gửi thông báo review xấu tới admin: {}", e.getMessage());
+            }
+        }
+
         return convertToDTO(review);
     }
 
@@ -333,6 +348,23 @@ public class ReviewService {
             review.setId(reviewId);
             log.info("Da luu danh gia [{}] cho mon [{}] trong don hang [{}]",
                     reviewId, item.getProductId(), request.getOrderId());
+
+            // Gửi thông báo đến Admin nếu rating <= 2
+            if (item.getStarRating() <= 2) {
+                try {
+                    String userName = (request.getUserName() != null && !request.getUserName().trim().isEmpty()) ? request.getUserName() : "Khách hàng";
+                    String orderCode = getOrderCodeDisplay(donHang);
+                    NotificationDTO adminNotif = new NotificationDTO();
+                    adminNotif.setTitle("Đánh giá thấp cần xử lý");
+                    adminNotif.setBody("Người dùng " + userName + " vừa đánh giá " + item.getStarRating() + " sao cho đơn hàng #" + orderCode + ". Bình luận: " + (item.getComment() != null && !item.getComment().trim().isEmpty() ? item.getComment() : "Không có."));
+                    adminNotif.setType(31); // 31 = bad review type for admin
+                    adminNotif.setOrderId(request.getOrderId());
+                    adminNotif.setReferenceId(reviewId);
+                    notificationService.notifyAdmins(adminNotif);
+                } catch (Exception e) {
+                    log.warn("Lỗi khi gửi thông báo review xấu tới admin: {}", e.getMessage());
+                }
+            }
 
             reviewIds.add(reviewId);
             count++;

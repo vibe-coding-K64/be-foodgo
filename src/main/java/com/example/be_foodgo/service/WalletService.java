@@ -20,9 +20,11 @@ public class WalletService {
     private static final Logger log = LoggerFactory.getLogger(WalletService.class);
 
     private final WalletRepository walletRepository;
+    private final NotificationService notificationService;
 
-    public WalletService(WalletRepository walletRepository) {
+    public WalletService(WalletRepository walletRepository, NotificationService notificationService) {
         this.walletRepository = walletRepository;
+        this.notificationService = notificationService;
     }
 
     public WalletDTO getDriverWallet(String userId) {
@@ -126,6 +128,18 @@ public class WalletService {
 
             String description = "Yêu cầu rút tiền tài khoản.";
             String transId = walletRepository.withdrawInTransaction(walletId, userId, amount, description);
+
+            // Gửi thông báo đến Admin khi có yêu cầu rút tiền mới
+            try {
+                com.example.be_foodgo.dto.NotificationDTO adminNotif = new com.example.be_foodgo.dto.NotificationDTO();
+                adminNotif.setTitle("Yêu cầu rút tiền từ Tài xế");
+                adminNotif.setBody("Tài xế (" + userId + ") gửi yêu cầu rút " + String.format("%,.0f", amount) + "đ.");
+                adminNotif.setType(41); // 41 = withdrawal type for admin
+                adminNotif.setReferenceId(transId);
+                notificationService.notifyAdmins(adminNotif);
+            } catch (Exception e) {
+                log.warn("Lỗi khi gửi thông báo rút tiền tới admin: {}", e.getMessage());
+            }
 
             com.google.cloud.firestore.DocumentSnapshot createdTrans = walletRepository.getFirestore()
                     .collection("transactions")
@@ -264,6 +278,18 @@ public class WalletService {
                 description = "Rút tiền về " + request.getBankName() + " - " + request.getBankAccountNumber();
             }
             String transId = walletRepository.withdrawInTransaction(walletId, userId, amount, description);
+
+            // Gửi thông báo đến Admin khi có yêu cầu rút tiền mới
+            try {
+                com.example.be_foodgo.dto.NotificationDTO adminNotif = new com.example.be_foodgo.dto.NotificationDTO();
+                adminNotif.setTitle("Yêu cầu rút tiền từ Cửa hàng");
+                adminNotif.setBody("Chủ quán (" + userId + ") gửi yêu cầu rút " + String.format("%,.0f", amount) + "đ.");
+                adminNotif.setType(41); // 41 = withdrawal type for admin
+                adminNotif.setReferenceId(transId);
+                notificationService.notifyAdmins(adminNotif);
+            } catch (Exception e) {
+                log.warn("Lỗi khi gửi thông báo rút tiền tới admin: {}", e.getMessage());
+            }
 
             com.google.cloud.firestore.DocumentSnapshot createdTrans = walletRepository.getFirestore()
                     .collection("transactions")

@@ -170,6 +170,31 @@ public class NotificationService {
         }
     }
 
+    public void deleteNotificationByProfile(String profileCollection, String profileId, String notifId) {
+        log.info("Bắt đầu xóa thông báo: collection={}, profileId={}, notifId={}", profileCollection, profileId, notifId);
+        try {
+            com.google.cloud.firestore.DocumentReference docRef = firestore
+                    .collection(profileCollection)
+                    .document(profileId)
+                    .collection("notifications")
+                    .document(notifId);
+                    
+            com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+
+            if (!doc.exists()) {
+                throw BusinessException.thongBaoKhongTimThay(notifId);
+            }
+
+            docRef.delete().get();
+            log.info("Xóa thông báo thành công: profileId={}, notifId={}", profileId, notifId);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa thông báo: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     private NotificationDTO mapToDTO(String notifId, Map<String, Object> data) {
         if (data == null) {
             return NotificationDTO.builder().id(notifId).build();
@@ -268,7 +293,7 @@ public class NotificationService {
                     .get().get().getDocuments();
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
                 String adminId = doc.getId();
-                createNotification("driver_profiles", adminId, dto);
+                createNotification("admin_profiles", adminId, dto);
             }
             log.info("Đã gửi thông báo hệ thống tới {} quản trị viên.", docs.size());
         } catch (Exception e) {

@@ -109,14 +109,6 @@ public class OrderService {
                 userNotif.setTitle("Đơn hàng " + orderCode + " đang chuẩn bị");
                 userNotif.setBody("Quán đang chuẩn bị món ăn cho đơn hàng của bạn.");
                 notificationService.createNotification("customer_profiles", order.getUserId(), userNotif);
-
-                // Thông báo Admin
-                NotificationDTO adminNotif = new NotificationDTO();
-                adminNotif.setOrderId(id);
-                adminNotif.setType(11);
-                adminNotif.setTitle("Đơn hàng #" + orderCode + " đã được xác nhận");
-                adminNotif.setBody("Cửa hàng " + order.getStoreName() + " đã xác nhận và đang chuẩn bị món ăn.");
-                notificationService.notifyAdmins(adminNotif);
             } else if (status == 2) {
                 // Đang giao -> Shipper đã lấy hàng
                 String driverName = (order.getDriverName() != null && !order.getDriverName().isEmpty()) ? order.getDriverName() : "Tài xế";
@@ -127,14 +119,6 @@ public class OrderService {
                 merchantNotif.setTitle("Tài xế đang giao đơn " + orderCode);
                 merchantNotif.setBody(driverName + " đã lấy món (" + itemsSummary + ") và đang giao cho khách.");
                 notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
-
-                // Thông báo Admin
-                NotificationDTO adminNotif = new NotificationDTO();
-                adminNotif.setOrderId(id);
-                adminNotif.setType(11);
-                adminNotif.setTitle("Đơn hàng #" + orderCode + " đang được giao");
-                adminNotif.setBody("Tài xế " + driverName + " đã lấy món tại " + order.getStoreName() + " và đang đi giao.");
-                notificationService.notifyAdmins(adminNotif);
             } else if (status == 3) {
                 double merchantIncome = order.getTotalAmount() - order.getShopDiscountAmount();
 
