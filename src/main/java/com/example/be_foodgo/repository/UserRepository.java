@@ -45,7 +45,10 @@ public class UserRepository {
     public User timTheoId(String id) throws ExecutionException, InterruptedException {
         DocumentSnapshot doc = getCollection().document(id).get().get();
         if (!doc.exists()) {
-            return null;
+            doc = getCollection().document("firebase:" + id).get().get();
+            if (!doc.exists()) {
+                return null;
+            }
         }
         return documentToUser(doc);
     }

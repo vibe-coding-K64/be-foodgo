@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -90,7 +91,7 @@ public class DeliveryService {
 
             Map<String, Object> profileUpdates = buildDriverProfileUpdateMap(request);
             if (!profileUpdates.isEmpty()) {
-                profileUpdates.put("updatedAt", Instant.now());
+                profileUpdates.put("updatedAt", new Date());
                 walletRepository.updateDriverProfileFields(userId, profileUpdates);
             }
 
@@ -105,7 +106,7 @@ public class DeliveryService {
                 userUpdates.put("photoUrl", request.getPhotoUrl());
             }
             if (!userUpdates.isEmpty()) {
-                userUpdates.put("updatedAt", Instant.now());
+                userUpdates.put("updatedAt", new Date());
                 walletRepository.updateUserFields(userId, userUpdates);
             }
 
@@ -152,7 +153,7 @@ public class DeliveryService {
             Map<String, Object> updates = new HashMap<>();
             updates.put("isActive", isActive);
             updates.put("isAvailable", isActive);
-            updates.put("updatedAt", Instant.now());
+            updates.put("updatedAt", new Date());
             walletRepository.updateDriverProfileFields(userId, updates);
 
             if (!isActive) {
@@ -188,7 +189,7 @@ public class DeliveryService {
             Map<String, Object> updates = new HashMap<>();
             updates.put("isActive", false);
             updates.put("isAvailable", false);
-            updates.put("updatedAt", Instant.now());
+            updates.put("updatedAt", new Date());
             walletRepository.updateDriverProfileFields(driverId, updates);
             xoaKhoiRealtimeDatabase(driverId);
             log.info("Da tu dong tat trang thai tai xe {} do het thoi gian cap nhat vi tri", driverId);
@@ -210,12 +211,12 @@ public class DeliveryService {
             profileUpdates.put("vehiclePlate", request.getVehiclePlate());
             profileUpdates.put("vehicleType", request.getVehicleType());
             profileUpdates.put("driverLicense", request.getDriverLicense());
-            profileUpdates.put("updatedAt", Instant.now());
+            profileUpdates.put("updatedAt", new Date());
             walletRepository.updateDriverProfileFields(userId, profileUpdates);
 
             Map<String, Object> userUpdates = new HashMap<>();
             userUpdates.put("vehiclePlate", request.getVehiclePlate());
-            userUpdates.put("updatedAt", Instant.now());
+            userUpdates.put("updatedAt", new Date());
             walletRepository.updateUserFields(userId, userUpdates);
 
             log.info("Cap nhat phuong tien tai xe thanh cong: {}", userId);

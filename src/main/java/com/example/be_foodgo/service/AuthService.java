@@ -428,6 +428,9 @@ public class AuthService {
             
             try {
                 com.google.cloud.firestore.DocumentSnapshot doc = firestore.collection("merchant_profiles").document(uid).get().get();
+                if (!doc.exists()) {
+                    doc = firestore.collection("merchant_profiles").document("firebase:" + uid).get().get();
+                }
                 if (doc.exists()) {
                     if (doc.contains("storeIds")) {
                         @SuppressWarnings("unchecked")

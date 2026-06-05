@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -148,7 +149,7 @@ public class DeliveryOrderService {
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
             notifData.put("imageUrl", null);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             statsRepository.saveDriverNotification(userId, notifData);
 
@@ -195,7 +196,7 @@ public class DeliveryOrderService {
             Map<String, Object> driverUpdates = new HashMap<>();
             driverUpdates.put("currentOrderId", null);
             driverUpdates.put("isAvailable", true);
-            driverUpdates.put("updatedAt", Instant.now());
+            driverUpdates.put("updatedAt", new Date());
 
             if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
@@ -213,7 +214,7 @@ public class DeliveryOrderService {
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
-                orderUpdates.put("updatedAt", Instant.now());
+                orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 driverUpdates.put("totalTrips",
@@ -254,7 +255,7 @@ public class DeliveryOrderService {
                 orderUpdates.put("driverName", null);
                 orderUpdates.put("driverPhone", null);
                 orderUpdates.put("vehiclePlate", null);
-                orderUpdates.put("updatedAt", Instant.now());
+                orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 walletRepository.updateDriverProfileFields(userId, driverUpdates);
@@ -434,7 +435,7 @@ public class DeliveryOrderService {
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
             notifData.put("imageUrl", null);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             walletRepository.getFirestore()
                     .collection("driver_profiles")
@@ -525,7 +526,7 @@ public class DeliveryOrderService {
             notifData.put("body", "Đơn hàng [" + orderId + "] đã được giao thành công. Cảm ơn bạn đã sử dụng FoodGo!");
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             statsRepository.saveCustomerNotification(userId, notifData);
             log.info("Da tao thong bao cho khach hang: userId={}, orderId={}", userId, orderId);
