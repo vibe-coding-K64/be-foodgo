@@ -19,14 +19,15 @@ public class CategoryRepository {
     private Firestore firestore;
 
     public List<Category> findAll(String storeId) throws ExecutionException, InterruptedException {
+        List<Category> systemCategories = findAllSystemCategories();
         if (storeId == null || storeId.isEmpty() || "null".equalsIgnoreCase(storeId) || "system".equalsIgnoreCase(storeId)) {
-            return findAllSystemCategories();
+            return systemCategories;
         }
         ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("storeId", storeId)
                 .get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-        List<Category> categories = new ArrayList<>();
+        List<Category> categories = new ArrayList<>(systemCategories);
         for (QueryDocumentSnapshot document : documents) {
             categories.add(document.toObject(Category.class));
         }

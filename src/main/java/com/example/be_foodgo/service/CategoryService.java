@@ -66,7 +66,7 @@ public class CategoryService {
                 throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại trong danh mục cửa hàng. Vui lòng chọn vị trí khác.");
             }
         }
-
+        
         Category category = new Category();
         category.setId(generateNextCategoryId(isSystem));
         category.setStoreId(isSystem ? null : dto.getStoreId());
@@ -105,6 +105,8 @@ public class CategoryService {
         if (category != null) {
             boolean newIsSystem = dto.getStoreId() == null || dto.getStoreId().isEmpty() || "null".equalsIgnoreCase(dto.getStoreId()) || "system".equalsIgnoreCase(dto.getStoreId());
 
+
+
             if (!category.getOrder().equals(dto.getOrder())) {
                 Category existing;
                 if (newIsSystem) {
@@ -113,9 +115,7 @@ public class CategoryService {
                     existing = categoryRepository.findStoreCategoryByOrder(dto.getStoreId(), dto.getOrder());
                 }
                 if (existing != null && !existing.getId().equals(id)) {
-                    // Tự động đổi chỗ vị trí (Swap)
-                    existing.setOrder(category.getOrder());
-                    categoryRepository.save(existing);
+                    throw new IllegalArgumentException("Vị trí " + dto.getOrder() + " đã tồn tại. Vui lòng chọn vị trí khác.");
                 }
             }
 
