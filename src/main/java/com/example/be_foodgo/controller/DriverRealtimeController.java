@@ -9,12 +9,14 @@ import com.example.be_foodgo.service.DeliveryOrderService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
+
+import java.security.Principal;
 
 @Controller
 public class DriverRealtimeController {
@@ -33,13 +35,19 @@ public class DriverRealtimeController {
 
     @MessageMapping("/driver/accept")
     public void acceptOrder(@Valid @Payload DriverRealtimeRespondRequest request,
-                            @AuthenticationPrincipal String userId) {
-        String resolvedUserId = requireAuthenticatedUser(userId);
+                            Principal principal) {
+        String resolvedUserId = principal != null ? principal.getName() : null;
         String orderId = request.getOrderId();
         String requestId = request.getRequestId();
 
         log.info("[STOMP DEBUG] ACCEPT request received: principal='{}', orderId='{}', requestId='{}'",
                 resolvedUserId, orderId, requestId);
+
+        if (!StringUtils.hasText(resolvedUserId)) {
+            log.error("[STOMP DEBUG] ACCEPT failed: principal is null or empty, session may not be authenticated");
+            sendErrorToUser(null, orderId, requestId, "Chua xac thuc ket noi websocket.");
+            return;
+        }
 
         try {
             DeliveryOrderDTO order = deliveryOrderService.respondAcceptOrder(orderId, resolvedUserId, requestId);
@@ -71,8 +79,8 @@ public class DriverRealtimeController {
                                     .build())
                             .build()
             );
-        } catch (RuntimeException e) {
-            log.error("Loi khi realtime accept order {}: {}", orderId, e.getMessage());
+        } catch (Exception e) {
+            log.error("Loi khi realtime accept order {}: {}", orderId, e.getMessage(), e);
             sendOrderStatusToUser(
                     resolvedUserId,
                     DriverRealtimeEvent.builder()
@@ -93,13 +101,19 @@ public class DriverRealtimeController {
 
     @MessageMapping("/driver/decline")
     public void declineOrder(@Valid @Payload DriverRealtimeRespondRequest request,
-                             @AuthenticationPrincipal String userId) {
-        String resolvedUserId = requireAuthenticatedUser(userId);
+                             Principal principal) {
+        String resolvedUserId = principal != null ? principal.getName() : null;
         String orderId = request.getOrderId();
         String requestId = request.getRequestId();
 
         log.info("[STOMP DEBUG] DECLINE request received: principal='{}', orderId='{}', requestId='{}'",
                 resolvedUserId, orderId, requestId);
+
+        if (!StringUtils.hasText(resolvedUserId)) {
+            log.error("[STOMP DEBUG] DECLINE failed: principal is null or empty, session may not be authenticated");
+            sendErrorToUser(null, orderId, requestId, "Chua xac thuc ket noi websocket.");
+            return;
+        }
 
         try {
             DriverOrderActionResultDTO result = deliveryOrderService.respondDeclineOrder(orderId, resolvedUserId, requestId);
@@ -131,8 +145,8 @@ public class DriverRealtimeController {
                                     .build())
                             .build()
             );
-        } catch (RuntimeException e) {
-            log.error("Loi khi realtime decline order {}: {}", orderId, e.getMessage());
+        } catch (Exception e) {
+            log.error("Loi khi realtime decline order {}: {}", orderId, e.getMessage(), e);
             sendOrderStatusToUser(
                     resolvedUserId,
                     DriverRealtimeEvent.builder()
@@ -161,10 +175,43 @@ public class DriverRealtimeController {
         messagingTemplate.convertAndSendToUser(userId, ORDER_STATUS_DESTINATION, event);
     }
 
-    private String requireAuthenticatedUser(String userId) {
-        if (!StringUtils.hasText(userId)) {
-            throw new IllegalArgumentException("Chua xac thuc ket noi websocket.");
+    private void sendErrorToUser(String userId, String orderId, String requestId, String message) {
+        if (StringUtils.hasText(userId)) {
+            sendOrderStatusToUser(
+                    userId,
+                    DriverRealtimeEvent.builder()
+                            .event("ORDER_ACCEPT_FAILED")
+                            .message(message)
+                            .orderId(orderId)
+                            .requestId(requestId)
+                            .status("ERROR")
+                            .actionResult(DriverOrderActionResultDTO.builder()
+                                    .orderId(orderId)
+                                    .requestId(requestId)
+                                    .status("ACCEPT_FAILED")
+                                    .build())
+                            .build()
+            );
         }
-        return userId;
+    }
+
+    @MessageExceptionHandler
+    public void handleMessagingException(Exception e, Principal principal) {
+        String userId = principal != null ? principal.getName() : null;
+        log.error("[STOMP DEBUG] @MessageExceptionHandler caught exception for user='{}': {}",
+                userId != null ? userId : "unknown", e.getMessage(), e);
+
+        if (!StringUtils.hasText(userId)) {
+            return;
+        }
+
+        sendOrderStatusToUser(
+                userId,
+                DriverRealtimeEvent.builder()
+                        .event("ORDER_ACCEPT_FAILED")
+                        .message("Loi he thong: " + e.getMessage())
+                        .status("ERROR")
+                        .build()
+        );
     }
 }
