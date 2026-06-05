@@ -721,9 +721,13 @@ Firestore Root
 | 25  | `driverPhone`        | String (nullable)     | Không    | SĐT tài xế                                      |
 | 26  | `vehiclePlate`        | String (nullable)     | Không    | Biển số xe                                      |
 | 27  | `idempotencyKey`     | String (nullable)     | Không    | Khóa chống đặt trùng (do client gửi lên)       |
-| 28  | `createdAt`           | Timestamp            | Có       | Thời điểm tạo đơn                               |
-| 29  | `updatedAt`           | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
-| 30  | `deletedAt`           | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
+| 28  | `pickedUpAt`         | Timestamp (nullable)  | Không    | Thời điểm tài xế nhấc hàng khỏi quán (null = chưa lấy) |
+| 29  | `arrivedAtStoreAt`   | Timestamp (nullable)  | Không    | Thời điểm tài xế đến quán                      |
+| 30  | `deliveredAt`        | Timestamp (nullable)  | Không    | Thời điểm giao hàng thành công                 |
+| 31  | `deliveryStep`       | String (nullable)     | Không    | Bước giao hàng: PENDING_STORE_CONFIRMATION, WAITING_DRIVER, WAITING_PICKUP, ARRIVED_STORE, ON_THE_WAY, DELIVERED, CANCELLED |
+| 32  | `createdAt`           | Timestamp            | Có       | Thời điểm tạo đơn                               |
+| 33  | `updatedAt`           | Timestamp            | Không    | Thời điểm cập nhật gần nhất                    |
+| 34  | `deletedAt`           | Timestamp (nullable)  | Không    | Thời điểm xóa mềm (null = chưa xóa)           |
 
 **Các giá trị status:**
 
@@ -734,6 +738,20 @@ Firestore Root
 | 2       | Đang giao     | Tài xế đang giao hàng       |
 | 3       | Hoàn thành    | Đã giao thành công          |
 | 4       | Đã hủy        | Đơn hàng đã bị hủy          |
+
+**Các giá trị `deliveryStep`** (dùng cho FE hiển thị giai đoạn giao hàng):
+
+| Giá trị           | Mô tả                                      | Ghi chú                                                     |
+| ----------------- | ------------------------------------------ | ----------------------------------------------------------- |
+| `PENDING_STORE_CONFIRMATION` | Chờ quán xác nhận                  | `status = 0`                                              |
+| `WAITING_DRIVER`  | Chờ tài xế nhận đơn                        | `status = 1`, chưa có driver                              |
+| `WAITING_PICKUP`  | Tài xế đã nhận, đang trên đường đến quán  | `status = 2`, `pickedUpAt = null`                          |
+| `ARRIVED_STORE`   | Tài xế đã đến quán                         | `status = 2`, `arrivedAtStoreAt != null`                   |
+| `ON_THE_WAY`      | Tài xế đã lấy hàng, đang giao             | `status = 2`, `pickedUpAt != null`                        |
+| `DELIVERED`       | Đã giao thành công                         | `status = 3`                                               |
+| `CANCELLED`       | Đã hủy                                     | `status = 4`                                               |
+
+**Quy tắc quan trọng:** Trường `deliveryStep` phải được sync xuống Firestore mỗi khi trạng thái thay đổi. FE dùng `deliveryStep` để hiển thị nhãn "Đang lấy" / "Đang giao" thay vì chỉ dùng `statusCode = "DELIVERING"`.
 
 **Các giá trị paymentMethod:**
 
@@ -789,6 +807,8 @@ Firestore Root
   "freeshipDiscountAmount": 5000.0,
   "finalAmount": 135000.0,
   "status": 2,
+  "deliveryStep": "ON_THE_WAY",
+  "pickedUpAt": "2026-04-07T00:01:00Z",
   "deliveryAddress": "Ky tuc xa UTC2, Quan 9, TP.HCM",
   "addressId": "addr_001",
   "receiverName": "Khoi",
@@ -804,7 +824,7 @@ Firestore Root
   "vehiclePlate": "59A-123.45",
   "idempotencyKey": null,
   "createdAt": "2026-04-07T00:00:00Z",
-  "updatedAt": "2026-04-07T00:00:00Z",
+  "updatedAt": "2026-04-07T00:01:00Z",
   "deletedAt": null
 }
 ```

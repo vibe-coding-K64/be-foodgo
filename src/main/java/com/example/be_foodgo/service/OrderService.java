@@ -379,13 +379,13 @@ public class OrderService {
 
     private boolean isCashPayment(Object paymentMethodObj) {
         if (paymentMethodObj == null) {
-            return true;
+            return false;
         }
         if (paymentMethodObj instanceof Number) {
             int val = ((Number) paymentMethodObj).intValue();
-            return val == 1 || val == 0;
+            return val == 2;
         }
         String pmStr = paymentMethodObj.toString().toLowerCase().trim();
-        return pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat") || pmStr.equals("1") || pmStr.equals("0");
+        return pmStr.equals("2") || pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat");
     }
 }

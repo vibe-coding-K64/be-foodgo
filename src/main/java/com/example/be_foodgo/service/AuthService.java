@@ -7,6 +7,7 @@ import com.example.be_foodgo.model.User;
 import com.example.be_foodgo.repository.UserRepository;
 import com.example.be_foodgo.security.JwtTokenProvider;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -340,17 +341,62 @@ public class AuthService {
         }
     }
 
-    public Map<String, Object> registerMerchant(AuthRequestDTO request) throws Exception {
-        log.info("Bat dau dang ky tai khoan nguoi ban - Email: {}", request.getEmail());
-
-        if (userRepository.tonTaiEmail(request.getEmail())) {
-            log.warn("Email da ton tai: {}", request.getEmail());
-            throw new IllegalArgumentException("Email da ton tai trong he thong. Vui long su dung email khac.");
+    public void updateFcmToken(String userId, FCMTokenRequest request) throws Exception {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("Khong xac dinh duoc tai khoan can cap nhat FCM token.");
+        }
+        if (request == null || request.getFcmToken() == null || request.getFcmToken().isBlank()) {
+            throw new IllegalArgumentException("fcmToken khong duoc de trong.");
         }
 
-        if (userRepository.tonTaiPhoneNumber(request.getPhoneNumber())) {
-            log.warn("So dien thoai da ton tai: {}", request.getPhoneNumber());
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("fcmToken", request.getFcmToken().trim());
+        updates.put("updatedAt", Instant.now());
+
+        firestore.collection("driver_profiles")
+                .document(userId)
+                .set(updates, SetOptions.merge())
+                .get();
+
+        log.info("Cap nhat FCM token thanh cong cho tai xe: {}", userId);
+    }
+
+    public Map<String, Object> registerMerchant(AuthRequestDTO request) throws Exception {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        String normalizedPhoneNumber = request.getPhoneNumber().trim();
+        log.info("Bat dau dang ky tai khoan nguoi ban - Email: {}", normalizedEmail);
+
+        User existingUser = userRepository.timTheoEmail(normalizedEmail);
+        if (existingUser != null && existingUser.getRoles() != null && existingUser.getRoles().contains(3)) {
+            log.warn("Email da ton tai voi role merchant: {}", normalizedEmail);
+            throw new IllegalArgumentException("Email da ton tai va da co vai tro nguoi ban trong he thong.");
+        }
+
+        if (existingUser == null && userRepository.tonTaiPhoneNumber(normalizedPhoneNumber)) {
+            log.warn("So dien thoai da ton tai: {}", normalizedPhoneNumber);
             throw new IllegalArgumentException("So dien thoai da duoc su dung. Vui long su dung so dien thoai khac.");
+        }
+
+        if (existingUser != null) {
+            List<Integer> updatedRoles = userRepository.themRoleNeuChuaCo(existingUser.getId(), 3);
+
+            StoreDTO defaultStore = new StoreDTO();
+            defaultStore.setName("Gian hàng của " + existingUser.getFullName());
+            defaultStore.setAddress("Chưa cập nhật địa chỉ");
+            defaultStore.setAvtUrl("https://placehold.co/150x150/FF6B35/FFFFFF?text=Store");
+            defaultStore.setBackUrl("https://placehold.co/800x400/FF6B35/FFFFFF?text=Cover");
+            defaultStore.setDeliveryTime("20-30 phút");
+            defaultStore.setDeliveryFee(15000.0);
+            defaultStore.setIsOpen(false);
+            storeService.createMerchantStore(existingUser.getId(), defaultStore);
+
+            log.info("Them role merchant cho user hien co thanh cong - UserId: {}, Roles: {}", existingUser.getId(), updatedRoles);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Da them vai tro nguoi ban cho tai khoan hien co va tao gian hang thanh cong");
+            result.put("uid", existingUser.getId());
+            result.put("roles", updatedRoles);
+            return result;
         }
 
         // Tao tai khoan tren Firebase Authentication de ho tro dang nhap bang Firebase
@@ -358,7 +404,7 @@ public class AuthService {
         try {
             FirebaseAuth firebaseAuth = FirebaseAuth.getInstance(FirebaseApp.getInstance());
             UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
-                    .setEmail(request.getEmail())
+                    .setEmail(normalizedEmail)
                     .setPassword(request.getPassword())
                     .setDisplayName(request.getFullName())
                     .setEmailVerified(false);
@@ -382,10 +428,10 @@ public class AuthService {
 
         User user = User.builder()
                 .id(newId)
-                .email(request.getEmail())
+                .email(normalizedEmail)
                 .password(hashedPassword)
                 .fullName(request.getFullName())
-                .phoneNumber(request.getPhoneNumber())
+                .phoneNumber(normalizedPhoneNumber)
                 .photoUrl(null)
                 .roles(List.of(3))
                 .createdAt(Instant.now().toString())
@@ -610,20 +656,22 @@ public class AuthService {
 
     public OtpSendResponse guiOtpDangKyEmail(String email, String password, String fullName, String phoneNumber) throws Exception {
         String emailLower = email.toLowerCase().trim();
+        String normalizedPhoneNumber = phoneNumber.trim();
         kiemTraCooldown(emailLower);
         log.info("Bat dau gui OTP dang ky email: {}", emailLower);
 
-        if (userRepository.tonTaiEmail(emailLower)) {
-            throw new IllegalArgumentException("Email da ton tai trong he thong. Vui long su dung email khac.");
+        User existingUser = userRepository.timTheoEmail(emailLower);
+        if (existingUser != null && existingUser.getRoles() != null && existingUser.getRoles().contains(1)) {
+            throw new IllegalArgumentException("Email da ton tai va da co vai tro nguoi dung trong he thong.");
         }
 
-        if (userRepository.tonTaiPhoneNumber(phoneNumber)) {
+        if (existingUser == null && userRepository.tonTaiPhoneNumber(normalizedPhoneNumber)) {
             throw new IllegalArgumentException("So dien thoai da duoc su dung. Vui long su dung so dien thoai khac.");
         }
 
         String otp = sinhMaOtp();
         String pendingKey = "pending:" + emailLower;
-        pendingRegistrations.put(pendingKey, new PendingRegistration(emailLower, password, fullName, phoneNumber));
+        pendingRegistrations.put(pendingKey, new PendingRegistration(emailLower, password, fullName, normalizedPhoneNumber));
         otpStore.put(pendingKey, new OtpEntry(otp, null, System.currentTimeMillis() + OTP_TTL_SECONDS * 1000));
         capNhatThoiGianGui(emailLower);
 
@@ -672,29 +720,47 @@ public class AuthService {
             throw new IllegalArgumentException("Khong tim thay thong tin dang ky. Vui long thu lai.");
         }
 
-        String newId = userRepository.sinhNextUserId();
-        String hashedPassword = passwordEncoder.encode(pending.password);
+        User existingUser = userRepository.timTheoEmail(emailLower);
+        User user;
+        String userId;
 
-        User user = User.builder()
-                .id(newId)
-                .email(pending.email)
-                .password(hashedPassword)
-                .fullName(pending.fullName)
-                .phoneNumber(pending.phoneNumber)
-                .photoUrl(null)
-                .roles(List.of(1))
-                .createdAt(Instant.now().toString())
-                .isEmailVerified(true)
-                .build();
+        if (existingUser != null) {
+            if (existingUser.getRoles() != null && existingUser.getRoles().contains(1)) {
+                otpStore.remove(pendingKey);
+                pendingRegistrations.remove(pendingKey);
+                throw new IllegalArgumentException("Email da ton tai va da co vai tro nguoi dung trong he thong.");
+            }
 
-        userRepository.taoUser(user);
+            List<Integer> updatedRoles = userRepository.themRoleNeuChuaCo(existingUser.getId(), 1);
+            user = userRepository.timTheoId(existingUser.getId());
+            userId = existingUser.getId();
+            log.info("Them role nguoi dung cho tai khoan hien co thanh cong - UserId: {}, Roles: {}", userId, updatedRoles);
+        } else {
+            String newId = userRepository.sinhNextUserId();
+            String hashedPassword = passwordEncoder.encode(pending.password);
+
+            user = User.builder()
+                    .id(newId)
+                    .email(pending.email)
+                    .password(hashedPassword)
+                    .fullName(pending.fullName)
+                    .phoneNumber(pending.phoneNumber)
+                    .photoUrl(null)
+                    .roles(List.of(1))
+                    .createdAt(Instant.now().toString())
+                    .isEmailVerified(true)
+                    .build();
+
+            userRepository.taoUser(user);
+            userId = newId;
+            log.info("Dang ky tai khoan thanh cong - UserId: {}, Email: {}", newId, pending.email);
+        }
+
         otpStore.remove(pendingKey);
         pendingRegistrations.remove(pendingKey);
 
-        log.info("Dang ky tai khoan thanh cong - UserId: {}, Email: {}", newId, pending.email);
-
-        String token = jwtTokenProvider.taoToken(newId);
-        RefreshToken refreshToken = refreshTokenService.taoRefreshToken(newId, null);
+        String token = jwtTokenProvider.taoToken(userId);
+        RefreshToken refreshToken = refreshTokenService.taoRefreshToken(userId, null);
         UserResponse userResponse = mapToUserResponse(user);
 
         return AuthResponse.of(token, jwtTokenProvider.getExpirationMs(),
@@ -704,20 +770,22 @@ public class AuthService {
     public OtpSendResponse guiOtpDangKyTaiXe(String email, String password, String fullName,
             String phoneNumber) throws Exception {
         String emailLower = email.toLowerCase().trim();
+        String normalizedPhoneNumber = phoneNumber.trim();
         kiemTraCooldown(emailLower);
         log.info("Bat dau gui OTP dang ky tai xe: {}", emailLower);
 
-        if (userRepository.tonTaiEmail(emailLower)) {
-            throw new IllegalArgumentException("Email da ton tai trong he thong.");
+        User existingUser = userRepository.timTheoEmail(emailLower);
+        if (existingUser != null && existingUser.getRoles() != null && existingUser.getRoles().contains(2)) {
+            throw new IllegalArgumentException("Email da ton tai va da co vai tro tai xe trong he thong.");
         }
-        if (userRepository.tonTaiPhoneNumber(phoneNumber)) {
+        if (existingUser == null && userRepository.tonTaiPhoneNumber(normalizedPhoneNumber)) {
             throw new IllegalArgumentException("So dien thoai da duoc su dung.");
         }
 
         String otp = sinhMaOtp();
         String pendingKey = "pendingDriver:" + emailLower;
         pendingDriverRegistrations.put(pendingKey,
-                new PendingDriverRegistration(emailLower, password, fullName, phoneNumber));
+                new PendingDriverRegistration(emailLower, password, fullName, normalizedPhoneNumber));
         otpStore.put(pendingKey, new OtpEntry(otp, null, System.currentTimeMillis() + OTP_TTL_SECONDS * 1000));
         capNhatThoiGianGui(emailLower);
 
@@ -766,31 +834,49 @@ public class AuthService {
             throw new IllegalArgumentException("Khong tim thay thong tin dang ky. Vui long thu lai.");
         }
 
-        String newId = userRepository.sinhNextUserId();
-        String hashedPassword = passwordEncoder.encode(pending.password);
+        User existingUser = userRepository.timTheoEmail(emailLower);
+        User user;
+        String userId;
 
-        User user = User.builder()
-                .id(newId)
-                .email(pending.email)
-                .password(hashedPassword)
-                .fullName(pending.fullName)
-                .phoneNumber(pending.phoneNumber)
-                .photoUrl(null)
-                .roles(List.of(2))
-                .createdAt(Instant.now().toString())
-                .isEmailVerified(true)
-                .build();
+        if (existingUser != null) {
+            if (existingUser.getRoles() != null && existingUser.getRoles().contains(2)) {
+                otpStore.remove(pendingKey);
+                pendingDriverRegistrations.remove(pendingKey);
+                throw new IllegalArgumentException("Email da ton tai va da co vai tro tai xe trong he thong.");
+            }
 
-        userRepository.taoUser(user);
+            List<Integer> updatedRoles = userRepository.themRoleNeuChuaCo(existingUser.getId(), 2);
+            storeService.taoDriverProfile(existingUser.getId(), pending.fullName, pending.phoneNumber);
+            user = userRepository.timTheoId(existingUser.getId());
+            userId = existingUser.getId();
+            log.info("Them role tai xe cho tai khoan hien co thanh cong - UserId: {}, Roles: {}", userId, updatedRoles);
+        } else {
+            String newId = userRepository.sinhNextUserId();
+            String hashedPassword = passwordEncoder.encode(pending.password);
+
+            user = User.builder()
+                    .id(newId)
+                    .email(pending.email)
+                    .password(hashedPassword)
+                    .fullName(pending.fullName)
+                    .phoneNumber(pending.phoneNumber)
+                    .photoUrl(null)
+                    .roles(List.of(2))
+                    .createdAt(Instant.now().toString())
+                    .isEmailVerified(true)
+                    .build();
+
+            userRepository.taoUser(user);
+            userId = newId;
+            storeService.taoDriverProfile(newId, pending.fullName, pending.phoneNumber);
+            log.info("Dang ky tai xe thanh cong - UserId: {}, Email: {}", newId, pending.email);
+        }
+
         otpStore.remove(pendingKey);
         pendingDriverRegistrations.remove(pendingKey);
 
-        storeService.taoDriverProfile(newId, pending.fullName, pending.phoneNumber);
-
-        log.info("Dang ky tai xe thanh cong - UserId: {}, Email: {}", newId, pending.email);
-
-        String token = jwtTokenProvider.taoToken(newId);
-        RefreshToken refreshToken = refreshTokenService.taoRefreshToken(newId, null);
+        String token = jwtTokenProvider.taoToken(userId);
+        RefreshToken refreshToken = refreshTokenService.taoRefreshToken(userId, null);
         UserResponse userResponse = mapToUserResponse(user);
 
         return AuthResponse.of(token, jwtTokenProvider.getExpirationMs(),

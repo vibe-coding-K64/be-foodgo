@@ -6,6 +6,7 @@ import com.example.be_foodgo.dto.DeliveryProfileRequest;
 import com.example.be_foodgo.dto.DeliveryStatusRequest;
 import com.example.be_foodgo.dto.DeliveryVehicleRequest;
 import com.example.be_foodgo.exception.ApiResponse;
+import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.service.DeliveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -147,6 +148,10 @@ public class DeliveryController extends BaseController {
                 profile = deliveryService.updateDriverStatus(holder.userId, request.getIsActive());
             }
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Cap nhat trang thai nhan don thanh cong."));
+        } catch (BusinessException e) {
+            log.warn("Loi business khi cap nhat trang thai nhan don: {}", e.getMessage());
+            return ResponseEntity.status(e.getStatus().value()).body(
+                    ApiResponse.thatError(e.getStatus().value(), e.getMessage()));
         } catch (Exception e) {
             log.error("Loi khi cap nhat trang thai nhan don: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(

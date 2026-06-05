@@ -1,4 +1,4 @@
-# Cấu trúc thư mục dự án - Be FoodGo
+# Cấu trúc thư mục dự án - Driver Go
 
 Dự án backend Spring Boot kết nối Firebase Firestore làm cơ sở dữ liệu.
 
@@ -7,7 +7,7 @@ Dự án backend Spring Boot kết nối Firebase Firestore làm cơ sở dữ l
 ## Cấu trúc tổng thể
 
 ```
-be-foodgo/
+be-driver-go/
 │
 ├── .mvn/                              # Maven wrapper
 ├── .vscode/                           # Cấu hình VS Code

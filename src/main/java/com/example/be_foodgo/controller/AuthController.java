@@ -1,13 +1,16 @@
 package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.*;
+import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,11 +18,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Xac thuc (Auth)", description = "API xac thuc tai khoan, dang nhap, dang ky, va khoi phuc mat khau")
-public class AuthController {
+public class AuthController extends BaseController {
 
     private final AuthService authService;
 
     public AuthController(AuthService authService) {
+        super(org.slf4j.LoggerFactory.getLogger(AuthController.class));
         this.authService = authService;
     }
 
@@ -245,6 +249,33 @@ public class AuthController {
             return ResponseEntity.badRequest().body(
                     com.example.be_foodgo.exception.ApiResponse.thatError(
                             400, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/fcm-token")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Cap nhat FCM token",
+            description = "Luu hoac cap nhat FCM token cua tai khoan hien tai de nhan push notification."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cap nhat FCM token thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Chua xac thuc")
+    })
+    public ResponseEntity<?> updateFcmToken(
+            HttpServletRequest httpRequest,
+            @Valid @RequestBody FCMTokenRequest request) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            authService.updateFcmToken(holder.userId, request);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Cap nhat FCM token thanh cong."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.thatError(400, e.getMessage()));
         }
     }
 

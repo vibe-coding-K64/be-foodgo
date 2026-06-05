@@ -50,6 +50,21 @@ public class WalletRepository {
         return doc.exists() ? doc.getData() : null;
     }
 
+    public List<Map<String, Object>> findActiveDriverProfiles() throws ExecutionException, InterruptedException {
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_DRIVER_PROFILES)
+                .whereEqualTo("isActive", true)
+                .get()
+                .get()
+                .getDocuments();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            Map<String, Object> data = new java.util.HashMap<>(doc.getData());
+            data.put("id", doc.getId());
+            result.add(data);
+        }
+        return result;
+    }
+
     public Map<String, Object> findUserById(String userId)
             throws ExecutionException, InterruptedException {
         DocumentSnapshot doc = firestore
@@ -104,7 +119,7 @@ public class WalletRepository {
         Map<String, Object> walletData = new HashMap<>();
         walletData.put("id", walletId);
         walletData.put("userId", userId);
-        walletData.put("role", "driver");
+        walletData.put("role", 2);
         walletData.put("balance", 0.0);
         walletData.put("totalEarned", 0.0);
         walletData.put("totalWithdrawn", 0.0);
