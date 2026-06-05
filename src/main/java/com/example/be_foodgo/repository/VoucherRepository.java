@@ -343,9 +343,12 @@ public class VoucherRepository {
 
     public void giamRemainingSystemVoucher(String voucherId) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucherId);
-        ApiFuture<WriteResult> future = docRef.update("remaining", FieldValue.increment(-1));
+        ApiFuture<WriteResult> future = docRef.update(
+                "remaining", FieldValue.increment(-1),
+                "usedCount", FieldValue.increment(1)
+        );
         future.get();
-        log.info("Da giam remaining cua voucher [{}]", voucherId);
+        log.info("Da giam remaining va tang usedCount cua voucher [{}]", voucherId);
     }
 
     public Integer getLoyaltyPoints(String userId) throws ExecutionException, InterruptedException {

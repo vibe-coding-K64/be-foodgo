@@ -822,11 +822,20 @@ public class FirebaseResetService {
         map.put("value", value);
         map.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80");
         map.put("remaining", remaining);
+        map.put("limitCount", remaining);
+        map.put("usedCount", 0);
         map.put("isActive", true);
         map.put("isFreeship", isFreeship);
         map.put("terms", terms);
         map.put("minOrderValue", minOrderValue);
-        map.put("expiryDate", FieldValue.serverTimestamp());
+        com.google.cloud.Timestamp expTimestamp;
+        try {
+            java.time.Instant instant = java.time.Instant.parse(expiryDate);
+            expTimestamp = com.google.cloud.Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), 0);
+        } catch (Exception e) {
+            expTimestamp = com.google.cloud.Timestamp.now();
+        }
+        map.put("expiryDate", expTimestamp);
         map.put("pointsRequired", pointsRequired);
         map.put("validityDays", validityDays);
         map.put("createdAt", FieldValue.serverTimestamp());

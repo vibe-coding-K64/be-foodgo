@@ -670,9 +670,10 @@ public class CheckoutService {
                 String voucherId = voucherInfo.getVoucherId();
                 if (voucherInfo.getLoaiVoucher() == LoaiVoucher.SYSTEM) {
                     DocumentReference voucherDocRef = firestore.collection("vouchers").document(voucherId);
-                    batch.update(voucherDocRef, "remaining",
-                            com.google.cloud.firestore.FieldValue.increment(-1));
-                    log.info("Them thao tac giam remaining voucher he thong [{}] vao WriteBatch.", voucherId);
+                    batch.update(voucherDocRef,
+                            "remaining", com.google.cloud.firestore.FieldValue.increment(-1),
+                            "usedCount", com.google.cloud.firestore.FieldValue.increment(1));
+                    log.info("Them thao tac giam remaining va tang usedCount voucher he thong [{}] vao WriteBatch.", voucherId);
                 } else {
                     DocumentReference myVoucherDocRef = firestore
                             .collection("customer_profiles")
