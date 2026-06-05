@@ -119,7 +119,7 @@ public class WalletRepository {
         Map<String, Object> walletData = new HashMap<>();
         walletData.put("id", walletId);
         walletData.put("userId", userId);
-        walletData.put("role", "driver");
+        walletData.put("role", 2);
         walletData.put("balance", 0.0);
         walletData.put("totalEarned", 0.0);
         walletData.put("totalWithdrawn", 0.0);

@@ -32,6 +32,9 @@ public class WalletService {
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = walletRepository
                     .findDriverWalletByUserIdAndRole(userId, "driver");
+            if (wallets.isEmpty()) {
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(userId, 2);
+            }
             if (!wallets.isEmpty()) {
                 com.google.cloud.firestore.DocumentSnapshot doc = wallets.get(0);
                 return mapToWalletDTO(doc.getId(), doc.getData());
@@ -98,7 +101,10 @@ public class WalletService {
         log.info("Bat dau yeu cau rut tien: userId={}, amount={}", userId, amount);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = walletRepository
-                    .findDriverWalletByUserIdAndRole(userId, "driver");
+                    .findDriverWalletByUserIdAndRole(userId, 2);
+            if (walletSnapshots.isEmpty()) {
+                walletSnapshots = walletRepository.findDriverWalletByUserIdAndRole(userId, "driver");
+            }
             if (walletSnapshots.isEmpty()) {
                 throw BusinessException.viKhongTonTai(userId);
             }
@@ -317,6 +323,17 @@ public class WalletService {
                     .findDriverWalletByUserIdAndRole(driverId, 2);
             if (!wallets.isEmpty()) {
                 walletId = wallets.get(0).getId();
+            } else {
+                // Thuong gap khi tao vi moi: thu lai voi role="driver" (string) cho cac vi cu
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(driverId, "driver");
+                if (!wallets.isEmpty()) {
+                    walletId = wallets.get(0).getId();
+                    log.info("Tim thay vi cu (role='driver') cho tai xe {}, walletId={}", driverId, walletId);
+                } else {
+                    // Tao vi moi neu chua ton tai
+                    walletId = walletRepository.createDriverWallet(driverId);
+                    log.info("Tao vi moi cho tai xe {}: walletId={}", driverId, walletId);
+                }
             }
 
             double driverCommissionPercentage = 80.0;
@@ -439,6 +456,14 @@ public class WalletService {
                     .findDriverWalletByUserIdAndRole(driverId, 2);
             if (!wallets.isEmpty()) {
                 walletId = wallets.get(0).getId();
+            } else {
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(driverId, "driver");
+                if (!wallets.isEmpty()) {
+                    walletId = wallets.get(0).getId();
+                } else {
+                    walletId = walletRepository.createDriverWallet(driverId);
+                    log.info("Tao vi moi cho tai xe khi COD Debit: driverId={}, walletId={}", driverId, walletId);
+                }
             }
 
             Map<String, Object> transData = new HashMap<>();
@@ -649,10 +674,17 @@ public class WalletService {
         if (data == null) {
             return WalletDTO.builder().id(id).build();
         }
+        Object roleVal = data.get("role");
+        String roleStr;
+        if (roleVal instanceof Number) {
+            roleStr = ((Number) roleVal).intValue() == 1 ? "merchant" : "driver";
+        } else {
+            roleStr = roleVal != null ? String.valueOf(roleVal) : null;
+        }
         return WalletDTO.builder()
                 .id(id)
                 .userId((String) data.get("userId"))
-                .role(data.get("role") != null ? String.valueOf(data.get("role")) : null)
+                .role(roleStr)
                 .balance(toDouble(data.get("balance")))
                 .totalEarned(toDouble(data.get("totalEarned")))
                 .totalWithdrawn(toDouble(data.get("totalWithdrawn")))
