@@ -30,6 +30,27 @@ public class AdminTransactionController extends BaseController {
         this.walletService = walletService;
     }
 
+    @GetMapping
+    @Operation(
+            summary = "Lay tat ca danh sach giao dich",
+            description = "Tra ve tat ca lich su giao dich trong toan bo he thong."
+    )
+    public ResponseEntity<?> getAllTransactions(HttpServletRequest httpRequest) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            List<TransactionDTO> list = walletService.getAllTransactions();
+            return ResponseEntity.ok(ApiResponse.thatSuccess(list, "Lay danh sach giao dich thanh cong."));
+        } catch (Exception e) {
+            log.error("Loi khi lay tat ca giao dich: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon."));
+        }
+    }
+
     @GetMapping("/withdrawals/pending")
     @Operation(
             summary = "Lay danh sach yeu cau rut tien dang cho",

@@ -87,14 +87,48 @@ public class AdminNotificationController extends BaseController {
         if (holder.isAuthError) return ResponseEntity.status(401).body(holder.errorResponse);
 
         try {
-            // notificationService.deleteNotification deletes from repository. Let's make sure it handles admin profiles or is general.
-            // Wait, notificationRepository.deleteNotification uses driver_profiles inside? Let's check notificationRepository.
-            // Let's check if we need deleteNotificationByProfile or if deleteNotification works.
-            // We'll write a profile-aware delete if needed or implement it. Let's check NotificationRepository first.
             notificationService.deleteNotificationByProfile("admin_profiles", holder.userId, notifId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Xóa thông báo thành công."));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
         }
+    }
+
+    @PostMapping("/broadcast")
+    @Operation(summary = "Gửi thông báo toàn sàn (broadcast) tới các nhóm người dùng")
+    public ResponseEntity<?> broadcastNotification(
+            HttpServletRequest httpRequest,
+            @RequestBody BroadcastRequest request) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) return ResponseEntity.status(401).body(holder.errorResponse);
+
+        try {
+            NotificationDTO dto = NotificationDTO.builder()
+                    .title(request.getTitle())
+                    .body(request.getBody())
+                    .type(99) // 99 represents system broadcast
+                    .createdAt(java.time.Instant.now())
+                    .isRead(false)
+                    .build();
+            
+            notificationService.broadcastNotification(request.getTarget(), dto);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(null, "Gửi thông báo toàn sàn thành công."));
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo toàn sàn: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(ApiResponse.thatError(500, e.getMessage()));
+        }
+    }
+
+    public static class BroadcastRequest {
+        private String title;
+        private String body;
+        private String target; // "all", "customers", "drivers", "merchants"
+
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getBody() { return body; }
+        public void setBody(String body) { this.body = body; }
+        public String getTarget() { return target; }
+        public void setTarget(String target) { this.target = target; }
     }
 }

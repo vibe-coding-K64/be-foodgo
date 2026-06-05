@@ -685,6 +685,39 @@ public class WalletService {
         }
     }
 
+    public List<TransactionDTO> getAllTransactions() {
+        log.info("Admin bat dau lay tat ca giao dich");
+        try {
+            com.google.cloud.firestore.Firestore firestore = walletRepository.getFirestore();
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = firestore.collection("transactions")
+                    .get()
+                    .get()
+                    .getDocuments();
+
+            List<TransactionDTO> result = new java.util.ArrayList<>();
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                result.add(mapToTransactionDTO(doc.getId(), doc.getData()));
+            }
+
+            // Sap xep in-memory giam dan theo createdAt
+            result.sort((a, b) -> {
+                if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+                if (a.getCreatedAt() == null) return 1;
+                if (b.getCreatedAt() == null) return -1;
+                return b.getCreatedAt().compareTo(a.getCreatedAt());
+            });
+
+            return result;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi lay tat ca giao dich: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi lay tat ca giao dich: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     private WalletDTO mapToWalletDTO(String id, Map<String, Object> data) {
         if (data == null) {
             return WalletDTO.builder().id(id).build();
