@@ -10,10 +10,8 @@ import com.google.cloud.firestore.Firestore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-
 import java.util.Date;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -117,5 +115,41 @@ class BeFoodgoApplicationTests {
             firestore.collection("stores").document(storeId).delete().get();
             firestore.collection("merchant_profiles").document(testMerchantUid).delete().get();
         }
+    }
+
+    @Test
+    void testLockUnlockStore() throws Exception {
+        System.out.println("=== STARTING LOCK/UNLOCK TEST ===");
+        // 1. Lock store_001
+        storeService.lockStore("store_001", "Test lock reason");
+        
+        // 2. Fetch it and verify it is locked and isOpen is false
+        var storeDto = storeService.getStoreById("store_001");
+        assertNotNull(storeDto);
+        assertFalse(storeDto.getIsOpen());
+        assertEquals("Test lock reason", storeDto.getAdminLockedReason());
+        System.out.println("Successfully locked store_001. Reason: " + storeDto.getAdminLockedReason());
+
+        // 3. Try to update store_001's isOpen to true (should fail)
+        storeDto.setIsOpen(true);
+        try {
+            storeService.updateStore("store_001", storeDto);
+            fail("Should have thrown IllegalArgumentException when trying to open locked store");
+        } catch (IllegalArgumentException e) {
+            // Expected exception
+            assertTrue(e.getMessage().contains("tạm khóa"));
+            System.out.println("Expected block triggered: " + e.getMessage());
+        }
+
+        // 4. Unlock store_001
+        storeService.unlockStore("store_001");
+        
+        // 5. Verify it is unlocked
+        var unlockedDto = storeService.getStoreById("store_001");
+        assertNotNull(unlockedDto);
+        assertTrue(unlockedDto.getIsOpen());
+        assertNull(unlockedDto.getAdminLockedReason());
+        System.out.println("Successfully unlocked store_001.");
+        System.out.println("=== LOCK/UNLOCK TEST PASSED ===");
     }
 }

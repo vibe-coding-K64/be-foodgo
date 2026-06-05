@@ -59,6 +59,7 @@ public class StoreService {
         store.setIsOpen(false);
         store.setApprovalStatus("pending");
         store.setRejectReason("");
+        store.setAdminLockedReason(null);
         store.setDeliveryTime(storeDTO.getDeliveryTime() != null ? storeDTO.getDeliveryTime() : "20-30 phút");
         store.setDeliveryFee(storeDTO.getDeliveryFee() != null ? storeDTO.getDeliveryFee() : 15000.0);
         store.setCategoryIds(storeDTO.getCategoryIds() != null ? storeDTO.getCategoryIds() : new java.util.ArrayList<>());
@@ -123,12 +124,22 @@ public class StoreService {
         store.setReviewCount(storeDTO.getReviewCount());
         store.setAvtUrl(storeDTO.getAvtUrl());
         store.setBackUrl(storeDTO.getBackUrl());
-        store.setIsOpen(storeDTO.getIsOpen());
+        if (store.getAdminLockedReason() != null && storeDTO.getIsOpen()) {
+            throw new IllegalArgumentException("Cửa hàng đang bị tạm khóa bởi Admin, không thể mở cửa.");
+        }
+        if (store.getAdminLockedReason() != null) {
+            store.setIsOpen(false);
+        } else {
+            store.setIsOpen(storeDTO.getIsOpen());
+        }
         if (storeDTO.getApprovalStatus() != null) {
             store.setApprovalStatus(storeDTO.getApprovalStatus());
         }
         if (storeDTO.getRejectReason() != null) {
             store.setRejectReason(storeDTO.getRejectReason());
+        }
+        if (storeDTO.getAdminLockedReason() != null) {
+            store.setAdminLockedReason(storeDTO.getAdminLockedReason());
         }
         store.setDeliveryTime(storeDTO.getDeliveryTime());
         store.setDeliveryFee(storeDTO.getDeliveryFee());
@@ -186,6 +197,40 @@ public class StoreService {
         log.info("Admin da tu choi cua hang: {} - Ly do: {}", storeId, reason);
     }
 
+    /**
+     * Admin tam khoa cua hang: cap nhat adminLockedReason = reason, isOpen = false
+     */
+    public void lockStore(String storeId, String reason) throws Exception {
+        com.google.cloud.firestore.DocumentReference docRef = firestore.collection("stores").document(storeId);
+        com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Cửa hàng không tồn tại: " + storeId);
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("adminLockedReason", reason != null && !reason.trim().isEmpty() ? reason : "Vi phạm quy định");
+        updates.put("isOpen", false);
+        updates.put("updatedAt", new java.util.Date());
+        docRef.update(updates).get();
+        log.info("Admin da tam khoa cua hang: {} - Ly do: {}", storeId, reason);
+    }
+
+    /**
+     * Admin mo khoa cua hang: xoa adminLockedReason, isOpen = true
+     */
+    public void unlockStore(String storeId) throws Exception {
+        com.google.cloud.firestore.DocumentReference docRef = firestore.collection("stores").document(storeId);
+        com.google.cloud.firestore.DocumentSnapshot doc = docRef.get().get();
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Cửa hàng không tồn tại: " + storeId);
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("adminLockedReason", com.google.cloud.firestore.FieldValue.delete());
+        updates.put("isOpen", true);
+        updates.put("updatedAt", new java.util.Date());
+        docRef.update(updates).get();
+        log.info("Admin da mo khoa cua hang: {}", storeId);
+    }
+
 
     private StoreDTO mapToDTO(Store store) {
         StoreDTO dto = new StoreDTO();
@@ -200,6 +245,7 @@ public class StoreService {
         dto.setIsOpen(store.getIsOpen());
         dto.setApprovalStatus(store.getApprovalStatus());
         dto.setRejectReason(store.getRejectReason());
+        dto.setAdminLockedReason(store.getAdminLockedReason());
         dto.setDeliveryTime(store.getDeliveryTime());
         dto.setDeliveryFee(store.getDeliveryFee());
         dto.setCategoryIds(store.getCategoryIds());
