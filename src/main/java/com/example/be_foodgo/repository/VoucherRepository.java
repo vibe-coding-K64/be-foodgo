@@ -198,6 +198,10 @@ public class VoucherRepository {
             com.google.protobuf.Timestamp ts = (com.google.protobuf.Timestamp) value;
             return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
         }
+        if (value instanceof com.google.cloud.Timestamp) {
+            com.google.cloud.Timestamp ts = (com.google.cloud.Timestamp) value;
+            return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
+        }
         if (value instanceof java.util.Date) {
             return ((java.util.Date) value).toInstant();
         }
