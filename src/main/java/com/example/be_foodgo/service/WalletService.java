@@ -562,6 +562,7 @@ public class WalletService {
                 throw new IllegalArgumentException("Khong tim thay vi lien ket.");
             }
 
+            Double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
             Double pendingBalance = walletDoc.getDouble("pendingBalance") != null ? walletDoc.getDouble("pendingBalance") : 0.0;
             Double totalWithdrawn = walletDoc.getDouble("totalWithdrawn") != null ? walletDoc.getDouble("totalWithdrawn") : 0.0;
 
@@ -572,6 +573,7 @@ public class WalletService {
             
             // Cap nhat vi
             Map<String, Object> walletUpdates = new HashMap<>();
+            walletUpdates.put("balance", Math.max(0.0, balance - amount));
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("totalWithdrawn", totalWithdrawn + amount);
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
@@ -579,6 +581,26 @@ public class WalletService {
 
             batch.commit().get();
             log.info("Da duyet thanh cong yeu cau rut tien: {}", transactionId);
+            
+            // Gui thong bao
+            try {
+                String userId = walletDoc.getString("userId");
+                Object roleObj = walletDoc.get("role");
+                
+                com.example.be_foodgo.dto.NotificationDTO dto = new com.example.be_foodgo.dto.NotificationDTO();
+                dto.setTitle("Yêu cầu rút tiền được duyệt");
+                dto.setBody("Yêu cầu rút " + String.format("%,.0f", amount) + "đ của bạn đã được duyệt thành công.");
+                dto.setType(42);
+                dto.setReferenceId(transactionId);
+                
+                if (roleObj != null && ("1".equals(String.valueOf(roleObj)) || "merchant".equals(String.valueOf(roleObj)))) {
+                    notificationService.createNotification("merchant_profiles", userId, dto);
+                } else {
+                    notificationService.createNotification("driver_profiles", userId, dto);
+                }
+            } catch (Exception ex) {
+                log.warn("Khong the gui thong bao duyet rut tien: {}", ex.getMessage());
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi duyet rut tien: {}", e.getMessage());
@@ -617,7 +639,6 @@ public class WalletService {
                 throw new IllegalArgumentException("Khong tim thay vi lien ket.");
             }
 
-            Double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
             Double pendingBalance = walletDoc.getDouble("pendingBalance") != null ? walletDoc.getDouble("pendingBalance") : 0.0;
 
             com.google.cloud.firestore.WriteBatch batch = firestore.batch();
@@ -626,15 +647,34 @@ public class WalletService {
             batch.update(transRef, "status", 2);
             batch.update(transRef, "description", "Tu choi rut tien: " + reason);
             
-            // Cap nhat vi: hoan tien
+            // Cap nhat vi: ko hoan tien vi tien chua tru
             Map<String, Object> walletUpdates = new HashMap<>();
-            walletUpdates.put("balance", balance + amount);
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             batch.update(walletRef, walletUpdates);
 
             batch.commit().get();
             log.info("Da tu choi yeu cau rut tien: {}", transactionId);
+
+            // Gui thong bao
+            try {
+                String userId = walletDoc.getString("userId");
+                Object roleObj = walletDoc.get("role");
+                
+                com.example.be_foodgo.dto.NotificationDTO dto = new com.example.be_foodgo.dto.NotificationDTO();
+                dto.setTitle("Yêu cầu rút tiền thất bại");
+                dto.setBody("Yêu cầu rút " + String.format("%,.0f", amount) + "đ của bạn bị từ chối. Lý do: " + reason);
+                dto.setType(43);
+                dto.setReferenceId(transactionId);
+                
+                if (roleObj != null && ("1".equals(String.valueOf(roleObj)) || "merchant".equals(String.valueOf(roleObj)))) {
+                    notificationService.createNotification("merchant_profiles", userId, dto);
+                } else {
+                    notificationService.createNotification("driver_profiles", userId, dto);
+                }
+            } catch (Exception ex) {
+                log.warn("Khong the gui thong bao tu choi rut tien: {}", ex.getMessage());
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi tu choi rut tien: {}", e.getMessage());

@@ -208,7 +208,7 @@ public class CheckoutService {
         int itemCount = request.getItems().stream().mapToInt(CheckoutRequestV2.CheckoutItem::getQuantity).sum();
         com.example.be_foodgo.dto.NotificationDTO notif = com.example.be_foodgo.dto.NotificationDTO.builder()
                 .type(21)
-                .title("🛒 Đơn hàng mới từ " + receiverName)
+                .title("Đơn hàng mới từ " + receiverName)
                 .body(orderCode + " · " + itemCount + " món · " + String.format("%,.0f", tongThanhToan) + "đ")
                 .orderId(orderId)
                 .referenceId(orderId)
