@@ -31,7 +31,9 @@ public class VoucherRepository {
     public String saveVoucher(Voucher voucher) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
         Map<String, Object> map = voucherToMap(voucher);
-        map.put("expiryDate", FieldValue.serverTimestamp());
+        map.put("expiryDate", voucher.getExpiryDate() != null 
+                ? Timestamp.ofTimeSecondsAndNanos(voucher.getExpiryDate().toInstant().getEpochSecond(), 0) 
+                : null);
         map.put("createdAt", FieldValue.serverTimestamp());
         map.put("updatedAt", FieldValue.serverTimestamp());
         ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
@@ -131,7 +133,7 @@ public class VoucherRepository {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
         Map<String, Object> map = voucherToMap(voucher);
         map.put("expiryDate", voucher.getExpiryDate() != null
-                ? FieldValue.serverTimestamp()
+                ? Timestamp.ofTimeSecondsAndNanos(voucher.getExpiryDate().toInstant().getEpochSecond(), 0)
                 : null);
         map.put("updatedAt", FieldValue.serverTimestamp());
         ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
