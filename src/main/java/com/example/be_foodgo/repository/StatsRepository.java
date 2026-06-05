@@ -215,7 +215,8 @@ public class StatsRepository {
             }
 
             Map<String, Object> orderUpdates = new HashMap<>();
-            orderUpdates.put("status", 2);
+            orderUpdates.put("status", 1);
+            orderUpdates.put("deliveryStep", "WAITING_PICKUP");
             orderUpdates.put("driverId", userId);
             orderUpdates.put("driverName", driverName);
             orderUpdates.put("driverPhone", driverPhone);

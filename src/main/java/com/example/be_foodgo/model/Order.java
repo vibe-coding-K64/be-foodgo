@@ -41,6 +41,8 @@ public class Order {
 
     private String note;
 
+    private String deliveryStep;
+
     public Order() {}
 
     public String getId() { return id; }
@@ -93,16 +95,20 @@ public class Order {
     }
 
     public String getPaymentMethodString() {
-        if (paymentMethod == null) return "Tiền mặt";
+        if (paymentMethod == null) return "MoMo";
         if (paymentMethod instanceof Number) {
             int val = ((Number) paymentMethod).intValue();
-            if (val == 0) return "Tiền mặt";
-            if (val == 1) return "Ví điện tử";
-            return "Tiền mặt";
+            if (val == 1) return "MoMo";
+            if (val == 2) return "Tiền mặt";
+            if (val == 3) return "ZaloPay";
+            if (val == 4) return "Thẻ ngân hàng";
+            return "MoMo";
         }
-        String str = paymentMethod.toString();
-        if ("0".equals(str) || "cash".equalsIgnoreCase(str)) return "Tiền mặt";
-        if ("1".equals(str) || "momo".equalsIgnoreCase(str) || "e-wallet".equalsIgnoreCase(str)) return "Ví điện tử";
+        String str = paymentMethod.toString().toLowerCase().trim();
+        if ("1".equals(str) || "momo".equals(str)) return "MoMo";
+        if ("2".equals(str) || "cash".equals(str) || "tiền mặt".equals(str) || "tien mat".equals(str)) return "Tiền mặt";
+        if ("3".equals(str) || "zalo".equals(str) || "zalopay".equals(str)) return "ZaloPay";
+        if ("4".equals(str) || "vnpay".equals(str) || "card".equals(str)) return "Thẻ ngân hàng";
         return str;
     }
 
@@ -185,4 +191,6 @@ public class Order {
     public void setDeliveryLng(Double deliveryLng) { this.deliveryLng = deliveryLng; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getDeliveryStep() { return deliveryStep; }
+    public void setDeliveryStep(String deliveryStep) { this.deliveryStep = deliveryStep; }
 }

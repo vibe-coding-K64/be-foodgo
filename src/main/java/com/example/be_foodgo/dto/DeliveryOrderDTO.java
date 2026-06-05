@@ -56,6 +56,9 @@ public class DeliveryOrderDTO {
     @Schema(description = "Kinh do quan", example = "106.7900")
     private Double storeLng;
 
+    @Schema(description = "So dien thoai quan", example = "0901234567")
+    private String storePhone;
+
     @Schema(description = "Danh sach mon an trong don")
     private List<OrderItemData> items;
 
@@ -121,7 +124,7 @@ public class DeliveryOrderDTO {
     @Schema(description = "Thoi gian uoc tinh hoan tat giao hang (phut) neu backend tinh duoc", example = "18")
     private Integer estimatedDurationMinutes;
 
-    @Schema(description = "Phuong thuc thanh toan (1=Cash, 2=MoMo, 3=ZaloPay, 4=VNPay/Card)", example = "2")
+    @Schema(description = "Phuong thuc thanh toan (1=MoMo, 2=Cash, 3=ZaloPay, 4=VNPay/Card)", example = "1")
     private int paymentMethod;
 
     @Schema(description = "ID tai xe nhan don", example = "user_001")

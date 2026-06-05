@@ -6,6 +6,7 @@ import com.example.be_foodgo.dto.DriverOrderActionResultDTO;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.OrderRequestRepository;
 import com.example.be_foodgo.repository.StatsRepository;
+import com.example.be_foodgo.repository.VoucherRepository;
 import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
@@ -28,15 +29,18 @@ public class DeliveryOrderService {
     private final WalletRepository walletRepository;
     private final WalletService walletService;
     private final OrderRequestRepository orderRequestRepository;
+    private final VoucherRepository voucherRepository;
 
     public DeliveryOrderService(StatsRepository statsRepository,
                                 WalletRepository walletRepository,
                                 WalletService walletService,
-                                OrderRequestRepository orderRequestRepository) {
+                                OrderRequestRepository orderRequestRepository,
+                                VoucherRepository voucherRepository) {
         this.statsRepository = statsRepository;
         this.walletRepository = walletRepository;
         this.walletService = walletService;
         this.orderRequestRepository = orderRequestRepository;
+        this.voucherRepository = voucherRepository;
     }
 
     public List<DeliveryOrderDTO> getAvailableOrders() {
@@ -196,18 +200,23 @@ public class DeliveryOrderService {
                 throw BusinessException.khongPhaiChuDonHang(orderId);
             }
 
+            if (newStatus == DeliveryOrderStatus.DELIVERING) {
+                if (currentStatus != DeliveryOrderStatus.WAITING_DRIVER) {
+                    throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái sang 'đã lấy hàng'");
+                }
+                Map<String, Object> pickupUpdates = new HashMap<>();
+                pickupUpdates.put("status", DeliveryOrderStatus.DELIVERING);
+                pickupUpdates.put("deliveryStep", "ON_THE_WAY");
+                pickupUpdates.put("pickedUpAt", Instant.now());
+                pickupUpdates.put("updatedAt", Instant.now());
+                statsRepository.updateOrderFields(orderId, pickupUpdates);
+                Map<String, Object> dtoOrderData = statsRepository.findOrderRawById(orderId);
+                return buildDeliveryOrderDTO(orderId, dtoOrderData);
+            }
+
             if (currentStatus != DeliveryOrderStatus.DELIVERING) {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
             }
-
-            if (newStatus != DeliveryOrderStatus.COMPLETED && newStatus != DeliveryOrderStatus.CANCELLED) {
-                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
-            }
-
-            Map<String, Object> driverUpdates = new HashMap<>();
-            driverUpdates.put("currentOrderId", null);
-            driverUpdates.put("isAvailable", true);
-            driverUpdates.put("updatedAt", Instant.now());
 
             if (newStatus == DeliveryOrderStatus.COMPLETED) {
                 String customerId = (String) orderData.get("userId");
@@ -215,7 +224,7 @@ public class DeliveryOrderService {
                 String storeId = (String) orderData.get("storeId");
                 Double finalAmount = toDouble(orderData.get("finalAmount"));
                 Double totalAmount = toDouble(orderData.get("totalAmount"));
-                
+
                 Double merchantIncome = 0.0;
                 if (finalAmount != null && finalAmount > 0) {
                     merchantIncome = finalAmount - (deliveryFee != null ? deliveryFee : 0.0);
@@ -225,21 +234,27 @@ public class DeliveryOrderService {
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", DeliveryOrderStatus.COMPLETED);
-                
+                orderUpdates.put("deliveryStep", "DELIVERED");
+
                 Integer currentPaymentStatus = toInt(orderData.get("paymentStatus"));
                 if (currentPaymentStatus == null || currentPaymentStatus == 1) {
                     orderUpdates.put("paymentStatus", 2);
                 }
-                
+
                 orderUpdates.put("updatedAt", Instant.now());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
+                Map<String, Object> driverUpdates = new HashMap<>();
+                driverUpdates.put("currentOrderId", null);
+                driverUpdates.put("isAvailable", true);
                 driverUpdates.put("totalTrips",
                         com.google.cloud.firestore.FieldValue.increment(1));
+                driverUpdates.put("updatedAt", Instant.now());
                 walletRepository.updateDriverProfileFields(userId, driverUpdates);
 
                 if (customerId != null) {
                     taoThongBaoKhachHang(customerId, orderId);
+                    congDiemLoyaltyKhachHang(customerId, finalAmount);
                 }
 
                 if (deliveryFee != null && deliveryFee > 0) {
@@ -251,7 +266,6 @@ public class DeliveryOrderService {
                     orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
                 }
 
-                // Nếu là đơn COD (tiền mặt), tài xế giữ tiền mặt nên ta trừ số dư ví điện tử của tài xế
                 if (isCashPayment(orderData.get("paymentMethod"))) {
                     Double codAmount = finalAmount != null ? finalAmount : (totalAmount != null ? totalAmount : 0.0);
                     if (codAmount > 0) {
@@ -265,9 +279,9 @@ public class DeliveryOrderService {
 
                 log.info("Don hang hoan thanh: orderId={}, tien cuoc={}", orderId, deliveryFee);
             } else {
-                // Sửa logic tài xế hủy đơn giao: Reset trạng thái đơn về 1 (Đang chờ tài xế nhận) thay vì 4 (Đã hủy)
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", DeliveryOrderStatus.WAITING_DRIVER);
+                orderUpdates.put("deliveryStep", "WAITING_DRIVER");
                 orderUpdates.put("driverId", null);
                 orderUpdates.put("driverName", null);
                 orderUpdates.put("driverPhone", null);
@@ -275,15 +289,16 @@ public class DeliveryOrderService {
                 orderUpdates.put("updatedAt", Instant.now());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
+                Map<String, Object> driverUpdates = new HashMap<>();
+                driverUpdates.put("currentOrderId", null);
+                driverUpdates.put("isAvailable", true);
+                driverUpdates.put("updatedAt", Instant.now());
                 walletRepository.updateDriverProfileFields(userId, driverUpdates);
                 log.info("Don hang da bi tai xe tu choi giao hang. Reset ve cho tai xe (status 1) - orderId={}", orderId);
             }
 
             Map<String, Object> updatedOrderData = statsRepository.findOrderRawById(orderId);
-            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, updatedOrderData);
-
-            log.info("Cap nhat trang thai don hang thanh cong: orderId={}, newStatus={}", orderId, newStatus);
-            return dto;
+            return buildDeliveryOrderDTO(orderId, updatedOrderData);
         } catch (BusinessException e) {
             throw e;
         } catch (InterruptedException e) {
@@ -584,6 +599,32 @@ public class DeliveryOrderService {
         }
     }
 
+    private void congDiemLoyaltyKhachHang(String userId, Double finalAmount) {
+        if (userId == null || userId.isBlank()) {
+            log.warn("Khong the cong diem loyalty: userId null hoac rong");
+            return;
+        }
+        if (finalAmount == null || finalAmount <= 0) {
+            log.warn("Khong the cong diem loyalty: finalAmount={}", finalAmount);
+            return;
+        }
+        int diemCong = (int) Math.floor(finalAmount / 10000.0);
+        if (diemCong <= 0) {
+            log.info("Don hang co gia tri nho, khong cong diem loyalty (finalAmount={})", finalAmount);
+            return;
+        }
+        try {
+            voucherRepository.congLoyaltyPoints(userId, diemCong);
+            log.info("Da cong {} diem loyalty cho khach hang [{}] - don hang finalAmount={}",
+                    diemCong, userId, finalAmount);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Loi khi cong diem loyalty cho khach hang [{}]: {}", userId, e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.warn("Loi khi cong diem loyalty cho khach hang [{}]: {}", userId, e.getMessage());
+        }
+    }
+
     private void enrichStoreLocation(DeliveryOrderDTO dto) throws ExecutionException, InterruptedException {
         if (dto == null || dto.getStoreId() == null) {
             return;
@@ -597,6 +638,7 @@ public class DeliveryOrderService {
         dto.setStoreAddress((String) storeData.get("address"));
         dto.setStoreLat(toDouble(storeData.get("lat")));
         dto.setStoreLng(toDouble(storeData.get("lng")));
+        dto.setStorePhone((String) storeData.get("phone"));
     }
 
     @SuppressWarnings("unchecked")
@@ -673,6 +715,7 @@ public class DeliveryOrderService {
                 .createdAt(toInstant(data.get("createdAt")))
                 .updatedAt(toInstant(data.get("updatedAt")))
                 .note((String) data.get("note"))
+                .deliveryStep((String) data.get("deliveryStep"))
                 .build();
     }
 
@@ -968,13 +1011,13 @@ public class DeliveryOrderService {
 
     private boolean isCashPayment(Object paymentMethodObj) {
         if (paymentMethodObj == null) {
-            return true;
+            return false;
         }
         if (paymentMethodObj instanceof Number) {
             int val = ((Number) paymentMethodObj).intValue();
-            return val == 1 || val == 0;
+            return val == 2;
         }
         String pmStr = paymentMethodObj.toString().toLowerCase().trim();
-        return pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat") || pmStr.equals("1") || pmStr.equals("0");
+        return pmStr.equals("2") || pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat");
     }
 }

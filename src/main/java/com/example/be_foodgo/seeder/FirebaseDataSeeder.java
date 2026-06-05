@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-@Component
+// @Component
 public class FirebaseDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseDataSeeder.class);
@@ -1276,7 +1276,8 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order1.put("shopDiscountAmount", 0.0);
         order1.put("freeshipDiscountAmount", 0.0);
         order1.put("finalAmount", 155000.0);
-        order1.put("status", 2);
+        order1.put("status", 1);
+        order1.put("deliveryStep", "WAITING_PICKUP");
         order1.put("deliveryAddress", "Ký túc xá UTC2, Quận 9, TP.HCM");
         order1.put("receiverName", "Khôi");
         order1.put("receiverPhone", "0123456789");
@@ -1317,6 +1318,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order2.put("freeshipDiscountAmount", 0.0);
         order2.put("finalAmount", 91000.0);
         order2.put("status", 3);
+        order2.put("deliveryStep", "DELIVERED");
         order2.put("deliveryAddress", "Ký túc xá UTC2, Quận 9, TP.HCM");
         order2.put("receiverName", "Khôi");
         order2.put("receiverPhone", "0123456789");
@@ -1358,6 +1360,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order3.put("freeshipDiscountAmount", 0.0);
         order3.put("finalAmount", 111000.0);
         order3.put("status", 1);
+        order3.put("deliveryStep", "WAITING_DRIVER");
         order3.put("deliveryAddress", "123 Lê Văn Việt, TP. Thủ Đức");
         order3.put("receiverName", "Quản Trị Viên");
         order3.put("receiverPhone", "0987654321");
@@ -1392,6 +1395,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order4.put("freeshipDiscountAmount", 0.0);
         order4.put("finalAmount", 85000.0);
         order4.put("status", 0);
+        order4.put("deliveryStep", "PENDING_STORE_CONFIRMATION");
         order4.put("deliveryAddress", "456 Nguyễn Thi Định, TP. Thủ Đức");
         order4.put("receiverName", "Quản Trị Viên");
         order4.put("receiverPhone", "0987654321");
@@ -1426,6 +1430,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order5.put("freeshipDiscountAmount", 0.0);
         order5.put("finalAmount", 80000.0);
         order5.put("status", 4);
+        order5.put("deliveryStep", "CANCELLED");
         order5.put("deliveryAddress", "Ký túc xá UTC2, Quận 9, TP.HCM");
         order5.put("receiverName", "Khôi");
         order5.put("receiverPhone", "0123456789");
@@ -1467,6 +1472,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order6.put("freeshipDiscountAmount", 0.0);
         order6.put("finalAmount", 99000.0);
         order6.put("status", 2);
+        order6.put("deliveryStep", "ON_THE_WAY");
         order6.put("deliveryAddress", "101 Phố Huế, Q.1, TP.HCM");
         order6.put("receiverName", "Lê Văn B");
         order6.put("receiverPhone", "0912345678");
@@ -1501,6 +1507,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order7.put("freeshipDiscountAmount", 0.0);
         order7.put("finalAmount", 106000.0);
         order7.put("status", 3);
+        order7.put("deliveryStep", "DELIVERED");
         order7.put("deliveryAddress", "789 Nguyễn Cửu, TP. Thủ Đức");
         order7.put("receiverName", "Quản Trị Viên");
         order7.put("receiverPhone", "0987654321");
@@ -1542,6 +1549,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order8.put("freeshipDiscountAmount", 0.0);
         order8.put("finalAmount", 170000.0);
         order8.put("status", 3);
+        order8.put("deliveryStep", "DELIVERED");
         order8.put("deliveryAddress", "123 Lê Văn Việt, TP Thủ Đức");
         order8.put("receiverName", "Khôi");
         order8.put("receiverPhone", "0123456789");
