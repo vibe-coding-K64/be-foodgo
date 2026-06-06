@@ -54,12 +54,12 @@ public class FirebaseDataSeeder implements ApplicationRunner {
 
     private void kiemTraVaSeed(String collectionName, List<Map<String, Object>> documents) {
         try {
-            ApiFuture<QuerySnapshot> query = firestore.collection(collectionName).limit(1).get();
-            QuerySnapshot querySnapshot = query.get();
-            if (!querySnapshot.isEmpty()) {
-                log.info("Collection [{}] da co du lieu, bo qua viec seed.", collectionName);
-                return;
-            }
+        //     ApiFuture<QuerySnapshot> query = firestore.collection(collectionName).limit(1).get();
+        //     QuerySnapshot querySnapshot = query.get();
+        //     if (!querySnapshot.isEmpty()) {
+        //         log.info("Collection [{}] da co du lieu, bo qua viec seed.", collectionName);
+        //         return;
+        //     }
             WriteBatch batch = firestore.batch();
             for (Map<String, Object> doc : documents) {
                 String docId = (String) doc.get("id");
