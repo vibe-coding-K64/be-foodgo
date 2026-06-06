@@ -277,8 +277,8 @@ public class PaymentService {
     private int typeStringToInt(String type) {
         if (type == null) return 1;
         return switch (type.toLowerCase()) {
-            case "cash" -> 1;
-            case "momo" -> 2;
+            case "momo" -> 1;
+            case "cash" -> 2;
             case "zalo", "zaloapp" -> 3;
             case "vnpay", "card" -> 4;
             default -> 1;
@@ -287,11 +287,11 @@ public class PaymentService {
 
     private String typeIntToString(int type) {
         return switch (type) {
-            case 1 -> "cash";
-            case 2 -> "momo";
+            case 1 -> "momo";
+            case 2 -> "cash";
             case 3 -> "zalo";
             case 4 -> "vnpay";
-            default -> "cash";
+            default -> "momo";
         };
     }
 }

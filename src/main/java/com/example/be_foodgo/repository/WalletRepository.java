@@ -50,6 +50,21 @@ public class WalletRepository {
         return doc.exists() ? doc.getData() : null;
     }
 
+    public List<Map<String, Object>> findActiveDriverProfiles() throws ExecutionException, InterruptedException {
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_DRIVER_PROFILES)
+                .whereEqualTo("isActive", true)
+                .get()
+                .get()
+                .getDocuments();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            Map<String, Object> data = new java.util.HashMap<>(doc.getData());
+            data.put("id", doc.getId());
+            result.add(data);
+        }
+        return result;
+    }
+
     public Map<String, Object> findUserById(String userId)
             throws ExecutionException, InterruptedException {
         DocumentSnapshot doc = firestore
@@ -104,7 +119,7 @@ public class WalletRepository {
         Map<String, Object> walletData = new HashMap<>();
         walletData.put("id", walletId);
         walletData.put("userId", userId);
-        walletData.put("role", "driver");
+        walletData.put("role", 2);
         walletData.put("balance", 0.0);
         walletData.put("totalEarned", 0.0);
         walletData.put("totalWithdrawn", 0.0);
@@ -248,9 +263,11 @@ public class WalletRepository {
         firestore.runTransaction(transaction -> {
             DocumentSnapshot walletDoc = transaction.get(walletRef).get();
             double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
+            double currentPending = walletDoc.getDouble("pendingBalance") != null
+                    ? walletDoc.getDouble("pendingBalance") : 0.0;
 
-            if (balance < amount) {
-                throw BusinessException.soDuKhongDu(balance, amount);
+            if (balance - currentPending < amount) {
+                throw BusinessException.soDuKhongDu(balance - currentPending, amount);
             }
 
             Map<String, Object> transData = new HashMap<>();
@@ -266,11 +283,8 @@ public class WalletRepository {
             transData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             transaction.set(transRef, transData);
 
-            double currentPending = walletDoc.getDouble("pendingBalance") != null
-                    ? walletDoc.getDouble("pendingBalance") : 0.0;
-
             Map<String, Object> walletUpdates = new HashMap<>();
-            walletUpdates.put("balance", balance - amount);
+            // Không trừ balance ở đây, chỉ tăng pendingBalance
             walletUpdates.put("pendingBalance", currentPending + amount);
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             transaction.update(walletRef, walletUpdates);

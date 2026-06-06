@@ -96,6 +96,21 @@ public class StatsRepository {
         return doc.exists() ? doc.getData() : null;
     }
 
+    public List<Map<String, Object>> findActiveDriverProfiles() throws ExecutionException, InterruptedException {
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_DRIVER_PROFILES)
+                .whereEqualTo("isActive", true)
+                .get()
+                .get()
+                .getDocuments();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (QueryDocumentSnapshot doc : docs) {
+            Map<String, Object> data = new HashMap<>(doc.getData());
+            data.put("id", doc.getId());
+            result.add(data);
+        }
+        return result;
+    }
+
     public Map<String, Object> findUserById(String userId) throws ExecutionException, InterruptedException {
         DocumentSnapshot doc = firestore.collection("users")
                 .document(userId)
@@ -200,7 +215,8 @@ public class StatsRepository {
             }
 
             Map<String, Object> orderUpdates = new HashMap<>();
-            orderUpdates.put("status", 2);
+            orderUpdates.put("status", 1);
+            orderUpdates.put("deliveryStep", "WAITING_PICKUP");
             orderUpdates.put("driverId", userId);
             orderUpdates.put("driverName", driverName);
             orderUpdates.put("driverPhone", driverPhone);

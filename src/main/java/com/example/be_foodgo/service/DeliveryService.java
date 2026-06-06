@@ -9,16 +9,7 @@ import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.util.Date;
@@ -30,20 +21,10 @@ public class DeliveryService {
 
     private static final Logger log = LoggerFactory.getLogger(DeliveryService.class);
 
-    private static final String RDB_ACTIVE_DRIVERS = "active_drivers";
-    private static final long LOCATION_TIMEOUT_MS = 60_000L;
-    private static final long LOCATION_CHECK_INTERVAL_MS = 30_000L;
-
     private final WalletRepository walletRepository;
-    private final RestTemplate restTemplate;
-    private final String firebaseDatabaseUrl;
 
-    public DeliveryService(WalletRepository walletRepository,
-                          RestTemplate restTemplate,
-                          @Autowired(required = false) String firebaseDatabaseUrl) {
+    public DeliveryService(WalletRepository walletRepository) {
         this.walletRepository = walletRepository;
-        this.restTemplate = restTemplate;
-        this.firebaseDatabaseUrl = firebaseDatabaseUrl;
     }
 
     public DeliveryProfileDTO getDriverProfile(String userId) {
@@ -157,9 +138,9 @@ public class DeliveryService {
             walletRepository.updateDriverProfileFields(userId, updates);
 
             if (!isActive) {
-                xoaKhoiRealtimeDatabase(userId);
+                xoaKhoiDanhSachHoatDong(userId);
             } else {
-                log.info("[FIREBASE] Calling updateDriverLocation for userId={}", userId);
+                log.info("Cap nhat vi tri tai xe hoat dong cho userId={}", userId);
                 updateDriverLocation(
                         userId,
                         statusRequest.getLat(),
@@ -191,7 +172,7 @@ public class DeliveryService {
             updates.put("isAvailable", false);
             updates.put("updatedAt", new Date());
             walletRepository.updateDriverProfileFields(driverId, updates);
-            xoaKhoiRealtimeDatabase(driverId);
+            xoaKhoiDanhSachHoatDong(driverId);
             log.info("Da tu dong tat trang thai tai xe {} do het thoi gian cap nhat vi tri", driverId);
         } catch (Exception e) {
             log.error("Loi khi tu dong tat trang thai tai xe {}: {}", driverId, e.getMessage());
@@ -234,50 +215,37 @@ public class DeliveryService {
     }
 
     public void updateDriverLocation(String driverId, Double lat, Double lng, Double heading, Double speed) {
-        if (firebaseDatabaseUrl == null || firebaseDatabaseUrl.isBlank()) {
-            log.warn("FirebaseDatabase URL chua duoc cau hinh, bo qua ghi location.");
-            return;
-        }
-        String url = firebaseDatabaseUrl + "/active_drivers/" + driverId + ".json";
-
-        Map<String, Object> locationData = new HashMap<>();
-        locationData.put("driverId", driverId);
-        locationData.put("lat", lat);
-        locationData.put("lng", lng);
-        locationData.put("heading", heading != null ? heading : 0.0);
-        locationData.put("speed", speed != null ? speed : 0.0);
-        locationData.put("updatedAt", System.currentTimeMillis());
-        locationData.put("lastLocationUpdate", System.currentTimeMillis());
-        locationData.put("isActive", true);
+        Map<String, Object> locationUpdates = new HashMap<>();
+        locationUpdates.put("lat", lat);
+        locationUpdates.put("lng", lng);
+        locationUpdates.put("heading", heading != null ? heading : 0.0);
+        locationUpdates.put("speed", speed != null ? speed : 0.0);
+        locationUpdates.put("lastLocationUpdate", System.currentTimeMillis());
+        locationUpdates.put("isActive", true);
+        locationUpdates.put("isAvailable", true);
+        locationUpdates.put("updatedAt", Instant.now());
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(locationData, headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, request, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("[FIREBASE REST] Da ghi location thanh cong vao active_drivers/{} - lat={}, lng={}", driverId, lat, lng);
-            } else {
-                log.error("[FIREBASE REST] Loi ghi Firebase cho {}: status={}, body={}", driverId, response.getStatusCode(), response.getBody());
-            }
+            walletRepository.updateDriverProfileFields(driverId, locationUpdates);
+            log.info("Da cap nhat location tai xe {} trong Firestore - lat={}, lng={}", driverId, lat, lng);
         } catch (Exception e) {
-            log.error("[FIREBASE REST] Exception khi ghi Firebase cho {}: {}", driverId, e.getMessage(), e);
+            log.error("Loi khi cap nhat location tai xe {} trong Firestore: {}", driverId, e.getMessage(), e);
         }
     }
 
-    private void xoaKhoiRealtimeDatabase(String driverId) {
-        if (firebaseDatabaseUrl == null || firebaseDatabaseUrl.isBlank()) {
-            log.warn("FirebaseDatabase URL chua duoc cau hinh, bo qua xoa khoi Realtime Database.");
-            return;
-        }
+    private void xoaKhoiDanhSachHoatDong(String driverId) {
         try {
-            String url = firebaseDatabaseUrl + "/active_drivers/" + driverId + ".json";
-            restTemplate.delete(url);
-            log.info("Da xoa tai xe {} khoi Realtime Database", driverId);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("heading", null);
+            updates.put("speed", null);
+            updates.put("lastLocationUpdate", null);
+            updates.put("lat", null);
+            updates.put("lng", null);
+            updates.put("updatedAt", Instant.now());
+            walletRepository.updateDriverProfileFields(driverId, updates);
+            log.info("Da xoa location realtime cua tai xe {} khoi Firestore", driverId);
         } catch (Exception e) {
-            log.warn("Khong the xoa khoi Realtime Database: {}", e.getMessage());
+            log.warn("Khong the xoa location realtime cua tai xe {}: {}", driverId, e.getMessage());
         }
     }
 

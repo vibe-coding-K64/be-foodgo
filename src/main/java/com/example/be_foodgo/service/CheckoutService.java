@@ -49,6 +49,7 @@ public class CheckoutService {
     private final StoreRepository storeRepository;
     private final VoucherRepository voucherRepository;
     private final Firestore firestore;
+    private final NotificationService notificationService;
 
     public CheckoutService(
             AddressRepository addressRepository,
@@ -56,7 +57,8 @@ public class CheckoutService {
             ProductRepository productRepository,
             StoreRepository storeRepository,
             VoucherRepository voucherRepository,
-            Firestore firestore
+            Firestore firestore,
+            NotificationService notificationService
     ) {
         this.addressRepository = addressRepository;
         this.paymentRepository = paymentRepository;
@@ -64,6 +66,7 @@ public class CheckoutService {
         this.storeRepository = storeRepository;
         this.voucherRepository = voucherRepository;
         this.firestore = firestore;
+        this.notificationService = notificationService;
     }
 
     public CheckoutResponse thucHienDatHang(CheckoutRequestV2 request, String authenticatedUserId) {
@@ -176,6 +179,16 @@ public class CheckoutService {
         log.info("Tinh toan chi phi - Tong tien hang: {}, Phi ship: {}, Giam discount: {}, Giam shop: {}, Giam freeship: {}, Tong giam: {}, Tong phai tra: {}.",
                 tongTienHang, phiShip, discountAmountVal, shopDiscountAmountVal, freeshipDiscountAmountVal, tongSoTienGiam, tongThanhToan);
 
+        int paymentMethodValue = 1;
+        try {
+            PaymentMethod pm = paymentRepository.layMotPhuongThuc(userId, request.getPaymentMethod());
+            if (pm != null) {
+                paymentMethodValue = pm.getType();
+            }
+        } catch (Exception e) {
+            log.warn("Khong the lay payment method [{}] tu Firestore, su dung gia tri mac dinh", request.getPaymentMethod());
+        }
+
         CheckoutResponse.OrderItemData[] orderItems = chuanBiOrderItems(requestItems);
         String orderCode = String.format("FG-%s-%s",
                 LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
@@ -183,23 +196,24 @@ public class CheckoutService {
         String orderId = taoDonHangAtomic(
                 userId, storeId, cuaHang.getName(), diaChi, request,
                 orderItems, tongTienHang, phiShip, discountAmountVal, shopDiscountAmountVal, freeshipDiscountAmountVal, tongThanhToan,
-                voucherInfos, request.getIdempotencyKey(), orderCode
+                voucherInfos, request.getIdempotencyKey(), orderCode, paymentMethodValue
         );
         orderCode = String.format("FG-%s-%s",
                 LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
                 orderId.substring(orderId.length() - 3).toUpperCase());
 
-        String paymentMethodName = request.getPaymentMethod();
-        try {
-            PaymentMethod pm = paymentRepository.layMotPhuongThuc(userId, request.getPaymentMethod());
-            if (pm != null) {
-                paymentMethodName = pm.getName();
-            }
-        } catch (Exception e) {
-            log.warn("Khong the lay payment method [{}] tu Firestore, tra ve ID goc", request.getPaymentMethod());
-        }
-
         log.info("Dat hang thanh cong - orderId: [{}], orderCode: [{}].", orderId, orderCode);
+
+        String receiverName = diaChi.getReceiverName() != null ? diaChi.getReceiverName() : "Khách hàng";
+        int itemCount = request.getItems().stream().mapToInt(CheckoutRequestV2.CheckoutItem::getQuantity).sum();
+        com.example.be_foodgo.dto.NotificationDTO notif = com.example.be_foodgo.dto.NotificationDTO.builder()
+                .type(21)
+                .title("Đơn hàng mới từ " + receiverName)
+                .body(orderCode + " · " + itemCount + " món · " + String.format("%,.0f", tongThanhToan) + "đ")
+                .orderId(orderId)
+                .referenceId(orderId)
+                .build();
+        notificationService.notifyMerchantByStoreId(storeId, notif);
 
         return CheckoutResponse.builder()
                 .orderId(orderId)
@@ -214,9 +228,10 @@ public class CheckoutService {
                 .shopDiscountAmount(shopDiscountAmountVal)
                 .freeshipDiscountAmount(freeshipDiscountAmountVal)
                 .finalAmount(tongThanhToan)
-                .paymentMethod(paymentMethodName)
+                .paymentMethod(paymentMethodIntToString(paymentMethodValue))
                 .deliveryAddress(diaChi.getAddress())
                 .status(0)
+                .paymentStatus(1)
                 .createdAt(Instant.now())
                 .note(request.getNote())
                 .build();
@@ -601,7 +616,8 @@ public class CheckoutService {
             double tongThanhToan,
             List<VoucherInfo> voucherInfos,
             String idempotencyKey,
-            String orderCode
+            String orderCode,
+            int paymentMethodValue
     ) {
         WriteBatch batch = firestore.batch();
         log.info("Bat dau tao don hang atomi cho nguoi dung [{}].", userId);
@@ -644,7 +660,7 @@ public class CheckoutService {
         orderData.put("shopDiscountAmount", shopDiscountAmount);
         orderData.put("freeshipDiscountAmount", freeshipDiscountAmount);
         orderData.put("finalAmount", tongThanhToan);
-        orderData.put("paymentMethod", request.getPaymentMethod());
+        orderData.put("paymentMethod", paymentMethodValue);
         orderData.put("deliveryAddress", diaChi.getAddress());
         orderData.put("addressId", diaChi.getId());
         orderData.put("deliveryLat", diaChi.getLat() != null ? diaChi.getLat() : 0.0);
@@ -652,6 +668,8 @@ public class CheckoutService {
         orderData.put("receiverName", diaChi.getReceiverName() != null ? diaChi.getReceiverName() : "");
         orderData.put("receiverPhone", diaChi.getReceiverPhone() != null ? diaChi.getReceiverPhone() : "");
         orderData.put("status", 0);
+        orderData.put("deliveryStep", "PENDING_STORE_CONFIRMATION");
+        orderData.put("paymentStatus", 1);
         orderData.put("note", request.getNote() != null ? request.getNote() : "");
         orderData.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
         orderData.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
@@ -831,5 +849,15 @@ public class CheckoutService {
         public void setSystemVoucher(Voucher systemVoucher) { this.systemVoucher = systemVoucher; }
         public MyVoucher getMyVoucher() { return myVoucher; }
         public void setMyVoucher(MyVoucher myVoucher) { this.myVoucher = myVoucher; }
+    }
+
+    private String paymentMethodIntToString(int type) {
+        return switch (type) {
+            case 1 -> "momo";
+            case 2 -> "cash";
+            case 3 -> "zalo";
+            case 4 -> "vnpay";
+            default -> "momo";
+        };
     }
 }

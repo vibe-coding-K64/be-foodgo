@@ -88,6 +88,9 @@ public class OrderService {
         Order order = orderRepository.findById(id);
         if (order != null) {
             order.setStatus(status);
+            if (status == 3) {
+                order.setPaymentStatus(2);
+            }
             String result = orderRepository.update(id, order);
             
             // Gửi thông báo theo từng trạng thái
@@ -181,9 +184,9 @@ public class OrderService {
         String orderCode = getOrderCodeDisplay(order);
         // Thông báo hủy đơn cho Quán
         NotificationDTO merchantNotif = new NotificationDTO();
-        merchantNotif.setTitle("Đơn hàng " + orderCode + " bị hủy");
+        merchantNotif.setTitle("Đơn hàng #" + orderCode + " đã bị hủy");
         merchantNotif.setBody("Khách hàng đã hủy đơn hàng #" + orderCode + ". Lý do: " + (reason != null ? reason : "Không có"));
-        merchantNotif.setType(1);
+        merchantNotif.setType(4);
         merchantNotif.setOrderId(orderId);
         notificationService.notifyMerchantByStoreId(order.getStoreId(), merchantNotif);
 
@@ -271,6 +274,7 @@ public class OrderService {
         dto.setFreeshipDiscountAmount(entity.getFreeshipDiscountAmount());
         dto.setFinalAmount(entity.getFinalAmount());
         dto.setPaymentMethod(entity.getPaymentMethodString());
+        dto.setPaymentStatus(entity.getPaymentStatus());
         // dto.setStatus(entity.getStatus());
         dto.setStatus(entity.getStatusText());
         dto.setCreatedAt(entity.getCreatedAt());
@@ -313,6 +317,7 @@ public class OrderService {
         entity.setFreeshipDiscountAmount(dto.getFreeshipDiscountAmount());
         entity.setFinalAmount(dto.getFinalAmount());
         entity.setPaymentMethod(dto.getPaymentMethod());
+        entity.setPaymentStatus(dto.getPaymentStatus());
         entity.setStatus(dto.getStatus());
         entity.setCreatedAt(dto.getCreatedAt());
         entity.setUpdatedAt(dto.getUpdatedAt());
@@ -374,13 +379,13 @@ public class OrderService {
 
     private boolean isCashPayment(Object paymentMethodObj) {
         if (paymentMethodObj == null) {
-            return true;
+            return false;
         }
         if (paymentMethodObj instanceof Number) {
             int val = ((Number) paymentMethodObj).intValue();
-            return val == 1 || val == 0;
+            return val == 2;
         }
         String pmStr = paymentMethodObj.toString().toLowerCase().trim();
-        return pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat") || pmStr.equals("1") || pmStr.equals("0");
+        return pmStr.equals("2") || pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat");
     }
 }

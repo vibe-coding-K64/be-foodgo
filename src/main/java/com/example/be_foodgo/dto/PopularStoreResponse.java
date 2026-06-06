@@ -22,6 +22,7 @@ public class PopularStoreResponse {
     private String backUrl;
     private String deliveryTime;
     private Double deliveryFee;
+    private Double distance;
     private Boolean isOpen;
     private List<String> categoryIds;
 }

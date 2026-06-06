@@ -3,6 +3,7 @@ package com.example.be_foodgo.repository;
 import com.example.be_foodgo.model.Order;
 import com.example.be_foodgo.model.OrderItem;
 import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -102,12 +103,10 @@ public class OrderRepository {
     public List<Order> findAllOrders() throws ExecutionException, InterruptedException {
         List<QueryDocumentSnapshot> documents;
         try {
-            // Thử query có orderBy (yêu cầu Firestore index)
             ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                     .orderBy("createdAt", Query.Direction.DESCENDING).get();
             documents = future.get().getDocuments();
         } catch (Exception e) {
-            // Fallback: lấy tất cả không có orderBy nếu chưa có index
             ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME).get();
             documents = future.get().getDocuments();
         }

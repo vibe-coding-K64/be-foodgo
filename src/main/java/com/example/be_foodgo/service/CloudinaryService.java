@@ -80,6 +80,29 @@ public class CloudinaryService {
     }
 
     @SuppressWarnings("unchecked")
+    public String uploadGenericImage(MultipartFile file, String folder) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh không được để trống.");
+        }
+
+        validateFile(file);
+
+        String publicId = folder + "/" + UUID.randomUUID();
+
+        Map<String, Object> params = ObjectUtils.asMap(
+                "public_id", publicId,
+                "overwrite", false,
+                "folder", folder,
+                "transformation", "q_auto,f_auto"
+        );
+
+        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+        String url = (String) result.get("secure_url");
+        log.info("Upload image thanh cong vao thu muc {}. URL: {}", folder, url);
+        return url;
+    }
+
+    @SuppressWarnings("unchecked")
     public String uploadImage(MultipartFile file, String folder) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File khong duoc de trong.");
@@ -88,8 +111,7 @@ public class CloudinaryService {
         validateFile(file);
 
         String cleanFolder = (folder == null || folder.isBlank()) ? "general" : folder.trim();
-        String suffix = UUID.randomUUID().toString();
-        String publicId = cleanFolder + "/" + suffix;
+        String publicId = cleanFolder + "/" + UUID.randomUUID();
 
         Map<String, Object> params = ObjectUtils.asMap(
                 "public_id", publicId,

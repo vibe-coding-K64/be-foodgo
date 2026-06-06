@@ -1,11 +1,12 @@
 package com.example.be_foodgo.repository;
 
 import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
-import com.google.protobuf.Timestamp;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,26 @@ public class OrderRequestRepository {
         return ref.get().getId();
     }
 
+    public Map<String, Object> findDriverRequestById(String driverId, String requestId) throws ExecutionException, InterruptedException {
+        DocumentSnapshot doc = firestore.collection(COLLECTION_ORDER_REQUESTS)
+                .document(driverId)
+                .collection("requests")
+                .document(requestId)
+                .get()
+                .get();
+        if (!doc.exists()) return null;
+        return convertDocData(doc.getData(), doc.getId());
+    }
+
+    public void deleteDriverRequest(String driverId, String requestId) throws ExecutionException, InterruptedException {
+        firestore.collection(COLLECTION_ORDER_REQUESTS)
+                .document(driverId)
+                .collection("requests")
+                .document(requestId)
+                .delete()
+                .get();
+    }
+
     public void updateFields(String orderId, Map<String, Object> fields) throws ExecutionException, InterruptedException {
         if (fields == null || fields.isEmpty()) return;
         Map<String, Object> converted = convertInstants(fields);
@@ -62,13 +83,10 @@ public class OrderRequestRepository {
     }
 
     public List<Map<String, Object>> findExpiredPendingRequests(Instant now) throws ExecutionException, InterruptedException {
-        Timestamp ts = Timestamp.newBuilder()
-                .setSeconds(now.getEpochSecond())
-                .setNanos(now.getNano())
-                .build();
+        Date nowDate = Date.from(now);
         List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_ORDER_REQUESTS)
                 .whereEqualTo("status", "pending")
-                .whereLessThan("expiresAt", ts)
+                .whereLessThan("expiresAt", nowDate)
                 .get()
                 .get()
                 .getDocuments();
@@ -97,9 +115,10 @@ public class OrderRequestRepository {
         Map<String, Object> result = new HashMap<>(data);
         for (Map.Entry<String, Object> entry : data.entrySet()) {
             Object value = entry.getValue();
-            if (value instanceof Timestamp) {
-                Timestamp ts = (Timestamp) value;
+            if (value instanceof Timestamp ts) {
                 result.put(entry.getKey(), Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()));
+            } else if (value instanceof Date date) {
+                result.put(entry.getKey(), date.toInstant());
             } else if (value instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nested = (Map<String, Object>) value;
@@ -116,9 +135,10 @@ public class OrderRequestRepository {
         List<Object> result = new java.util.ArrayList<>(list);
         for (int i = 0; i < list.size(); i++) {
             Object value = list.get(i);
-            if (value instanceof Timestamp) {
-                Timestamp ts = (Timestamp) value;
+            if (value instanceof Timestamp ts) {
                 result.set(i, Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos()));
+            } else if (value instanceof Date date) {
+                result.set(i, date.toInstant());
             } else if (value instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nested = (Map<String, Object>) value;
@@ -152,10 +172,7 @@ public class OrderRequestRepository {
         for (Map.Entry<String, Object> entry : original.entrySet()) {
             Object value = entry.getValue();
             if (value instanceof Instant instant) {
-                result.put(entry.getKey(), Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build());
+                result.put(entry.getKey(), Date.from(instant));
             } else if (value instanceof Map<?, ?> nestedMap) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nested = (Map<String, Object>) nestedMap;
@@ -174,10 +191,7 @@ public class OrderRequestRepository {
         for (int i = 0; i < original.size(); i++) {
             Object value = original.get(i);
             if (value instanceof Instant instant) {
-                result.set(i, Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build());
+                result.set(i, Date.from(instant));
             } else if (value instanceof Map<?, ?> nestedMap) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> nested = (Map<String, Object>) nestedMap;
