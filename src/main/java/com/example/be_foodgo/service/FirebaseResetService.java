@@ -1011,7 +1011,7 @@ public class FirebaseResetService {
         order1.put("shopDiscountAmount", 0.0);
         order1.put("freeshipDiscountAmount", 0.0);
         order1.put("finalAmount", 155000.0);
-        order1.put("status", 2);
+        order1.put("status", 2); order1.put("deliveryStep", "WAITING_PICKUP");
         order1.put("paymentMethod", 1);
         order1.put("driverId", "user_001"); order1.put("driverName", "Le Van B");
         order1.put("driverPhone", "0912345678"); order1.put("vehiclePlate", "59A-123.45");
@@ -1042,7 +1042,7 @@ public class FirebaseResetService {
         order2.put("shopDiscountAmount", 0.0);
         order2.put("freeshipDiscountAmount", 0.0);
         order2.put("finalAmount", 91000.0);
-        order2.put("status", 3);
+        order2.put("status", 3); order2.put("deliveryStep", "DELIVERED");
         order2.put("paymentMethod", 2);
         order2.put("driverId", "user_003"); order2.put("driverName", "Le Van B");
         order2.put("driverPhone", "0912345678"); order2.put("vehiclePlate", "59A-123.45");
@@ -1073,7 +1073,7 @@ public class FirebaseResetService {
         order3.put("shopDiscountAmount", 0.0);
         order3.put("freeshipDiscountAmount", 0.0);
         order3.put("finalAmount", 111000.0);
-        order3.put("status", 1);
+        order3.put("status", 1); order3.put("deliveryStep", "WAITING_DRIVER");
         order3.put("paymentMethod", 1);
         order3.put("driverId", null); order3.put("driverName", null);
         order3.put("driverPhone", null); order3.put("vehiclePlate", null);
@@ -1099,7 +1099,7 @@ public class FirebaseResetService {
         order4.put("shopDiscountAmount", 0.0);
         order4.put("freeshipDiscountAmount", 0.0);
         order4.put("finalAmount", 85000.0);
-        order4.put("status", 0);
+        order4.put("status", 0); order4.put("deliveryStep", "PENDING_STORE_CONFIRMATION");
         order4.put("paymentMethod", 2);
         order4.put("driverId", null); order4.put("driverName", null);
         order4.put("driverPhone", null); order4.put("vehiclePlate", null);
@@ -1125,7 +1125,7 @@ public class FirebaseResetService {
         order5.put("shopDiscountAmount", 0.0);
         order5.put("freeshipDiscountAmount", 0.0);
         order5.put("finalAmount", 80000.0);
-        order5.put("status", 4);
+        order5.put("status", 4); order5.put("deliveryStep", "CANCELLED");
         order5.put("paymentMethod", 3);
         order5.put("driverId", null); order5.put("driverName", null);
         order5.put("driverPhone", null); order5.put("vehiclePlate", null);
@@ -1156,7 +1156,7 @@ public class FirebaseResetService {
         order6.put("shopDiscountAmount", 0.0);
         order6.put("freeshipDiscountAmount", 0.0);
         order6.put("finalAmount", 99000.0);
-        order6.put("status", 2);
+        order6.put("status", 2); order6.put("deliveryStep", "ON_THE_WAY");
         order6.put("paymentMethod", 4);
         order6.put("driverId", "user_001"); order6.put("driverName", "Le Van B");
         order6.put("driverPhone", "0912345678"); order6.put("vehiclePlate", "59A-123.45");
@@ -1182,7 +1182,7 @@ public class FirebaseResetService {
         order7.put("shopDiscountAmount", 0.0);
         order7.put("freeshipDiscountAmount", 0.0);
         order7.put("finalAmount", 106000.0);
-        order7.put("status", 3);
+        order7.put("status", 3); order7.put("deliveryStep", "DELIVERED");
         order7.put("paymentMethod", 1);
         order7.put("driverId", "user_003"); order7.put("driverName", "Le Van B");
         order7.put("driverPhone", "0912345678"); order7.put("vehiclePlate", "59A-123.45");
@@ -1219,7 +1219,7 @@ public class FirebaseResetService {
         order8.put("shopDiscountAmount", 0.0);
         order8.put("freeshipDiscountAmount", 0.0);
         order8.put("finalAmount", 170000.0);
-        order8.put("status", 3);
+        order8.put("status", 3); order8.put("deliveryStep", "DELIVERED");
         order8.put("deliveryAddress", "123 Lê Văn Việt, TP Thủ Đức");
         order8.put("receiverName", "Khôi");
         order8.put("receiverPhone", "0123456789");

@@ -32,6 +32,9 @@ public class WalletService {
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> wallets = walletRepository
                     .findDriverWalletByUserIdAndRole(userId, "driver");
+            if (wallets.isEmpty()) {
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(userId, 2);
+            }
             if (!wallets.isEmpty()) {
                 com.google.cloud.firestore.DocumentSnapshot doc = wallets.get(0);
                 return mapToWalletDTO(doc.getId(), doc.getData());
@@ -98,7 +101,10 @@ public class WalletService {
         log.info("Bat dau yeu cau rut tien: userId={}, amount={}", userId, amount);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> walletSnapshots = walletRepository
-                    .findDriverWalletByUserIdAndRole(userId, "driver");
+                    .findDriverWalletByUserIdAndRole(userId, 2);
+            if (walletSnapshots.isEmpty()) {
+                walletSnapshots = walletRepository.findDriverWalletByUserIdAndRole(userId, "driver");
+            }
             if (walletSnapshots.isEmpty()) {
                 throw BusinessException.viKhongTonTai(userId);
             }
@@ -317,6 +323,17 @@ public class WalletService {
                     .findDriverWalletByUserIdAndRole(driverId, 2);
             if (!wallets.isEmpty()) {
                 walletId = wallets.get(0).getId();
+            } else {
+                // Thuong gap khi tao vi moi: thu lai voi role="driver" (string) cho cac vi cu
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(driverId, "driver");
+                if (!wallets.isEmpty()) {
+                    walletId = wallets.get(0).getId();
+                    log.info("Tim thay vi cu (role='driver') cho tai xe {}, walletId={}", driverId, walletId);
+                } else {
+                    // Tao vi moi neu chua ton tai
+                    walletId = walletRepository.createDriverWallet(driverId);
+                    log.info("Tao vi moi cho tai xe {}: walletId={}", driverId, walletId);
+                }
             }
 
             double driverCommissionPercentage = 80.0;
@@ -439,6 +456,14 @@ public class WalletService {
                     .findDriverWalletByUserIdAndRole(driverId, 2);
             if (!wallets.isEmpty()) {
                 walletId = wallets.get(0).getId();
+            } else {
+                wallets = walletRepository.findDriverWalletByUserIdAndRole(driverId, "driver");
+                if (!wallets.isEmpty()) {
+                    walletId = wallets.get(0).getId();
+                } else {
+                    walletId = walletRepository.createDriverWallet(driverId);
+                    log.info("Tao vi moi cho tai xe khi COD Debit: driverId={}, walletId={}", driverId, walletId);
+                }
             }
 
             Map<String, Object> transData = new HashMap<>();
@@ -562,6 +587,7 @@ public class WalletService {
                 throw new IllegalArgumentException("Khong tim thay vi lien ket.");
             }
 
+            Double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
             Double pendingBalance = walletDoc.getDouble("pendingBalance") != null ? walletDoc.getDouble("pendingBalance") : 0.0;
             Double totalWithdrawn = walletDoc.getDouble("totalWithdrawn") != null ? walletDoc.getDouble("totalWithdrawn") : 0.0;
 
@@ -572,6 +598,7 @@ public class WalletService {
             
             // Cap nhat vi
             Map<String, Object> walletUpdates = new HashMap<>();
+            walletUpdates.put("balance", Math.max(0.0, balance - amount));
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("totalWithdrawn", totalWithdrawn + amount);
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
@@ -579,6 +606,26 @@ public class WalletService {
 
             batch.commit().get();
             log.info("Da duyet thanh cong yeu cau rut tien: {}", transactionId);
+            
+            // Gui thong bao
+            try {
+                String userId = walletDoc.getString("userId");
+                Object roleObj = walletDoc.get("role");
+                
+                com.example.be_foodgo.dto.NotificationDTO dto = new com.example.be_foodgo.dto.NotificationDTO();
+                dto.setTitle("Yêu cầu rút tiền được duyệt");
+                dto.setBody("Yêu cầu rút " + String.format("%,.0f", amount) + "đ của bạn đã được duyệt thành công.");
+                dto.setType(42);
+                dto.setReferenceId(transactionId);
+                
+                if (roleObj != null && ("1".equals(String.valueOf(roleObj)) || "merchant".equals(String.valueOf(roleObj)))) {
+                    notificationService.createNotification("merchant_profiles", userId, dto);
+                } else {
+                    notificationService.createNotification("driver_profiles", userId, dto);
+                }
+            } catch (Exception ex) {
+                log.warn("Khong the gui thong bao duyet rut tien: {}", ex.getMessage());
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi duyet rut tien: {}", e.getMessage());
@@ -617,7 +664,6 @@ public class WalletService {
                 throw new IllegalArgumentException("Khong tim thay vi lien ket.");
             }
 
-            Double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
             Double pendingBalance = walletDoc.getDouble("pendingBalance") != null ? walletDoc.getDouble("pendingBalance") : 0.0;
 
             com.google.cloud.firestore.WriteBatch batch = firestore.batch();
@@ -626,15 +672,34 @@ public class WalletService {
             batch.update(transRef, "status", 2);
             batch.update(transRef, "description", "Tu choi rut tien: " + reason);
             
-            // Cap nhat vi: hoan tien
+            // Cap nhat vi: ko hoan tien vi tien chua tru
             Map<String, Object> walletUpdates = new HashMap<>();
-            walletUpdates.put("balance", balance + amount);
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             batch.update(walletRef, walletUpdates);
 
             batch.commit().get();
             log.info("Da tu choi yeu cau rut tien: {}", transactionId);
+
+            // Gui thong bao
+            try {
+                String userId = walletDoc.getString("userId");
+                Object roleObj = walletDoc.get("role");
+                
+                com.example.be_foodgo.dto.NotificationDTO dto = new com.example.be_foodgo.dto.NotificationDTO();
+                dto.setTitle("Yêu cầu rút tiền thất bại");
+                dto.setBody("Yêu cầu rút " + String.format("%,.0f", amount) + "đ của bạn bị từ chối. Lý do: " + reason);
+                dto.setType(43);
+                dto.setReferenceId(transactionId);
+                
+                if (roleObj != null && ("1".equals(String.valueOf(roleObj)) || "merchant".equals(String.valueOf(roleObj)))) {
+                    notificationService.createNotification("merchant_profiles", userId, dto);
+                } else {
+                    notificationService.createNotification("driver_profiles", userId, dto);
+                }
+            } catch (Exception ex) {
+                log.warn("Khong the gui thong bao tu choi rut tien: {}", ex.getMessage());
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Loi khi tu choi rut tien: {}", e.getMessage());
@@ -682,10 +747,17 @@ public class WalletService {
         if (data == null) {
             return WalletDTO.builder().id(id).build();
         }
+        Object roleVal = data.get("role");
+        String roleStr;
+        if (roleVal instanceof Number) {
+            roleStr = ((Number) roleVal).intValue() == 1 ? "merchant" : "driver";
+        } else {
+            roleStr = roleVal != null ? String.valueOf(roleVal) : null;
+        }
         return WalletDTO.builder()
                 .id(id)
                 .userId((String) data.get("userId"))
-                .role(data.get("role") != null ? String.valueOf(data.get("role")) : null)
+                .role(roleStr)
                 .balance(toDouble(data.get("balance")))
                 .totalEarned(toDouble(data.get("totalEarned")))
                 .totalWithdrawn(toDouble(data.get("totalWithdrawn")))

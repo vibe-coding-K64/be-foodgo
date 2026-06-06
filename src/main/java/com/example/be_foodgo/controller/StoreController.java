@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.be_foodgo.dto.StoreDTO;
 import com.example.be_foodgo.repository.OrderRepository;
 import com.example.be_foodgo.security.JwtTokenProvider;
+import com.example.be_foodgo.service.OrderAssignmentService;
 import com.example.be_foodgo.service.StoreService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,6 +47,9 @@ public class StoreController {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private OrderAssignmentService orderAssignmentService;
 
     private String trichXuatUserIdTuHeader(HttpServletRequest request) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -208,9 +212,11 @@ public class StoreController {
     public ResponseEntity<Map<String, Object>> getPopularStores(
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String categoryId,
-            @RequestParam(defaultValue = "0") double minRating) {
+            @RequestParam(defaultValue = "0") double minRating,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
         try {
-            Map<String, Object> response = storeService.getPopularStores(limit, categoryId, minRating);
+            Map<String, Object> response = storeService.getPopularStores(limit, categoryId, minRating, lat, lng);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -261,8 +267,7 @@ public class StoreController {
             updates.put("status", 1);
             updates.put("updatedAt", new java.util.Date());
             orderRepository.updateFields(orderId, updates);
-
-            orderRepository.updateRdbStatus(orderId, 1);
+            orderAssignmentService.triggerAssignmentForOrder(orderId);
 
             log.info("Merchant {} xac nhan don hang {} thanh cong. Store: {}", userId, orderId, orderStoreId);
             return ResponseEntity.ok(Map.of(

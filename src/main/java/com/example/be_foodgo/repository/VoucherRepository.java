@@ -368,6 +368,13 @@ public class VoucherRepository {
         return null;
     }
 
+    public void congLoyaltyPoints(String userId, int soDiem) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection("customer_profiles").document(userId);
+        ApiFuture<WriteResult> future = docRef.update("loyaltyPoints", FieldValue.increment(soDiem));
+        future.get();
+        log.info("Da cong [{}] diem loyalty cho user [{}]", soDiem, userId);
+    }
+
     public void truLoyaltyPoints(String userId, int soDiem) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection("customer_profiles").document(userId);
         ApiFuture<WriteResult> future = docRef.update("loyaltyPoints", FieldValue.increment(-soDiem));

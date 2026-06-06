@@ -1,5 +1,6 @@
 package com.example.be_foodgo.exception;
 
+import com.example.be_foodgo.constant.DeliveryOrderStatus;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
@@ -144,46 +145,22 @@ public class BusinessException extends RuntimeException {
     }
 
     public static BusinessException trangThaiKhongTheHuy(String orderId, int status) {
-        String tenTrangThai;
-        if (status == 0) {
-            tenTrangThai = "Chờ xác nhận";
-        } else if (status == 1) {
-            tenTrangThai = "Đang chuẩn bị";
-        } else if (status == 2) {
-            tenTrangThai = "Đang giao";
-        } else if (status == 3) {
-            tenTrangThai = "Hoàn thành";
-        } else if (status == 4) {
-            tenTrangThai = "Đã hủy";
-        } else {
-            tenTrangThai = "Không xác định";
-        }
+        String tenTrangThai = DeliveryOrderStatus.getDisplayName(status);
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,
                 "ORDER_STATUS_CANNOT_CANCEL",
-                "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái [Chờ xác nhận]."
+                "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái ["
+                        + DeliveryOrderStatus.getDisplayName(DeliveryOrderStatus.PENDING_STORE_CONFIRMATION) + "]."
         );
     }
 
     public static BusinessException trangThaiDonHangKhongChoPhepDanhGia(String orderId, int status) {
-        String tenTrangThai;
-        if (status == 0) {
-            tenTrangThai = "Chờ xác nhận";
-        } else if (status == 1) {
-            tenTrangThai = "Đang chuẩn bị";
-        } else if (status == 2) {
-            tenTrangThai = "Đang giao";
-        } else if (status == 3) {
-            tenTrangThai = "Hoàn thành";
-        } else if (status == 4) {
-            tenTrangThai = "Đã hủy";
-        } else {
-            tenTrangThai = "Không xác định";
-        }
+        String tenTrangThai = DeliveryOrderStatus.getDisplayName(status);
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,
                 "ORDER_STATUS_CANNOT_REVIEW",
-                "Không thể đánh giá đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể đánh giá đơn hàng đang ở trạng thái [Hoàn thành] (status = 3)."
+                "Không thể đánh giá đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể đánh giá đơn hàng đang ở trạng thái ["
+                        + DeliveryOrderStatus.getDisplayName(DeliveryOrderStatus.COMPLETED) + "] (status = " + DeliveryOrderStatus.COMPLETED + ")."
         );
     }
 
@@ -275,17 +252,18 @@ public class BusinessException extends RuntimeException {
         );
     }
 
-    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, int status, String hanhDong) {
+    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, Integer status, String hanhDong) {
+        int resolvedStatus = status != null ? status : -1;
         String tenTrangThai;
-        if (status == 0) {
+        if (resolvedStatus == 0) {
             tenTrangThai = "Chờ xác nhận";
-        } else if (status == 1) {
+        } else if (resolvedStatus == 1) {
             tenTrangThai = "Đang chuẩn bị";
-        } else if (status == 2) {
+        } else if (resolvedStatus == 2) {
             tenTrangThai = "Đang giao";
-        } else if (status == 3) {
+        } else if (resolvedStatus == 3) {
             tenTrangThai = "Hoàn thành";
-        } else if (status == 4) {
+        } else if (resolvedStatus == 4) {
             tenTrangThai = "Đã hủy";
         } else {
             tenTrangThai = "Không xác định";
@@ -295,6 +273,10 @@ public class BusinessException extends RuntimeException {
                 "ORDER_STATUS_INVALID",
                 "Không thể " + hanhDong + " đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]."
         );
+    }
+
+    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, int status, String hanhDong) {
+        return trangThaiDonHangKhongHopLe(orderId, Integer.valueOf(status), hanhDong);
     }
 
     public static BusinessException donHangDaCoTaiXe(String orderId) {

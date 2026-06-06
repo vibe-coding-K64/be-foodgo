@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import com.google.cloud.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -236,5 +237,22 @@ public class UserRepository {
         updates.put("roles", roles);
         updates.put("updatedAt", java.time.Instant.now().toString());
         docRef.update(updates).get();
+    }
+
+    public List<Integer> themRoleNeuChuaCo(String userId, Integer role) throws ExecutionException, InterruptedException {
+        User user = timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+
+        LinkedHashSet<Integer> mergedRoles = new LinkedHashSet<>();
+        if (user.getRoles() != null) {
+            mergedRoles.addAll(user.getRoles());
+        }
+        mergedRoles.add(role);
+
+        List<Integer> updatedRoles = new ArrayList<>(mergedRoles);
+        capNhatRoles(userId, updatedRoles);
+        return updatedRoles;
     }
 }
