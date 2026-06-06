@@ -218,12 +218,6 @@ public class DeliveryOrderService {
             if (currentStatus != DeliveryOrderStatus.DELIVERING) {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
             }
-
-            Map<String, Object> driverUpdates = new HashMap<>();
-            driverUpdates.put("currentOrderId", null);
-            driverUpdates.put("isAvailable", true);
-            driverUpdates.put("updatedAt", new Date());
-
             if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
                 Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
