@@ -31,7 +31,9 @@ public class VoucherRepository {
     public String saveVoucher(Voucher voucher) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
         Map<String, Object> map = voucherToMap(voucher);
-        map.put("expiryDate", FieldValue.serverTimestamp());
+        map.put("expiryDate", voucher.getExpiryDate() != null 
+                ? Timestamp.ofTimeSecondsAndNanos(voucher.getExpiryDate().toInstant().getEpochSecond(), 0) 
+                : null);
         map.put("createdAt", FieldValue.serverTimestamp());
         map.put("updatedAt", FieldValue.serverTimestamp());
         ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
@@ -131,7 +133,7 @@ public class VoucherRepository {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucher.getId());
         Map<String, Object> map = voucherToMap(voucher);
         map.put("expiryDate", voucher.getExpiryDate() != null
-                ? FieldValue.serverTimestamp()
+                ? Timestamp.ofTimeSecondsAndNanos(voucher.getExpiryDate().toInstant().getEpochSecond(), 0)
                 : null);
         map.put("updatedAt", FieldValue.serverTimestamp());
         ApiFuture<WriteResult> collectionsApiFuture = docRef.set(map);
@@ -194,6 +196,10 @@ public class VoucherRepository {
         if (value == null) return null;
         if (value instanceof com.google.protobuf.Timestamp) {
             com.google.protobuf.Timestamp ts = (com.google.protobuf.Timestamp) value;
+            return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
+        }
+        if (value instanceof com.google.cloud.Timestamp) {
+            com.google.cloud.Timestamp ts = (com.google.cloud.Timestamp) value;
             return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
         }
         if (value instanceof java.util.Date) {
@@ -337,9 +343,12 @@ public class VoucherRepository {
 
     public void giamRemainingSystemVoucher(String voucherId) throws ExecutionException, InterruptedException {
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(voucherId);
-        ApiFuture<WriteResult> future = docRef.update("remaining", FieldValue.increment(-1));
+        ApiFuture<WriteResult> future = docRef.update(
+                "remaining", FieldValue.increment(-1),
+                "usedCount", FieldValue.increment(1)
+        );
         future.get();
-        log.info("Da giam remaining cua voucher [{}]", voucherId);
+        log.info("Da giam remaining va tang usedCount cua voucher [{}]", voucherId);
     }
 
     public Integer getLoyaltyPoints(String userId) throws ExecutionException, InterruptedException {

@@ -9,7 +9,7 @@ import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -221,13 +221,13 @@ public class StatsRepository {
             orderUpdates.put("driverName", driverName);
             orderUpdates.put("driverPhone", driverPhone);
             orderUpdates.put("vehiclePlate", vehiclePlate);
-            orderUpdates.put("updatedAt", Instant.now());
+            orderUpdates.put("updatedAt", new Date());
             transaction.update(orderRef, orderUpdates);
 
             Map<String, Object> driverUpdates = new HashMap<>();
             driverUpdates.put("currentOrderId", orderId);
             driverUpdates.put("isAvailable", false);
-            driverUpdates.put("updatedAt", Instant.now());
+            driverUpdates.put("updatedAt", new Date());
             transaction.update(driverProfileRef, driverUpdates);
 
             return null;

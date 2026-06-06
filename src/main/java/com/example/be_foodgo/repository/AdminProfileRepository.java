@@ -28,6 +28,15 @@ public class AdminProfileRepository {
         if (document.exists()) {
             return documentToProfile(document);
         }
+
+        // Fallback for firebase user prefix
+        documentReference = firestore.collection(COLLECTION_NAME).document("firebase:" + userId);
+        future = documentReference.get();
+        document = future.get();
+        if (document.exists()) {
+            return documentToProfile(document);
+        }
+
         return null;
     }
 

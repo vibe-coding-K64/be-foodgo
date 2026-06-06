@@ -74,9 +74,11 @@ public class ProfileService {
             throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.warn("Mat khau xac thuc khong dung cho userId: {}", userId);
-            throw new IllegalArgumentException("Mat khau xac thuc khong dung.");
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                log.warn("Mat khau xac thuc khong dung cho userId: {}", userId);
+                throw new IllegalArgumentException("Mat khau xac thuc khong dung.");
+            }
         }
 
         String newEmail = request.getEmail();

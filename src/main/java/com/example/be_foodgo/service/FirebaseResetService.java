@@ -399,7 +399,7 @@ public class FirebaseResetService {
                 createCategoryMap("syscate_007", null, "Mon Nhat", "restaurant", 7, "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
                 createCategoryMap("syscate_008", null, "Banh mi", "bakery_dining", 8, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
                 createCategoryMap("syscate_009", null, "Lau/Buffet", "restaurant", 9, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
-                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80")
+                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80")
         );
         seedDirect("categories", categories);
     }
@@ -410,7 +410,7 @@ public class FirebaseResetService {
                 createCategoryMap("stocate_002", "store_001", "Mon phu", "restaurant", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                 createCategoryMap("stocate_003", "store_001", "Nuoc uong", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                 createCategoryMap("stocate_004", "store_002", "Tra sua", "local_cafe", 1, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
-                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                 createCategoryMap("stocate_006", "store_003", "Banh mi", "bakery_dining", 1, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
                 createCategoryMap("stocate_007", "store_003", "Do an them", "fastfood", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80")
         );
@@ -597,7 +597,7 @@ public class FirebaseResetService {
                         Map.entry("name", "Tra dao cam"),
                         Map.entry("description", "Tra dao cam that huong vi dai"),
                         Map.entry("basePrice", 25000.0),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -768,7 +768,7 @@ public class FirebaseResetService {
 
         Map<String, Object> banner2 = new HashMap<>();
         banner2.put("id", "banner_002"); banner2.put("title", "Freeship 0 dong");
-        banner2.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=800&q=80");
+        banner2.put("imageUrl", "https://images.unsplash.com/photo-1526367790999-015070fc4449?w=800&q=80");
         banner2.put("storeId", null); banner2.put("storeName", null);
         banner2.put("isActive", true); banner2.put("order", 2);
         banner2.put("createdAt", FieldValue.serverTimestamp());
@@ -822,11 +822,20 @@ public class FirebaseResetService {
         map.put("value", value);
         map.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80");
         map.put("remaining", remaining);
+        map.put("limitCount", remaining);
+        map.put("usedCount", 0);
         map.put("isActive", true);
         map.put("isFreeship", isFreeship);
         map.put("terms", terms);
         map.put("minOrderValue", minOrderValue);
-        map.put("expiryDate", FieldValue.serverTimestamp());
+        com.google.cloud.Timestamp expTimestamp;
+        try {
+            java.time.Instant instant = java.time.Instant.parse(expiryDate);
+            expTimestamp = com.google.cloud.Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), 0);
+        } catch (Exception e) {
+            expTimestamp = com.google.cloud.Timestamp.now();
+        }
+        map.put("expiryDate", expTimestamp);
         map.put("pointsRequired", pointsRequired);
         map.put("validityDays", validityDays);
         map.put("createdAt", FieldValue.serverTimestamp());
@@ -1103,7 +1112,7 @@ public class FirebaseResetService {
         Map<String, Object> order6Item1 = new HashMap<>();
         order6Item1.put("foodId", "prod_005"); order6Item1.put("name", "Tra dao cam");
         order6Item1.put("price", 25000.0); order6Item1.put("quantity", 2);
-        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80");
+        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80");
         order6Items.add(order6Item1);
         Map<String, Object> order6Item2 = new HashMap<>();
         order6Item2.put("foodId", "prod_014"); order6Item2.put("name", "Tra sua trai cay");
