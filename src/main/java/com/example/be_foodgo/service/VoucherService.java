@@ -38,17 +38,21 @@ public class VoucherService {
             isSystemVoucher = true;
         }
 
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
         if (isSystemVoucher) {
-            com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
-            if (user == null || user.getRoles() == null || !user.getRoles().contains(4)) {
+            if (!isAdmin) {
                 log.warn("User [{}] khong phai Admin - khong the tao voucher he thong", userId);
                 throw new IllegalArgumentException("Khong co quyen tao voucher he thong.");
             }
         } else {
-            List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
-            if (!ownedStoreIds.contains(storeId)) {
-                log.warn("User [{}] khong so huu cua hang [{}] - khong the tao voucher", userId, storeId);
-                throw new IllegalArgumentException("Khong co quyen tao voucher cho cua hang nay.");
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(storeId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the tao voucher", userId, storeId);
+                    throw new IllegalArgumentException("Khong co quyen tao voucher cho cua hang nay.");
+                }
             }
         }
 
@@ -115,17 +119,21 @@ public class VoucherService {
             isSystemVoucher = true;
         }
 
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
         if (isSystemVoucher) {
-            com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
-            if (user == null || user.getRoles() == null || !user.getRoles().contains(4)) {
+            if (!isAdmin) {
                 log.warn("User [{}] khong phai Admin - khong the cap nhat voucher he thong [{}]", userId, id);
                 throw new IllegalArgumentException("Khong co quyen cap nhat voucher he thong nay.");
             }
         } else {
-            List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
-            if (!ownedStoreIds.contains(voucherStoreId)) {
-                log.warn("User [{}] khong so huu cua hang [{}] - khong the cap nhat voucher [{}]", userId, voucherStoreId, id);
-                throw new IllegalArgumentException("Khong co quyen cap nhat voucher nay.");
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(voucherStoreId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the cap nhat voucher [{}]", userId, voucherStoreId, id);
+                    throw new IllegalArgumentException("Khong co quyen cap nhat voucher nay.");
+                }
             }
         }
 
@@ -151,17 +159,21 @@ public class VoucherService {
             isSystemVoucher = true;
         }
 
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
         if (isSystemVoucher) {
-            com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
-            if (user == null || user.getRoles() == null || !user.getRoles().contains(4)) {
+            if (!isAdmin) {
                 log.warn("User [{}] khong phai Admin - khong the xoa voucher he thong [{}]", userId, id);
                 throw new IllegalArgumentException("Khong co quyen xoa voucher he thong nay.");
             }
         } else {
-            List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
-            if (!ownedStoreIds.contains(voucherStoreId)) {
-                log.warn("User [{}] khong so huu cua hang [{}] - khong the xoa voucher [{}]", userId, voucherStoreId, id);
-                throw new IllegalArgumentException("Khong co quyen xoa voucher nay.");
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(voucherStoreId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the xoa voucher [{}]", userId, voucherStoreId, id);
+                    throw new IllegalArgumentException("Khong co quyen xoa voucher nay.");
+                }
             }
         }
 
