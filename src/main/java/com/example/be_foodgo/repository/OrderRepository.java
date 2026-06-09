@@ -10,6 +10,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -35,7 +36,7 @@ public class OrderRepository {
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Order> orders = new ArrayList<>();
         for (DocumentSnapshot document : documents) {
-            Order order = mapDocumentToOrder(document);
+            Order order = documentToOrder(document);
             if (order != null) {
                 orders.add(order);
             }
@@ -48,7 +49,7 @@ public class OrderRepository {
         ApiFuture<DocumentSnapshot> future = docRef.get();
         DocumentSnapshot document = future.get();
         if (document.exists()) {
-            return mapDocumentToOrder(document);
+            return documentToOrder(document);
         }
         return null;
     }
@@ -111,7 +112,7 @@ public class OrderRepository {
         }
         List<Order> orders = new ArrayList<>();
         for (DocumentSnapshot document : documents) {
-            Order order = mapDocumentToOrder(document);
+            Order order = documentToOrder(document);
             if (order != null) {
                 orders.add(order);
             }
@@ -119,163 +120,136 @@ public class OrderRepository {
         return orders;
     }
 
-    private Order mapDocumentToOrder(DocumentSnapshot document) {
-        if (document == null || !document.exists()) {
-            return null;
+    @SuppressWarnings("unchecked")
+    private Instant toInstant(Object value) {
+        if (value == null) return null;
+        if (value instanceof com.google.protobuf.Timestamp) {
+            com.google.protobuf.Timestamp ts = (com.google.protobuf.Timestamp) value;
+            return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
         }
-
-        Order order = new Order();
-        order.setId(document.getId());
-        order.setUserId(document.getString("userId"));
-        order.setStoreId(document.getString("storeId"));
-        order.setStoreName(document.getString("storeName"));
-        order.setCode(document.getString("code"));
-        order.setDeliveryAddress(document.getString("deliveryAddress"));
-        order.setAddressId(document.getString("addressId"));
-        order.setReceiverName(document.getString("receiverName"));
-        order.setReceiverPhone(document.getString("receiverPhone"));
-        order.setDeliveryFee(toDouble(document.get("deliveryFee")));
-        order.setDriverName(document.getString("driverName"));
-        order.setDriverPhone(document.getString("driverPhone"));
-        order.setItems(extractOrderItems(document.get("items")));
-        order.setTotalAmount(toDouble(document.get("totalAmount")));
-        order.setDiscountAmount(toDouble(document.get("discountAmount")));
-        order.setShopDiscountAmount(toDouble(document.get("shopDiscountAmount")));
-        order.setFreeshipDiscountAmount(toDouble(document.get("freeshipDiscountAmount")));
-        order.setFinalAmount(toDouble(document.get("finalAmount")));
-        order.setPaymentMethod(resolvePaymentMethod(document));
-        order.setPaymentStatus(toInteger(document.get("paymentStatus")));
-        order.setStatus(document.get("status"));
-        order.setCreatedAt(toDate(document.get("createdAt")));
-        order.setUpdatedAt(toDate(document.get("updatedAt")));
-        order.setDeletedAt(toDate(document.get("deletedAt")));
-        order.setDeliveryHeading(toNullableDouble(document.get("deliveryHeading")));
-        order.setDeliveryLat(toNullableDouble(document.get("deliveryLat")));
-        order.setDeliveryLng(toNullableDouble(document.get("deliveryLng")));
-        order.setNote(document.getString("note"));
-        return order;
-    }
-
-    private Object resolvePaymentMethod(DocumentSnapshot document) {
-        Object paymentMethod = document.get("paymentMethod");
-        return paymentMethod != null ? paymentMethod : document.get("paymentMethodString");
-    }
-
-    private List<OrderItem> extractOrderItems(Object value) {
-        if (!(value instanceof List<?> rawItems)) {
-            return null;
+        if (value instanceof com.google.cloud.Timestamp) {
+            com.google.cloud.Timestamp ts = (com.google.cloud.Timestamp) value;
+            return Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
         }
-
-        List<OrderItem> items = new ArrayList<>();
-        for (Object rawItem : rawItems) {
-            if (rawItem instanceof OrderItem orderItem) {
-                items.add(orderItem);
-                continue;
-            }
-            if (!(rawItem instanceof Map<?, ?> map)) {
-                continue;
-            }
-
-            OrderItem item = new OrderItem();
-            item.setFoodId(asString(firstNonNull(map.get("foodId"), map.get("productId"))));
-            item.setImageUrl(asString(firstNonNull(map.get("imageUrl"), map.get("image"))));
-            item.setName(asString(firstNonNull(map.get("name"), map.get("productName"))));
-            item.setSize(asString(map.get("size")));
-            item.setOptions(map.get("options"));
-            Integer quantity = toInteger(map.get("quantity"));
-            item.setQuantity(quantity != null ? quantity : 0);
-            item.setPrice(toDouble(map.get("price")));
-            items.add(item);
+        if (value instanceof java.util.Date) {
+            return ((java.util.Date) value).toInstant();
         }
-        return items;
-    }
-
-    private Object firstNonNull(Object... values) {
-        for (Object value : values) {
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-
-    private String asString(Object value) {
-        return value != null ? String.valueOf(value) : null;
-    }
-
-    private double toDouble(Object value) {
-        Double number = toNullableDouble(value);
-        return number != null ? number : 0.0;
-    }
-
-    private Double toNullableDouble(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        if (value instanceof String str) {
+        if (value instanceof String) {
             try {
-                return Double.parseDouble(str);
-            } catch (NumberFormatException ignored) {
+                return Instant.parse((String) value);
+            } catch (Exception e) {
                 return null;
             }
         }
-        return null;
-    }
-
-    private Integer toInteger(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String str) {
-            try {
-                return Integer.parseInt(str);
-            } catch (NumberFormatException ignored) {
-                return null;
+        if (value instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) value;
+            Object seconds = map.get("epochSecond");
+            Object nanos = map.get("nano");
+            if (seconds != null) {
+                long sec = seconds instanceof Long ? (Long) seconds : ((Integer) seconds).longValue();
+                int nano = nanos != null ? (nanos instanceof Long ? ((Long) nanos).intValue() : (Integer) nanos) : 0;
+                return Instant.ofEpochSecond(sec, nano);
             }
+            return null;
         }
         return null;
     }
 
     private Date toDate(Object value) {
-        if (value == null) {
+        if (value == null) return null;
+        Instant instant = toInstant(value);
+        return instant != null ? Date.from(instant) : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Order documentToOrder(DocumentSnapshot doc) {
+        if (doc == null || !doc.exists()) {
             return null;
         }
-        if (value instanceof Date date) {
-            return date;
-        }
-        if (value instanceof Timestamp timestamp) {
-            return timestamp.toDate();
-        }
-        if (value instanceof Number number) {
-            return new Date(number.longValue());
-        }
-        if (value instanceof Map<?, ?> map) {
-            Object seconds = map.get("_seconds");
-            Object nanoseconds = map.get("_nanoseconds");
-            if (seconds instanceof Number secondsNumber) {
-                long millis = secondsNumber.longValue() * 1000L;
-                if (nanoseconds instanceof Number nanosNumber) {
-                    millis += nanosNumber.longValue() / 1_000_000L;
+        try {
+            Order order = doc.toObject(Order.class);
+            if (order != null) {
+                order.setId(doc.getId());
+                return order;
+            }
+        } catch (Exception e) {
+            // Fallback manual parsing when toObject fails due to format mismatch (e.g., String dates in old DB)
+            Order order = new Order();
+            order.setId(doc.getId());
+            order.setUserId(doc.getString("userId"));
+            order.setStoreId(doc.getString("storeId"));
+            order.setStoreName(doc.getString("storeName"));
+            order.setCode(doc.getString("code"));
+            order.setDeliveryAddress(doc.getString("deliveryAddress"));
+            order.setAddressId(doc.getString("addressId"));
+            order.setReceiverName(doc.getString("receiverName"));
+            order.setReceiverPhone(doc.getString("receiverPhone"));
+            
+            Double deliveryFee = doc.getDouble("deliveryFee");
+            order.setDeliveryFee(deliveryFee != null ? deliveryFee : 0.0);
+            
+            order.setDriverName(doc.getString("driverName"));
+            order.setDriverPhone(doc.getString("driverPhone"));
+            
+            Double totalAmount = doc.getDouble("totalAmount");
+            order.setTotalAmount(totalAmount != null ? totalAmount : 0.0);
+            
+            Double discountAmount = doc.getDouble("discountAmount");
+            order.setDiscountAmount(discountAmount != null ? discountAmount : 0.0);
+            
+            Double shopDiscountAmount = doc.getDouble("shopDiscountAmount");
+            order.setShopDiscountAmount(shopDiscountAmount != null ? shopDiscountAmount : 0.0);
+            
+            Double freeshipDiscountAmount = doc.getDouble("freeshipDiscountAmount");
+            order.setFreeshipDiscountAmount(freeshipDiscountAmount != null ? freeshipDiscountAmount : 0.0);
+            
+            Double finalAmount = doc.getDouble("finalAmount");
+            order.setFinalAmount(finalAmount != null ? finalAmount : 0.0);
+            
+            order.setPaymentMethod(doc.get("paymentMethod"));
+            order.setStatus(doc.get("status"));
+            
+            order.setCreatedAt(toDate(doc.get("createdAt")));
+            order.setUpdatedAt(toDate(doc.get("updatedAt")));
+            order.setDeletedAt(toDate(doc.get("deletedAt")));
+            
+            order.setDeliveryHeading(doc.getDouble("deliveryHeading"));
+            order.setDeliveryLat(doc.getDouble("deliveryLat"));
+            order.setDeliveryLng(doc.getDouble("deliveryLng"));
+            order.setNote(doc.getString("note"));
+            
+            // Parse items list
+            Object itemsObj = doc.get("items");
+            if (itemsObj instanceof List) {
+                List<OrderItem> items = new ArrayList<>();
+                for (Object itemObj : (List<?>) itemsObj) {
+                    if (itemObj instanceof Map) {
+                        Map<?, ?> itemMap = (Map<?, ?>) itemObj;
+                        OrderItem item = new OrderItem();
+                        item.setFoodId((String) itemMap.get("foodId"));
+                        item.setName((String) itemMap.get("name"));
+                        item.setImageUrl((String) itemMap.get("imageUrl"));
+                        
+                        Object qtyObj = itemMap.get("quantity");
+                        if (qtyObj instanceof Number) {
+                            item.setQuantity(((Number) qtyObj).intValue());
+                        }
+                        
+                        Object priceObj = itemMap.get("price");
+                        if (priceObj instanceof Number) {
+                            item.setPrice(((Number) priceObj).doubleValue());
+                        }
+                        
+                        Object optsObj = itemMap.get("options");
+                        if (optsObj instanceof List) {
+                            item.setOptions((List<Map<String, Object>>) optsObj);
+                        }
+                        items.add(item);
+                    }
                 }
-                return new Date(millis);
+                order.setItems(items);
             }
-            Object timestamp = map.get("timestamp");
-            if (timestamp != null) {
-                return toDate(timestamp);
-            }
-        }
-        if (value instanceof String str) {
-            try {
-                return Date.from(java.time.Instant.parse(str));
-            } catch (Exception ignored) {
-                return null;
-            }
+            return order;
         }
         return null;
     }

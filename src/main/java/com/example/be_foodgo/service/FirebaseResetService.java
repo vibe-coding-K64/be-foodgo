@@ -399,7 +399,7 @@ public class FirebaseResetService {
                 createCategoryMap("syscate_007", null, "Mon Nhat", "restaurant", 7, "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
                 createCategoryMap("syscate_008", null, "Banh mi", "bakery_dining", 8, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
                 createCategoryMap("syscate_009", null, "Lau/Buffet", "restaurant", 9, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
-                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80")
+                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80")
         );
         seedDirect("categories", categories);
     }
@@ -410,7 +410,7 @@ public class FirebaseResetService {
                 createCategoryMap("stocate_002", "store_001", "Mon phu", "restaurant", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                 createCategoryMap("stocate_003", "store_001", "Nuoc uong", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                 createCategoryMap("stocate_004", "store_002", "Tra sua", "local_cafe", 1, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
-                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                 createCategoryMap("stocate_006", "store_003", "Banh mi", "bakery_dining", 1, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
                 createCategoryMap("stocate_007", "store_003", "Do an them", "fastfood", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80")
         );
@@ -597,7 +597,7 @@ public class FirebaseResetService {
                         Map.entry("name", "Tra dao cam"),
                         Map.entry("description", "Tra dao cam that huong vi dai"),
                         Map.entry("basePrice", 25000.0),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp()),
@@ -768,7 +768,7 @@ public class FirebaseResetService {
 
         Map<String, Object> banner2 = new HashMap<>();
         banner2.put("id", "banner_002"); banner2.put("title", "Freeship 0 dong");
-        banner2.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=800&q=80");
+        banner2.put("imageUrl", "https://images.unsplash.com/photo-1526367790999-015070fc4449?w=800&q=80");
         banner2.put("storeId", null); banner2.put("storeName", null);
         banner2.put("isActive", true); banner2.put("order", 2);
         banner2.put("createdAt", FieldValue.serverTimestamp());
@@ -822,11 +822,20 @@ public class FirebaseResetService {
         map.put("value", value);
         map.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80");
         map.put("remaining", remaining);
+        map.put("limitCount", remaining);
+        map.put("usedCount", 0);
         map.put("isActive", true);
         map.put("isFreeship", isFreeship);
         map.put("terms", terms);
         map.put("minOrderValue", minOrderValue);
-        map.put("expiryDate", FieldValue.serverTimestamp());
+        com.google.cloud.Timestamp expTimestamp;
+        try {
+            java.time.Instant instant = java.time.Instant.parse(expiryDate);
+            expTimestamp = com.google.cloud.Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), 0);
+        } catch (Exception e) {
+            expTimestamp = com.google.cloud.Timestamp.now();
+        }
+        map.put("expiryDate", expTimestamp);
         map.put("pointsRequired", pointsRequired);
         map.put("validityDays", validityDays);
         map.put("createdAt", FieldValue.serverTimestamp());
@@ -993,10 +1002,15 @@ public class FirebaseResetService {
         Map<String, Object> order1 = new HashMap<>();
         order1.put("id", "order_001"); order1.put("userId", "user_001");
         order1.put("storeId", "store_001");         order1.put("storeName", "Com tam Phuc Loc Tho");
+        order1.put("code", "FG001");
         order1.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
         order1.put("receiverName", "Khoi"); order1.put("receiverPhone", "0123456789");
         order1.put("items", order1Items); order1.put("totalAmount", 140000.0);
         order1.put("deliveryFee", 15000.0);
+        order1.put("discountAmount", 0.0);
+        order1.put("shopDiscountAmount", 0.0);
+        order1.put("freeshipDiscountAmount", 0.0);
+        order1.put("finalAmount", 155000.0);
         order1.put("status", 2); order1.put("deliveryStep", "WAITING_PICKUP");
         order1.put("paymentMethod", 1);
         order1.put("driverId", "user_001"); order1.put("driverName", "Le Van B");
@@ -1019,10 +1033,15 @@ public class FirebaseResetService {
         Map<String, Object> order2 = new HashMap<>();
         order2.put("id", "order_002"); order2.put("userId", "user_001");
         order2.put("storeId", "store_002");         order2.put("storeName", "Tra sua Tocotoco");
+        order2.put("code", "FG002");
         order2.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
         order2.put("receiverName", "Khoi"); order2.put("receiverPhone", "0123456789");
         order2.put("items", order2Items); order2.put("totalAmount", 79000.0);
         order2.put("deliveryFee", 12000.0);
+        order2.put("discountAmount", 0.0);
+        order2.put("shopDiscountAmount", 0.0);
+        order2.put("freeshipDiscountAmount", 0.0);
+        order2.put("finalAmount", 91000.0);
         order2.put("status", 3); order2.put("deliveryStep", "DELIVERED");
         order2.put("paymentMethod", 2);
         order2.put("driverId", "user_003"); order2.put("driverName", "Le Van B");
@@ -1045,10 +1064,15 @@ public class FirebaseResetService {
         Map<String, Object> order3 = new HashMap<>();
         order3.put("id", "order_003"); order3.put("userId", "user_002");
         order3.put("storeId", "store_003");         order3.put("storeName", "Ga ran KFC Nguyen Cuu");
+        order3.put("code", "FG003");
         order3.put("deliveryAddress", "123 Le Van Viet, TP. Thu Duc");
         order3.put("receiverName", "Quan Tri Vien"); order3.put("receiverPhone", "0987654321");
         order3.put("items", order3Items); order3.put("totalAmount", 93000.0);
         order3.put("deliveryFee", 18000.0);
+        order3.put("discountAmount", 0.0);
+        order3.put("shopDiscountAmount", 0.0);
+        order3.put("freeshipDiscountAmount", 0.0);
+        order3.put("finalAmount", 111000.0);
         order3.put("status", 1); order3.put("deliveryStep", "WAITING_DRIVER");
         order3.put("paymentMethod", 1);
         order3.put("driverId", null); order3.put("driverName", null);
@@ -1066,10 +1090,15 @@ public class FirebaseResetService {
         Map<String, Object> order4 = new HashMap<>();
         order4.put("id", "order_004"); order4.put("userId", "user_002");
         order4.put("storeId", "store_004");         order4.put("storeName", "Bun bo Hue Ba Le");
+        order4.put("code", "FG004");
         order4.put("deliveryAddress", "456 Nguyen Thi Dinh, TP. Thu Duc");
         order4.put("receiverName", "Quan Tri Vien"); order4.put("receiverPhone", "0987654321");
         order4.put("items", order4Items); order4.put("totalAmount", 65000.0);
         order4.put("deliveryFee", 20000.0);
+        order4.put("discountAmount", 0.0);
+        order4.put("shopDiscountAmount", 0.0);
+        order4.put("freeshipDiscountAmount", 0.0);
+        order4.put("finalAmount", 85000.0);
         order4.put("status", 0); order4.put("deliveryStep", "PENDING_STORE_CONFIRMATION");
         order4.put("paymentMethod", 2);
         order4.put("driverId", null); order4.put("driverName", null);
@@ -1087,10 +1116,15 @@ public class FirebaseResetService {
         Map<String, Object> order5 = new HashMap<>();
         order5.put("id", "order_005"); order5.put("userId", "user_001");
         order5.put("storeId", "store_001");         order5.put("storeName", "Com tam Phuc Loc Tho");
+        order5.put("code", "FG005");
         order5.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
         order5.put("receiverName", "Khoi"); order5.put("receiverPhone", "0123456789");
         order5.put("items", order5Items); order5.put("totalAmount", 65000.0);
         order5.put("deliveryFee", 15000.0);
+        order5.put("discountAmount", 0.0);
+        order5.put("shopDiscountAmount", 0.0);
+        order5.put("freeshipDiscountAmount", 0.0);
+        order5.put("finalAmount", 80000.0);
         order5.put("status", 4); order5.put("deliveryStep", "CANCELLED");
         order5.put("paymentMethod", 3);
         order5.put("driverId", null); order5.put("driverName", null);
@@ -1103,7 +1137,7 @@ public class FirebaseResetService {
         Map<String, Object> order6Item1 = new HashMap<>();
         order6Item1.put("foodId", "prod_005"); order6Item1.put("name", "Tra dao cam");
         order6Item1.put("price", 25000.0); order6Item1.put("quantity", 2);
-        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80");
+        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80");
         order6Items.add(order6Item1);
         Map<String, Object> order6Item2 = new HashMap<>();
         order6Item2.put("foodId", "prod_014"); order6Item2.put("name", "Tra sua trai cay");
@@ -1113,10 +1147,15 @@ public class FirebaseResetService {
         Map<String, Object> order6 = new HashMap<>();
         order6.put("id", "order_006"); order6.put("userId", "user_003");
         order6.put("storeId", "store_002");         order6.put("storeName", "Tra sua Tocotoco");
+        order6.put("code", "FG006");
         order6.put("deliveryAddress", "101 Pho Hue, Q.1, TP.HCM");
         order6.put("receiverName", "Le Van B"); order6.put("receiverPhone", "0912345678");
         order6.put("items", order6Items); order6.put("totalAmount", 87000.0);
         order6.put("deliveryFee", 12000.0);
+        order6.put("discountAmount", 0.0);
+        order6.put("shopDiscountAmount", 0.0);
+        order6.put("freeshipDiscountAmount", 0.0);
+        order6.put("finalAmount", 99000.0);
         order6.put("status", 2); order6.put("deliveryStep", "ON_THE_WAY");
         order6.put("paymentMethod", 4);
         order6.put("driverId", "user_001"); order6.put("driverName", "Le Van B");
@@ -1134,10 +1173,15 @@ public class FirebaseResetService {
         Map<String, Object> order7 = new HashMap<>();
         order7.put("id", "order_007"); order7.put("userId", "user_002");
         order7.put("storeId", "store_003");         order7.put("storeName", "Ga ran KFC Nguyen Cuu");
+        order7.put("code", "FG007");
         order7.put("deliveryAddress", "789 Nguyen Cuu, TP. Thu Duc");
         order7.put("receiverName", "Quan Tri Vien"); order7.put("receiverPhone", "0987654321");
         order7.put("items", order7Items); order7.put("totalAmount", 88000.0);
         order7.put("deliveryFee", 18000.0);
+        order7.put("discountAmount", 0.0);
+        order7.put("shopDiscountAmount", 0.0);
+        order7.put("freeshipDiscountAmount", 0.0);
+        order7.put("finalAmount", 106000.0);
         order7.put("status", 3); order7.put("deliveryStep", "DELIVERED");
         order7.put("paymentMethod", 1);
         order7.put("driverId", "user_003"); order7.put("driverName", "Le Van B");

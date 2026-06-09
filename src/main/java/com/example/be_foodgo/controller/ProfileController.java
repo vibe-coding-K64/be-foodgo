@@ -39,12 +39,25 @@ public class ProfileController {
     }
 
     private String trichXuatUserIdTuHeader(HttpServletRequest request) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
+            String name = auth.getName();
+            if (name.startsWith("firebase:")) {
+                return name.substring(9);
+            }
+            return name;
+        }
+
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return null;
         }
         String token = authHeader.substring(7);
-        return jwtTokenProvider.layUserIdTuToken(token);
+        try {
+            return jwtTokenProvider.layUserIdTuToken(token);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @GetMapping("/profile")
@@ -114,7 +127,7 @@ public class ProfileController {
             @RequestParam(value = "avatar", required = false) MultipartFile avatar,
             @RequestParam(value = "fullName", required = false) String fullName,
             @RequestParam(value = "email", required = false) String email,
-            @RequestParam(value = "password") String password) {
+            @RequestParam(value = "password", required = false) String password) {
         try {
             String userId = trichXuatUserIdTuHeader(httpRequest);
             if (userId == null) {

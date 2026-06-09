@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -159,7 +160,7 @@ public class DeliveryOrderService {
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
             notifData.put("imageUrl", null);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             statsRepository.saveDriverNotification(userId, notifData);
 
@@ -217,8 +218,7 @@ public class DeliveryOrderService {
             if (currentStatus != DeliveryOrderStatus.DELIVERING) {
                 throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "cập nhật trạng thái");
             }
-
-            if (newStatus == DeliveryOrderStatus.COMPLETED) {
+            if (newStatus == 3) {
                 String customerId = (String) orderData.get("userId");
                 Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
                 String storeId = (String) orderData.get("storeId");
@@ -233,15 +233,8 @@ public class DeliveryOrderService {
                 }
 
                 Map<String, Object> orderUpdates = new HashMap<>();
-                orderUpdates.put("status", DeliveryOrderStatus.COMPLETED);
-                orderUpdates.put("deliveryStep", "DELIVERED");
-
-                Integer currentPaymentStatus = toInt(orderData.get("paymentStatus"));
-                if (currentPaymentStatus == null || currentPaymentStatus == 1) {
-                    orderUpdates.put("paymentStatus", 2);
-                }
-
-                orderUpdates.put("updatedAt", Instant.now());
+                orderUpdates.put("status", 3);
+                orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 Map<String, Object> driverUpdates = new HashMap<>();
@@ -286,7 +279,7 @@ public class DeliveryOrderService {
                 orderUpdates.put("driverName", null);
                 orderUpdates.put("driverPhone", null);
                 orderUpdates.put("vehiclePlate", null);
-                orderUpdates.put("updatedAt", Instant.now());
+                orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
                 Map<String, Object> driverUpdates = new HashMap<>();
@@ -437,7 +430,7 @@ public class DeliveryOrderService {
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
             notifData.put("imageUrl", null);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             walletRepository.getFirestore()
                     .collection("driver_profiles")
@@ -590,7 +583,7 @@ public class DeliveryOrderService {
             notifData.put("body", "Đơn hàng [" + orderId + "] đã được giao thành công. Cảm ơn bạn đã sử dụng FoodGo!");
             notifData.put("referenceId", orderId);
             notifData.put("isRead", false);
-            notifData.put("createdAt", Instant.now());
+            notifData.put("createdAt", new Date());
 
             statsRepository.saveCustomerNotification(userId, notifData);
             log.info("Da tao thong bao cho khach hang: userId={}, orderId={}", userId, orderId);

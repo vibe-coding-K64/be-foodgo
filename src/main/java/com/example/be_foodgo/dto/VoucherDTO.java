@@ -56,6 +56,7 @@ public class VoucherDTO {
 
     public double getMinOrderValue() { return minOrderValue; }
     public void setMinOrderValue(double minOrderValue) { this.minOrderValue = minOrderValue; }
+    public void setMinOrder(double minOrder) { this.minOrderValue = minOrder; }
 
     public int getLimitCount() { return limitCount; }
     public void setLimitCount(int limitCount) { this.limitCount = limitCount; }

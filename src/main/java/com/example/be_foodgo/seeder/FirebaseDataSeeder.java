@@ -362,7 +362,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                 createCategoryMap("stocate_002", "store_001", "Món phụ", "restaurant", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                 createCategoryMap("stocate_003", "store_001", "Nước uống", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                 createCategoryMap("stocate_004", "store_002", "Trà sữa", "local_cafe", 1, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
-                createCategoryMap("stocate_005", "store_002", "Trà trái cây", "local_cafe", 2, "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                createCategoryMap("stocate_005", "store_002", "Trà trái cây", "local_cafe", 2, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                 createCategoryMap("stocate_006", "store_003", "Bánh mì", "bakery_dining", 1, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
                 createCategoryMap("stocate_007", "store_003", "Đồ ăn thêm", "fastfood", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                 createCategoryMap("stocate_008", "store_005", "Bún chả", "restaurant", 2, "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80")
@@ -593,7 +593,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
                         Map.entry("name", "Trà đào cam"),
                         Map.entry("description", "Trà đào cam thật hương vị đài"),
                         Map.entry("basePrice", 25000.0),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                         Map.entry("isOutOfStock", false),
                         Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
@@ -826,7 +826,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         Map<String, Object> banner2 = new HashMap<>();
         banner2.put("id", "banner_002");
         banner2.put("title", "Freeship 0 đồng");
-        banner2.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=800&q=80");
+        banner2.put("imageUrl", "https://images.unsplash.com/photo-1526367790999-015070fc4449?w=800&q=80");
         banner2.put("storeId", null);
         banner2.put("storeName", null);
         banner2.put("isActive", true);
@@ -1448,7 +1448,7 @@ public class FirebaseDataSeeder implements ApplicationRunner {
         order6Item1.put("name", "Tra dao cam");
         order6Item1.put("price", 25000.0);
         order6Item1.put("quantity", 2);
-        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80");
+        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80");
         order6Items.add(order6Item1);
         Map<String, Object> order6Item2 = new HashMap<>();
         order6Item2.put("foodId", "prod_014");

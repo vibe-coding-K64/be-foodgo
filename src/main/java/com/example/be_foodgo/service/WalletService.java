@@ -778,13 +778,13 @@ public class WalletService {
                 .id(id)
                 .walletId((String) data.get("walletId"))
                 .userId((String) data.get("userId"))
-                .type(data.get("type") != null ? Integer.parseInt(String.valueOf(data.get("type"))) : null)
-                .amount(data.get("amount") != null ? Double.parseDouble(String.valueOf(data.get("amount"))) : null)
-                .fee(data.get("fee") != null ? Double.parseDouble(String.valueOf(data.get("fee"))) : null)
-                .netAmount(data.get("netAmount") != null ? Double.parseDouble(String.valueOf(data.get("netAmount"))) : null)
+                .type(parseTransactionType(data.get("type")))
+                .amount(toDouble(data.get("amount")))
+                .fee(toDouble(data.get("fee")))
+                .netAmount(toDouble(data.get("netAmount")))
                 .description(data.get("description") != null ? String.valueOf(data.get("description")) : null)
                 .orderId(data.get("orderId") != null ? String.valueOf(data.get("orderId")) : null)
-                .status(data.get("status") != null ? Integer.parseInt(String.valueOf(data.get("status"))) : null)
+                .status(parseTransactionStatus(data.get("status")))
                 .createdAt(toInstant(data.get("createdAt")))
                 .build();
     }
@@ -792,13 +792,21 @@ public class WalletService {
     private Double toDouble(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).doubleValue();
-        return null;
+        try {
+            return Double.parseDouble(String.valueOf(value).trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).longValue();
-        return null;
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Instant toInstant(Object value) {
@@ -806,6 +814,40 @@ public class WalletService {
         if (value instanceof Timestamp) return ((Timestamp) value).toDate().toInstant();
         if (value instanceof java.util.Date) return ((java.util.Date) value).toInstant();
         if (value instanceof Long) return Instant.ofEpochMilli((Long) value);
+        if (value instanceof String) {
+            try {
+                return Instant.parse((String) value);
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
         return null;
+    }
+
+    private Integer parseTransactionType(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).intValue();
+        String str = String.valueOf(value).trim().toLowerCase();
+        try {
+            return Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            if ("withdrawal".equals(str)) return 3;
+            if ("income".equals(str)) return 2;
+            return null;
+        }
+    }
+
+    private Integer parseTransactionStatus(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).intValue();
+        String str = String.valueOf(value).trim().toLowerCase();
+        try {
+            return Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            if ("pending".equals(str)) return 0;
+            if ("completed".equals(str) || "approved".equals(str) || "success".equals(str)) return 1;
+            if ("failed".equals(str) || "rejected".equals(str)) return 2;
+            return null;
+        }
     }
 }
