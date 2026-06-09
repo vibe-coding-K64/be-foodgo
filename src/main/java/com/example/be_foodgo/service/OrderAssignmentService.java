@@ -494,11 +494,24 @@ public class OrderAssignmentService {
             String fcmToken = profile != null ? (String) profile.get("fcmToken") : null;
 
             if (fcmToken != null && !fcmToken.isBlank()) {
+                Double estimatedEarning = tinhThuNhapUocTinh(orderId);
+                DeliveryOrderDTO realtimeOrder = deliveryOrderService
+                        .mapToDriverOrderRealtimeDTO(orderId, requestId, null, estimatedEarning, null);
+
                 Map<String, String> data = new HashMap<>();
                 data.put("orderId", orderId);
                 data.put("requestId", requestId);
                 data.put("driverId", driverId);
                 data.put("type", "new_order_request");
+                putIfPresent(data, "estimatedEarning", estimatedEarning);
+                putIfPresent(data, "paymentMethod", realtimeOrder.getPaymentMethod());
+                putIfPresent(data, "paymentStatus", realtimeOrder.getPaymentStatus());
+                putIfPresent(data, "totalAmount", realtimeOrder.getTotalAmount());
+                putIfPresent(data, "deliveryFee", realtimeOrder.getDeliveryFee());
+                putIfPresent(data, "finalAmount", realtimeOrder.getFinalAmount());
+                putIfPresent(data, "driverCollectAmount", realtimeOrder.getDriverCollectAmount());
+                putIfPresent(data, "deliveryAddress", realtimeOrder.getDeliveryAddress());
+                putIfPresent(data, "storeName", realtimeOrder.getStoreName());
                 log.info("[ORDER_DISPATCH][FCM] Chuan bi gui FCM: driverId={}, orderId={}, requestId={}, tokenPreview={}...", driverId, orderId, requestId,
                         fcmToken.substring(0, Math.min(12, fcmToken.length())));
                 log.info("[ORDER_DISPATCH][FCM] Payload data: {}", data);
@@ -544,6 +557,13 @@ public class OrderAssignmentService {
         } catch (JsonProcessingException e) {
             return "<json-serialize-error:" + e.getMessage() + ">";
         }
+    }
+
+    private void putIfPresent(Map<String, String> data, String key, Object value) {
+        if (data == null || key == null || key.isBlank() || value == null) {
+            return;
+        }
+        data.put(key, String.valueOf(value));
     }
 
     private Double tinhThuNhapUocTinh(String orderId) {
