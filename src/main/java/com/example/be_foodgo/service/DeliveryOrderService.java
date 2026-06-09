@@ -234,6 +234,7 @@ public class DeliveryOrderService {
 
                 Map<String, Object> orderUpdates = new HashMap<>();
                 orderUpdates.put("status", 3);
+                orderUpdates.put("paymentStatus", 2);
                 orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
