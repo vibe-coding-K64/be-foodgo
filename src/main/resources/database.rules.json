@@ -1,0 +1,20 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "orders": {
+      "$orderId": {
+        ".read": true,
+        ".write": false,
+        ".validate": "newData.hasChildren(['id', 'status'])"
+      }
+    },
+    "chat_histories": {
+      "$userId": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.val() === null || newData.hasChildren()"
+      }
+    }
+  }
+}

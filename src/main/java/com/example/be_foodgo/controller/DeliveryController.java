@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -66,6 +67,40 @@ public class DeliveryController extends BaseController {
 
         try {
             DeliveryProfileDTO profile = deliveryService.getDriverProfile(holder.userId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Lay ho so tai xe thanh cong."));
+        } catch (Exception e) {
+            log.error("Loi khi lay ho so tai xe: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
+    @GetMapping("/{id}/profile")
+    @Operation(
+            summary = "Lay thong tin ho so tai xe theo ID",
+            description = "Lay thong tin ho so tai xe theo driverId (cho fe driver goi API)."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lay ho so tai xe thanh cong"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Chua xac thuc"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Khong tim thay ho so tai xe")
+    })
+    public ResponseEntity<?> getProfileById(
+            HttpServletRequest httpRequest,
+            @PathVariable("id") String driverId) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            DeliveryProfileDTO profile = deliveryService.getDriverProfile(driverId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(profile, "Lay ho so tai xe thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay ho so tai xe: {}", e.getMessage());
@@ -223,12 +258,6 @@ public class DeliveryController extends BaseController {
         }
 
         try {
-            DeliveryProfileDTO profile = deliveryService.getDriverProfile(holder.userId);
-            if (!Boolean.TRUE.equals(profile.getIsActive())) {
-                return ResponseEntity.badRequest().body(
-                        ApiResponse.thatError(400, "Tai xe chua bat trang thai hoat dong. Vui long bat trang thai online truoc."));
-            }
-
             deliveryService.updateDriverLocation(
                     holder.userId,
                     request.getLat(),

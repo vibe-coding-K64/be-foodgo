@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,6 +59,29 @@ public class StatsController extends BaseController {
 
         try {
             StatsDTO stats = statsService.getDriverStats(holder.userId);
+            return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke thanh cong."));
+        } catch (Exception e) {
+            log.error("Loi khi lay thong ke: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.thatError(500, "Da xay ra loi khong mong muon. Vui long thu lai sau."));
+        }
+    }
+
+    @GetMapping("/{id}/stats")
+    @Operation(
+            summary = "Lay thong ke tong quan theo ID",
+            description = "Lay thong ke tong quan cua tai xe theo driverId (cho fe driver goi API)."
+    )
+    public ResponseEntity<?> getStatsById(
+            HttpServletRequest httpRequest,
+            @PathVariable("id") String driverId) {
+        ResponseHolder holder = layUserIdHoacTraLoiLoi(httpRequest);
+        if (holder.isAuthError) {
+            return ResponseEntity.status(401).body(holder.errorResponse);
+        }
+
+        try {
+            StatsDTO stats = statsService.getDriverStats(driverId);
             return ResponseEntity.ok(ApiResponse.thatSuccess(stats, "Lay thong ke thanh cong."));
         } catch (Exception e) {
             log.error("Loi khi lay thong ke: {}", e.getMessage());

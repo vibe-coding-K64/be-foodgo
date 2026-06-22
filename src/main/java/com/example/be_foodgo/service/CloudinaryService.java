@@ -19,6 +19,7 @@ public class CloudinaryService {
     private static final String REVIEWS_FOLDER = "reviews";
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final long MAX_REVIEW_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_DELIVERY_PHOTO_SIZE = 10 * 1024 * 1024; // 10MB
     private static final String[] ALLOWED_CONTENT_TYPES = {
             "image/jpeg", "image/png", "image/gif", "image/webp"
     };
@@ -103,6 +104,29 @@ public class CloudinaryService {
     }
 
     @SuppressWarnings("unchecked")
+    public String uploadDeliveryPhoto(MultipartFile file, String orderId) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh giao hàng không được để trống.");
+        }
+
+        validateDeliveryPhoto(file);
+
+        String publicId = "delivery_photos/" + orderId + "_" + UUID.randomUUID();
+
+        Map<String, Object> params = ObjectUtils.asMap(
+                "public_id", publicId,
+                "overwrite", false,
+                "folder", "delivery_photos",
+                "transformation", "q_auto,f_auto"
+        );
+
+        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+        String url = (String) result.get("secure_url");
+        log.info("Upload delivery photo thanh cong. OrderId: {}, URL: {}", orderId, url);
+        return url;
+    }
+
+    @SuppressWarnings("unchecked")
     public String uploadImage(MultipartFile file, String folder) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File khong duoc de trong.");
@@ -131,9 +155,18 @@ public class CloudinaryService {
             throw new IllegalArgumentException("Kích thước ảnh vượt quá giới hạn 10MB.");
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !isAllowedContentType(contentType)) {
-            throw new IllegalArgumentException("Chỉ chấp nhận các định dạng ảnh: JPEG, PNG, WEBP.");
+        if (!isValidImageFormat(file)) {
+            throw new IllegalArgumentException("Chỉ chấp nhận các định dạng ảnh: JPEG, PNG, WEBP, HEIC.");
+        }
+    }
+
+    private void validateDeliveryPhoto(MultipartFile file) {
+        if (file.getSize() > MAX_DELIVERY_PHOTO_SIZE) {
+            throw new IllegalArgumentException("Kich thuoc file vuot qua gioi han 10MB.");
+        }
+
+        if (!isValidImageFormat(file)) {
+            throw new IllegalArgumentException("Chi chap nhan cac dinh dang anh: JPEG, PNG, GIF, WEBP, HEIC.");
         }
     }
 
@@ -167,10 +200,43 @@ public class CloudinaryService {
             throw new IllegalArgumentException("Kich thuoc file vuot qua gioi han 5MB.");
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !isAllowedContentType(contentType)) {
-            throw new IllegalArgumentException("Chi chap nhan cac dinh dang anh: JPEG, PNG, GIF, WEBP.");
+        if (!isValidImageFormat(file)) {
+            throw new IllegalArgumentException("Chi chap nhan cac dinh dang anh: JPEG, PNG, GIF, WEBP, HEIC.");
         }
+    }
+
+    private boolean isValidImageFormat(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType != null && isAllowedContentType(contentType)) {
+            return true;
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename != null) {
+            String lower = filename.toLowerCase();
+            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+                    lower.endsWith(".png") || lower.endsWith(".gif") ||
+                    lower.endsWith(".webp") || lower.endsWith(".heic") ||
+                    lower.endsWith(".heif")) {
+                return true;
+            }
+        }
+
+        try {
+            byte[] bytes = file.getBytes();
+            if (bytes.length >= 4) {
+                if ((bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xD8 && bytes[2] == (byte) 0xFF)) return true;
+                if (bytes[0] == (byte) 0x89 && bytes[1] == (byte) 0x50 && bytes[2] == (byte) 0x4E && bytes[3] == (byte) 0x47) return true;
+                if (bytes[0] == (byte) 0x47 && bytes[1] == (byte) 0x49 && bytes[2] == (byte) 0x46) return true;
+                if (bytes[0] == (byte) 0x52 && bytes[1] == (byte) 0x49 && bytes[2] == (byte) 0x46 && bytes[3] == (byte) 0x46) return true;
+                if ((bytes[4] == (byte) 0x66 && bytes[5] == (byte) 0x74 && bytes[6] == (byte) 0x79 && bytes[7] == (byte) 0x70) &&
+                    (bytes[8] == (byte) 0x68 && bytes[9] == (byte) 0x65 && bytes[10] == (byte) 0x69 && bytes[11] == (byte) 0x63)) return true;
+            }
+        } catch (IOException e) {
+            log.warn("Khong the doc bytes de kiem tra dinh dang anh: {}", e.getMessage());
+        }
+
+        return false;
     }
 
     private boolean isAllowedContentType(String contentType) {

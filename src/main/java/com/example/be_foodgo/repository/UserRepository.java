@@ -37,6 +37,11 @@ public class UserRepository {
         return !snapshot.isEmpty();
     }
 
+    public Map<String, Object> findById(String userId) throws ExecutionException, InterruptedException {
+        DocumentSnapshot doc = getCollection().document(userId).get().get();
+        return doc.exists() ? doc.getData() : null;
+    }
+
     public boolean tonTaiPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
         Query query = getCollection().whereEqualTo("phoneNumber", phoneNumber).limit(1);
         QuerySnapshot snapshot = query.get().get();

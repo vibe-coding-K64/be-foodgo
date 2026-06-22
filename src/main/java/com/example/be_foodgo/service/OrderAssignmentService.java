@@ -46,6 +46,7 @@ public class OrderAssignmentService {
     private final FCMService fcmService;
     private final SimpMessagingTemplate messagingTemplate;
     private final DeliveryOrderService deliveryOrderService;
+    private final MapboxService mapboxService;
 
     private final Set<String> processingOrders = ConcurrentHashMap.newKeySet();
     private final Set<String> timeoutOrdersInFlight = ConcurrentHashMap.newKeySet();
@@ -57,7 +58,8 @@ public class OrderAssignmentService {
             WalletRepository walletRepository,
             FCMService fcmService,
             SimpMessagingTemplate messagingTemplate,
-            DeliveryOrderService deliveryOrderService) {
+            DeliveryOrderService deliveryOrderService,
+            MapboxService mapboxService) {
         this.orderRequestRepository = orderRequestRepository;
         this.statsRepository = statsRepository;
         this.storeRepository = storeRepository;
@@ -65,6 +67,7 @@ public class OrderAssignmentService {
         this.fcmService = fcmService;
         this.messagingTemplate = messagingTemplate;
         this.deliveryOrderService = deliveryOrderService;
+        this.mapboxService = mapboxService;
     }
 
     public void triggerAssignmentForOrder(String orderId) {
@@ -215,7 +218,9 @@ public class OrderAssignmentService {
             if (driver.lat == null || driver.lng == null) continue;
             if (loaiTruIds != null && loaiTruIds.contains(driver.driverId)) continue;
 
-            double khoangCach = tinhKhoangCachHaversine(storeLat, storeLng, driver.lat, driver.lng);
+            double khoangCach = mapboxService.isEnabled()
+                    ? mapboxService.getDriverToStoreDistanceKm(driver.lat, driver.lng, storeLat, storeLng)
+                    : tinhKhoangCachHaversine(storeLat, storeLng, driver.lat, driver.lng);
             if (khoangCach <= BAN_KINH_TIM_KM) {
                 result.add(driver.driverId);
             }

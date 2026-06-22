@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -264,6 +266,7 @@ public class DeliveryService {
                 .totalTrips(toLong(data.get("totalTrips")))
                 .totalEarnings(toDouble(data.get("totalEarnings")))
                 .currentOrderId((String) data.get("currentOrderId"))
+                .currentOrderIds(toStringList(data.get("currentOrderIds")))
                 .lat(toDouble(data.get("lat")))
                 .lng(toDouble(data.get("lng")))
                 .email((String) data.get("email"))
@@ -291,6 +294,19 @@ public class DeliveryService {
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).longValue();
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> toStringList(Object value) {
+        if (value == null) return null;
+        if (value instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) result.add(item.toString());
+            }
+            return result;
+        }
         return null;
     }
 

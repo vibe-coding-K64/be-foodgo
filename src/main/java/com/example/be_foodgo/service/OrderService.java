@@ -353,8 +353,10 @@ public class OrderService {
         if (order.getCode() != null && !order.getCode().trim().isEmpty()) {
             return order.getCode();
         }
-        if (order.getId() != null && order.getId().length() >= 6) {
-            return order.getId().substring(order.getId().length() - 6).toUpperCase();
+        if (order.getId() != null) {
+            return String.format("FG-%s-%04d",
+                    java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+                    Math.abs(order.getId().hashCode() % 10000));
         }
         return "ORDER";
     }

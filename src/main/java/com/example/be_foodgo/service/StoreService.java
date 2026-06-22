@@ -4,6 +4,8 @@ import com.example.be_foodgo.dto.NearbyStoreResponse;
 import com.example.be_foodgo.dto.PaginationInfo;
 import com.example.be_foodgo.dto.PopularStoreResponse;
 import com.example.be_foodgo.dto.StoreDTO;
+import com.example.be_foodgo.dto.DriverProfileResponse;
+import com.example.be_foodgo.dto.UpdateDriverProfileRequest;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.repository.StoreRepository;
 import com.example.be_foodgo.repository.WalletRepository;
@@ -13,6 +15,7 @@ import com.google.cloud.firestore.SetOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +36,12 @@ public class StoreService {
 
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private MapboxService mapboxService;
 
     public StoreDTO createMerchantStore(String uid, StoreDTO storeDTO) throws Exception {
         String newStoreId = "store_001";
@@ -281,6 +290,14 @@ public class StoreService {
             double distance = earthRadius * c;
 
             if (distance <= radius) {
+                double displayDistance;
+                if (mapboxService.isEnabled()) {
+                    double mapboxDist = mapboxService.getRoadDistanceKm(lat, lng, store.getLat(), store.getLng());
+                    displayDistance = mapboxDist > 0 ? mapboxDist : Math.round((distance / 1000.0) * 10.0) / 10.0;
+                } else {
+                    displayDistance = Math.round((distance / 1000.0) * 10.0) / 10.0;
+                }
+
                 nearbyStores.add(NearbyStoreResponse.builder()
                         .id(store.getId())
                         .name(store.getName())
@@ -290,7 +307,7 @@ public class StoreService {
                         .avtUrl(store.getAvtUrl())
                         .deliveryTime(store.getDeliveryTime())
                         .deliveryFee(store.getDeliveryFee())
-                        .distance(Math.round((distance / 1000.0) * 10.0) / 10.0)
+                        .distance(displayDistance)
                         .isOpen(store.getIsOpen())
                         .categoryIds(store.getCategoryIds())
                         .build());
@@ -397,7 +414,7 @@ public class StoreService {
         profileData.put("phoneNumber", phoneNumber);
         profileData.put("isActive", true);
         profileData.put("isAvailable", true);
-        profileData.put("currentOrderId", null);
+        profileData.put("currentOrderIds", java.util.List.of());
         profileData.put("rating", 5.0);
         profileData.put("totalTrips", 0);
         profileData.put("driverCommissionPercentage", 80.0);
@@ -409,6 +426,183 @@ public class StoreService {
         walletRepository.createDriverWallet(userId);
 
         log.info("Da tao driver profile va wallet cho tai xe: {}", userId);
+    }
+
+    public DriverProfileResponse getDriverProfile(String userId) throws Exception {
+        log.info("Bat dau lay driver profile cho userId: {}", userId);
+        com.google.cloud.firestore.DocumentSnapshot doc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+        if (!doc.exists()) {
+            log.warn("Khong tim thay driver profile cho userId: {}", userId);
+            return null;
+        }
+        return mapToDriverProfileResponse(doc.getData());
+    }
+
+    public DriverProfileResponse updateDriverProfile(String userId, UpdateDriverProfileRequest request) throws Exception {
+        log.info("Bat dau cap nhat driver profile cho userId: {}", userId);
+
+        com.google.cloud.firestore.DocumentSnapshot doc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Khong tim thay tai xe voi ID: " + userId);
+        }
+
+        Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            updates.put("fullName", request.getFullName().trim());
+        }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
+            updates.put("phoneNumber", request.getPhoneNumber().trim());
+        }
+        if (request.getVehiclePlate() != null && !request.getVehiclePlate().isBlank()) {
+            updates.put("vehiclePlate", request.getVehiclePlate().trim().toUpperCase());
+        }
+        if (request.getVehicleType() != null && !request.getVehicleType().isBlank()) {
+            updates.put("vehicleType", request.getVehicleType().trim());
+        }
+        if (request.getDriverLicense() != null && !request.getDriverLicense().isBlank()) {
+            updates.put("driverLicense", request.getDriverLicense().trim().toUpperCase());
+        }
+        if (request.getPhotoUrl() != null && !request.getPhotoUrl().isBlank()) {
+            updates.put("photoUrl", request.getPhotoUrl().trim());
+        }
+
+        firestore.collection("driver_profiles")
+                .document(userId)
+                .update(updates)
+                .get();
+
+        log.info("Cap nhat driver profile thanh cong cho userId: {}", userId);
+
+        com.google.cloud.firestore.DocumentSnapshot updatedDoc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+
+        return mapToDriverProfileResponse(updatedDoc.getData());
+    }
+
+    public DriverProfileResponse updateDriverProfileMultipart(
+            String userId,
+            UpdateDriverProfileRequest request,
+            MultipartFile avatarFile) throws Exception {
+        log.info("Bat dau cap nhat driver profile (multipart) cho userId: {}", userId);
+
+        com.google.cloud.firestore.DocumentSnapshot doc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Khong tim thay tai xe voi ID: " + userId);
+        }
+
+        Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("updatedAt", FieldValue.serverTimestamp());
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            updates.put("fullName", request.getFullName().trim());
+        }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
+            updates.put("phoneNumber", request.getPhoneNumber().trim());
+        }
+        if (request.getVehiclePlate() != null && !request.getVehiclePlate().isBlank()) {
+            updates.put("vehiclePlate", request.getVehiclePlate().trim().toUpperCase());
+        }
+        if (request.getVehicleType() != null && !request.getVehicleType().isBlank()) {
+            updates.put("vehicleType", request.getVehicleType().trim());
+        }
+        if (request.getDriverLicense() != null && !request.getDriverLicense().isBlank()) {
+            updates.put("driverLicense", request.getDriverLicense().trim().toUpperCase());
+        }
+
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            String newPhotoUrl = cloudinaryService.uploadAvatar(avatarFile, userId);
+            String oldPhotoUrl = null;
+            Object existingPhoto = doc.get("photoUrl");
+            if (existingPhoto != null) {
+                oldPhotoUrl = existingPhoto.toString();
+            }
+            if (oldPhotoUrl != null && !oldPhotoUrl.isBlank() && oldPhotoUrl.contains("cloudinary.com")) {
+                cloudinaryService.deleteAvatar(oldPhotoUrl);
+            }
+            updates.put("photoUrl", newPhotoUrl);
+        }
+
+        firestore.collection("driver_profiles")
+                .document(userId)
+                .update(updates)
+                .get();
+
+        log.info("Cap nhat driver profile (multipart) thanh cong cho userId: {}", userId);
+
+        com.google.cloud.firestore.DocumentSnapshot updatedDoc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+
+        return mapToDriverProfileResponse(updatedDoc.getData());
+    }
+
+    public String uploadDriverAvatar(String userId, MultipartFile avatar) throws Exception {
+        com.google.cloud.firestore.DocumentSnapshot doc = firestore
+                .collection("driver_profiles")
+                .document(userId)
+                .get()
+                .get();
+
+        if (!doc.exists()) {
+            throw new IllegalArgumentException("Khong tim thay tai xe voi ID: " + userId);
+        }
+
+        String newPhotoUrl = cloudinaryService.uploadAvatar(avatar, userId);
+
+        String oldPhotoUrl = null;
+        Object existingPhoto = doc.get("photoUrl");
+        if (existingPhoto != null) {
+            oldPhotoUrl = existingPhoto.toString();
+        }
+        if (oldPhotoUrl != null && !oldPhotoUrl.isBlank() && oldPhotoUrl.contains("cloudinary.com")) {
+            cloudinaryService.deleteAvatar(oldPhotoUrl);
+        }
+
+        firestore.collection("driver_profiles")
+                .document(userId)
+                .update("photoUrl", newPhotoUrl, "updatedAt", FieldValue.serverTimestamp())
+                .get();
+
+        log.info("Upload avatar thanh cong cho userId: {}", userId);
+        return newPhotoUrl;
+    }
+
+    private DriverProfileResponse mapToDriverProfileResponse(Map<String, Object> data) {
+        if (data == null) return null;
+        return DriverProfileResponse.builder()
+                .id(data.get("id") != null ? data.get("id").toString() : null)
+                .fullName(data.get("fullName") != null ? data.get("fullName").toString() : null)
+                .phoneNumber(data.get("phoneNumber") != null ? data.get("phoneNumber").toString() : null)
+                .vehiclePlate(data.get("vehiclePlate") != null ? data.get("vehiclePlate").toString() : null)
+                .vehicleType(data.get("vehicleType") != null ? data.get("vehicleType").toString() : null)
+                .driverLicense(data.get("driverLicense") != null ? data.get("driverLicense").toString() : null)
+                .photoUrl(data.get("photoUrl") != null ? data.get("photoUrl").toString() : null)
+                .rating(data.get("rating") != null ? ((Number) data.get("rating")).doubleValue() : null)
+                .totalTrips(data.get("totalTrips") != null ? ((Number) data.get("totalTrips")).intValue() : null)
+                .isActive(data.get("isActive") != null ? (Boolean) data.get("isActive") : null)
+                .isAvailable(data.get("isAvailable") != null ? (Boolean) data.get("isAvailable") : null)
+                .build();
     }
 
     @SuppressWarnings("unchecked")

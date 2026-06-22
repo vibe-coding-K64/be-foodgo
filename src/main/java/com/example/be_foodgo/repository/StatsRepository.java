@@ -49,13 +49,20 @@ public class StatsRepository {
     }
 
     public List<QueryDocumentSnapshot> findAvailableOrders() throws ExecutionException, InterruptedException {
-        return firestore.collection(COLLECTION_ORDERS)
+        // NOTE: Firestore whereEqualTo(field, null) does NOT match documents where field does not exist.
+        // We query only by status=1 and filter driverId in memory.
+        List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION_ORDERS)
                 .whereEqualTo("status", 1)
-                .whereEqualTo("driverId", null)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .get()
                 .getDocuments();
+
+        return docs.stream()
+                .filter(doc -> {
+                    Object driverId = doc.get("driverId");
+                    return driverId == null || "".equals(driverId.toString().trim());
+                })
+                .toList();
     }
 
     public List<QueryDocumentSnapshot> findByDriverIdAndStatus(String driverId, int status)
@@ -183,6 +190,8 @@ public class StatsRepository {
                 .get();
     }
 
+    private static final int MAX_CONCURRENT_ORDERS = 3;
+
     public void acceptOrderInTransaction(
             String orderId,
             String userId,
@@ -214,6 +223,18 @@ public class StatsRepository {
                 throw new IllegalStateException("ORDER_ALREADY_ASSIGNED");
             }
 
+            DocumentSnapshot driverDoc = transaction.get(driverProfileRef).get();
+            List<String> currentOrderIds = new java.util.ArrayList<>();
+            Object existingOrderIds = driverDoc.get("currentOrderIds");
+            if (existingOrderIds instanceof List<?>) {
+                for (Object id : (List<?>) existingOrderIds) {
+                    if (id != null) currentOrderIds.add(id.toString());
+                }
+            }
+            if (currentOrderIds.size() >= MAX_CONCURRENT_ORDERS) {
+                throw new IllegalStateException("DRIVER_AT_MAX_ORDERS:" + MAX_CONCURRENT_ORDERS);
+            }
+
             Map<String, Object> orderUpdates = new HashMap<>();
             orderUpdates.put("status", 1);
             orderUpdates.put("deliveryStep", "WAITING_PICKUP");
@@ -224,9 +245,12 @@ public class StatsRepository {
             orderUpdates.put("updatedAt", new Date());
             transaction.update(orderRef, orderUpdates);
 
+            currentOrderIds.add(orderId);
+
             Map<String, Object> driverUpdates = new HashMap<>();
-            driverUpdates.put("currentOrderId", orderId);
-            driverUpdates.put("isAvailable", false);
+            driverUpdates.put("currentOrderIds", currentOrderIds);
+            boolean hasDelivering = !currentOrderIds.isEmpty();
+            driverUpdates.put("isAvailable", !hasDelivering);
             driverUpdates.put("updatedAt", new Date());
             transaction.update(driverProfileRef, driverUpdates);
 

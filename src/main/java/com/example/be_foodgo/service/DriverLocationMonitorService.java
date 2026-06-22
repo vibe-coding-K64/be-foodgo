@@ -16,7 +16,7 @@ import java.util.Map;
 public class DriverLocationMonitorService {
 
     private static final Logger log = LoggerFactory.getLogger(DriverLocationMonitorService.class);
-    private static final long LOCATION_TIMEOUT_MS = 60_000L;
+    private static final long LOCATION_TIMEOUT_MS = 180_000L;
     private static final long CHECK_INTERVAL_MS = 30_000L;
 
     private final DeliveryService deliveryService;

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @Builder
@@ -44,6 +45,9 @@ public class DeliveryProfileDTO {
 
     @Schema(description = "ID don hang dang giao hien tai", example = "order_001")
     private String currentOrderId;
+
+    @Schema(description = "Danh sach ID don hang dang giao", example = "[\"order_001\", \"order_002\"]")
+    private List<String> currentOrderIds;
 
     @Schema(description = "Vi do hien tai", example = "10.8500")
     private Double lat;

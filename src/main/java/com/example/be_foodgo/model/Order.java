@@ -29,11 +29,18 @@ public class Order {
     private double freeshipDiscountAmount;
     private double finalAmount;
     private Object paymentMethod;
+    private String paymentMethodString;
 
     private Object status; // 0=Chờ xác nhận, 1=Đang chuẩn bị, 2=Đang giao, 3=Hoàn thành, 4=Đã hủy
     private Object createdAt;
     private Object updatedAt;
     private Object deletedAt;
+
+    private String driverId;
+    private String vehiclePlate;
+    private Object pickedUpAt;
+    private Object deliveredAt;
+    private String deliveryPhotoUrl;
 
     private Double deliveryHeading;
     private Double deliveryLat;
@@ -94,6 +101,8 @@ public class Order {
         return 0;
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.google.cloud.firestore.annotation.Exclude
     public String getPaymentMethodString() {
         if (paymentMethod == null) return "MoMo";
         if (paymentMethod instanceof Number) {
@@ -113,6 +122,7 @@ public class Order {
     }
 
     public void setPaymentMethod(Object paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setPaymentMethodString(String paymentMethodString) { this.paymentMethodString = paymentMethodString; }
 
     private Integer paymentStatus;
 
@@ -208,4 +218,15 @@ public class Order {
     public void setNote(String note) { this.note = note; }
     public String getDeliveryStep() { return deliveryStep; }
     public void setDeliveryStep(String deliveryStep) { this.deliveryStep = deliveryStep; }
+
+    public String getDriverId() { return driverId; }
+    public void setDriverId(String driverId) { this.driverId = driverId; }
+    public String getVehiclePlate() { return vehiclePlate; }
+    public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }
+    public Date getPickedUpAt() { return parseDate(pickedUpAt); }
+    public void setPickedUpAt(Object pickedUpAt) { this.pickedUpAt = pickedUpAt; }
+    public Date getDeliveredAt() { return parseDate(deliveredAt); }
+    public void setDeliveredAt(Object deliveredAt) { this.deliveredAt = deliveredAt; }
+    public String getDeliveryPhotoUrl() { return deliveryPhotoUrl; }
+    public void setDeliveryPhotoUrl(String deliveryPhotoUrl) { this.deliveryPhotoUrl = deliveryPhotoUrl; }
 }

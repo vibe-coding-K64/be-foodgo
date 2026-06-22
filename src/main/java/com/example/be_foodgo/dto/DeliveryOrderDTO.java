@@ -175,6 +175,9 @@ public class DeliveryOrderDTO {
     @Schema(description = "Huong tu cua hang den diem giao (do), phuc vu UI/map", example = "120.0")
     private Double deliveryHeading;
 
+    @Schema(description = "URL anh xac nhan giao hang cua tai xe", example = "https://res.cloudinary.com/...")
+    private String deliveryPhotoUrl;
+
     @Data
     @Builder
     @NoArgsConstructor

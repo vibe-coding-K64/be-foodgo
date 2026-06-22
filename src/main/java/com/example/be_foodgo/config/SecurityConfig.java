@@ -69,7 +69,10 @@ public class SecurityConfig {
                                 "/api/auth/firebase/link",
                                 "/api/auth/send-verify-email-otp",
                                 "/api/auth/verify-email",
-                                "/api/auth/check-admin"
+					"/api/auth/check-admin"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/ai/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/stores/{id}",

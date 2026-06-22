@@ -198,9 +198,9 @@ public class CheckoutService {
                 orderItems, tongTienHang, phiShip, discountAmountVal, shopDiscountAmountVal, freeshipDiscountAmountVal, tongThanhToan,
                 voucherInfos, request.getIdempotencyKey(), orderCode, paymentMethodValue
         );
-        orderCode = String.format("FG-%s-%s",
+        orderCode = String.format("FG-%s-%04d",
                 LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE),
-                orderId.substring(orderId.length() - 3).toUpperCase());
+                Math.abs(orderId.hashCode() % 10000));
 
         log.info("Dat hang thanh cong - orderId: [{}], orderCode: [{}].", orderId, orderCode);
 

@@ -3,15 +3,20 @@ package com.example.be_foodgo.service;
 import com.example.be_foodgo.constant.DeliveryOrderStatus;
 import com.example.be_foodgo.dto.DeliveryOrderDTO;
 import com.example.be_foodgo.dto.DriverOrderActionResultDTO;
+import com.example.be_foodgo.dto.RouteInfo;
 import com.example.be_foodgo.exception.BusinessException;
 import com.example.be_foodgo.repository.OrderRequestRepository;
 import com.example.be_foodgo.repository.StatsRepository;
 import com.example.be_foodgo.repository.VoucherRepository;
 import com.example.be_foodgo.repository.WalletRepository;
 import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
+import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.Date;
@@ -19,35 +24,54 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 @Service
 public class DeliveryOrderService {
 
     private static final Logger log = LoggerFactory.getLogger(DeliveryOrderService.class);
+    private static final int MAX_CONCURRENT_ORDERS = 3;
 
     private final StatsRepository statsRepository;
     private final WalletRepository walletRepository;
     private final WalletService walletService;
     private final OrderRequestRepository orderRequestRepository;
     private final VoucherRepository voucherRepository;
+    private final CloudinaryService cloudinaryService;
+    private final MapboxService mapboxService;
+    private final Firestore firestore;
 
     public DeliveryOrderService(StatsRepository statsRepository,
                                 WalletRepository walletRepository,
                                 WalletService walletService,
                                 OrderRequestRepository orderRequestRepository,
-                                VoucherRepository voucherRepository) {
+                                VoucherRepository voucherRepository,
+                                CloudinaryService cloudinaryService,
+                                MapboxService mapboxService,
+                                Firestore firestore) {
         this.statsRepository = statsRepository;
         this.walletRepository = walletRepository;
         this.walletService = walletService;
         this.orderRequestRepository = orderRequestRepository;
         this.voucherRepository = voucherRepository;
+        this.cloudinaryService = cloudinaryService;
+        this.mapboxService = mapboxService;
+        this.firestore = firestore;
     }
 
     public List<DeliveryOrderDTO> getAvailableOrders() {
         log.info("Bat dau lay danh sach don hang kha dung");
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository.findAvailableOrders();
+            log.info("Firestore raw docs count: {}", docs.size());
+            for (int i = 0; i < Math.min(docs.size(), 3); i++) {
+                Map<String, Object> d = docs.get(i).getData();
+                log.info("Doc[{}] id={}, status={} (type={}), driverId={} (type={})",
+                    i, docs.get(i).getId(),
+                    d.get("status"), (d.get("status") != null ? d.get("status").getClass().getName() : "null"),
+                    d.get("driverId"), (d.get("driverId") != null ? d.get("driverId").getClass().getName() : "null"));
+            }
             List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
@@ -60,10 +84,10 @@ public class DeliveryOrderService {
             return orders;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Loi khi lay don hang kha dung: {}", e.getMessage());
+            log.error("Loi khi lay don hang kha dung: {}", e.getMessage(), e);
             throw BusinessException.loiHeThong(e.getMessage());
         } catch (java.util.concurrent.ExecutionException e) {
-            log.error("Loi khi lay don hang kha dung: {}", e.getMessage());
+            log.error("Loi khi lay don hang kha dung: {}", e.getMessage(), e);
             throw BusinessException.loiHeThong(e.getMessage());
         }
     }
@@ -127,6 +151,10 @@ public class DeliveryOrderService {
                     }
                     if (msg.equals("ORDER_ALREADY_ASSIGNED")) {
                         throw BusinessException.donHangDaCoTaiXe(orderId);
+                    }
+                    if (msg.startsWith("DRIVER_AT_MAX_ORDERS:")) {
+                        int max = MAX_CONCURRENT_ORDERS;
+                        throw BusinessException.loiHeThong("Tai xe da nhan toi da " + max + " don hang cung luc. Vui long hoan thanh cac don dang co truoc khi nhan them.");
                     }
                 }
                 throw BusinessException.loiHeThong(e.getMessage());
@@ -238,9 +266,9 @@ public class DeliveryOrderService {
                 orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
+                xoaKhoiCurrentOrderIds(userId, orderId, false);
+
                 Map<String, Object> driverUpdates = new HashMap<>();
-                driverUpdates.put("currentOrderId", null);
-                driverUpdates.put("isAvailable", true);
                 driverUpdates.put("totalTrips",
                         com.google.cloud.firestore.FieldValue.increment(1));
                 driverUpdates.put("updatedAt", Instant.now());
@@ -256,9 +284,11 @@ public class DeliveryOrderService {
                 }
 
                 String orderCode = (String) orderData.get("code");
-                if (orderCode == null || orderCode.trim().isEmpty()) {
-                    orderCode = orderId.length() >= 6 ? orderId.substring(orderId.length() - 6).toUpperCase() : "ORDER";
-                }
+            if (orderCode == null || orderCode.trim().isEmpty()) {
+                orderCode = String.format("FG-%s-%04d",
+                        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+                        Math.abs(orderId.hashCode() % 10000));
+            }
 
                 if (isCashPayment(orderData.get("paymentMethod"))) {
                     Double codAmount = finalAmount != null ? finalAmount : (totalAmount != null ? totalAmount : 0.0);
@@ -283,11 +313,7 @@ public class DeliveryOrderService {
                 orderUpdates.put("updatedAt", new Date());
                 statsRepository.updateOrderFields(orderId, orderUpdates);
 
-                Map<String, Object> driverUpdates = new HashMap<>();
-                driverUpdates.put("currentOrderId", null);
-                driverUpdates.put("isAvailable", true);
-                driverUpdates.put("updatedAt", Instant.now());
-                walletRepository.updateDriverProfileFields(userId, driverUpdates);
+                xoaKhoiCurrentOrderIds(userId, orderId, false);
                 log.info("Don hang da bi tai xe tu choi giao hang. Reset ve cho tai xe (status 1) - orderId={}", orderId);
             }
 
@@ -305,11 +331,112 @@ public class DeliveryOrderService {
         }
     }
 
+    public DeliveryOrderDTO confirmDeliveryWithPhoto(String orderId, String userId, MultipartFile photo) {
+        log.info("Bat dau xac nhan giao hang voi anh: orderId={}, userId={}", orderId, userId);
+        try {
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+            if (orderData == null) {
+                throw BusinessException.donHangKhongTimThay(orderId);
+            }
+
+            int currentStatus = getOrderStatusValueFromMap(orderData);
+            String driverIdOfOrder = (String) orderData.get("driverId");
+
+            if (!userId.equals(driverIdOfOrder)) {
+                throw BusinessException.khongPhaiChuDonHang(orderId);
+            }
+
+            if (currentStatus != DeliveryOrderStatus.DELIVERING) {
+                throw BusinessException.trangThaiDonHangKhongHopLe(orderId, currentStatus, "xac nhan giao hang voi anh");
+            }
+
+            String photoUrl = cloudinaryService.uploadDeliveryPhoto(photo, orderId);
+            log.info("Upload anh giao hang thanh cong: orderId={}, photoUrl={}", orderId, photoUrl);
+
+            String customerId = (String) orderData.get("userId");
+            Double deliveryFee = toDouble(orderData.get("deliveryFee") != null ? orderData.get("deliveryFee") : orderData.get("shippingFee"));
+            String storeId = (String) orderData.get("storeId");
+            Double finalAmount = toDouble(orderData.get("finalAmount"));
+            Double totalAmount = toDouble(orderData.get("totalAmount"));
+
+            Double merchantIncome = 0.0;
+            if (finalAmount != null && finalAmount > 0) {
+                merchantIncome = finalAmount - (deliveryFee != null ? deliveryFee : 0.0);
+            } else if (totalAmount != null) {
+                merchantIncome = totalAmount;
+            }
+
+            Map<String, Object> orderUpdates = new HashMap<>();
+            orderUpdates.put("status", DeliveryOrderStatus.COMPLETED);
+            orderUpdates.put("paymentStatus", 2);
+            orderUpdates.put("deliveredAt", Instant.now());
+            orderUpdates.put("updatedAt", new Date());
+            orderUpdates.put("deliveryPhotoUrl", photoUrl);
+            statsRepository.updateOrderFields(orderId, orderUpdates);
+
+            xoaKhoiCurrentOrderIds(userId, orderId, false);
+
+            Map<String, Object> driverUpdates = new HashMap<>();
+            driverUpdates.put("totalTrips", com.google.cloud.firestore.FieldValue.increment(1));
+            driverUpdates.put("updatedAt", Instant.now());
+            walletRepository.updateDriverProfileFields(userId, driverUpdates);
+
+            if (customerId != null) {
+                taoThongBaoKhachHang(customerId, orderId);
+                congDiemLoyaltyKhachHang(customerId, finalAmount);
+            }
+
+            if (deliveryFee != null && deliveryFee > 0) {
+                walletService.taoGiaoDichThuNhap(userId, orderId, deliveryFee);
+            }
+
+            String orderCode = (String) orderData.get("code");
+            if (orderCode == null || orderCode.trim().isEmpty()) {
+                orderCode = String.format("FG-%s-%04d",
+                        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+                        Math.abs(orderId.hashCode() % 10000));
+            }
+
+            if (isCashPayment(orderData.get("paymentMethod"))) {
+                Double codAmount = finalAmount != null ? finalAmount : (totalAmount != null ? totalAmount : 0.0);
+                if (codAmount > 0) {
+                    walletService.createDriverCodDebitTransaction(userId, orderId, orderCode, codAmount);
+                }
+            }
+
+            if (storeId != null && merchantIncome != null && merchantIncome > 0) {
+                walletService.createMerchantIncomeTransaction(storeId, orderId, orderCode, merchantIncome);
+            }
+
+            Map<String, Object> updatedOrderData = statsRepository.findOrderRawById(orderId);
+            DeliveryOrderDTO dto = buildDeliveryOrderDTO(orderId, updatedOrderData);
+
+            log.info("Xac nhan giao hang voi anh thanh cong: orderId={}, photoUrl={}", orderId, photoUrl);
+            return dto;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Loi khi xac nhan giao hang voi anh: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (java.util.concurrent.ExecutionException e) {
+            log.error("Loi khi xac nhan giao hang voi anh: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        } catch (Exception e) {
+            log.error("Loi khi xac nhan giao hang voi anh: {}", e.getMessage());
+            throw BusinessException.loiHeThong(e.getMessage());
+        }
+    }
+
     public DeliveryOrderDTO getCurrentOrder(String userId) {
         log.info("Bat dau lay don hien tai cua tai xe: {}", userId);
         try {
             List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
                     .findByDriverIdAndStatus(userId, DeliveryOrderStatus.DELIVERING);
+            if (docs.isEmpty()) {
+                docs = statsRepository
+                        .findByDriverIdAndStatus(userId, DeliveryOrderStatus.WAITING_DRIVER);
+            }
             if (docs.isEmpty()) {
                 return null;
             }
@@ -329,7 +456,7 @@ public class DeliveryOrderService {
             }
 
             if (docs.size() > 1) {
-                log.warn("Tai xe {} dang co {} don o trang thai DELIVERING, se tra ve don moi nhat {}",
+                log.warn("Tai xe {} dang co {} don, se tra ve don moi nhat {}",
                         userId, docs.size(), selectedDoc.getId());
             }
 
@@ -347,8 +474,13 @@ public class DeliveryOrderService {
     public List<DeliveryOrderDTO> getActiveOrders(String userId) {
         log.info("Bat dau lay don hang active cua tai xe: {}", userId);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> deliveringDocs = statsRepository
                     .findByDriverIdAndStatus(userId, DeliveryOrderStatus.DELIVERING);
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> waitingDocs = statsRepository
+                    .findByDriverIdAndStatus(userId, DeliveryOrderStatus.WAITING_DRIVER);
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = new ArrayList<>();
+            docs.addAll(deliveringDocs);
+            docs.addAll(waitingDocs);
             List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
@@ -372,9 +504,20 @@ public class DeliveryOrderService {
     public List<DeliveryOrderDTO> getOrderHistory(String userId) {
         log.info("Bat dau lay lich su don hang cua tai xe: {}", userId);
         try {
-            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = statsRepository
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> completedDocs = statsRepository
                     .findByDriverIdAndStatusOrderByCreatedAt(userId, DeliveryOrderStatus.COMPLETED,
                             com.google.cloud.firestore.Query.Direction.DESCENDING);
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> cancelledDocs = statsRepository
+                    .findByDriverIdAndStatusOrderByCreatedAt(userId, DeliveryOrderStatus.CANCELLED,
+                            com.google.cloud.firestore.Query.Direction.DESCENDING);
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs = new ArrayList<>();
+            docs.addAll(completedDocs);
+            docs.addAll(cancelledDocs);
+            docs.sort((a, b) -> {
+                Instant aTime = toInstant(a.get("createdAt"));
+                Instant bTime = toInstant(b.get("createdAt"));
+                return bTime.compareTo(aTime);
+            });
             List<DeliveryOrderDTO> orders = new ArrayList<>();
 
             for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
@@ -392,6 +535,9 @@ public class DeliveryOrderService {
         } catch (java.util.concurrent.ExecutionException e) {
             log.error("Loi khi lay lich su don hang: {}", e.getMessage());
             throw BusinessException.loiHeThong(e.getMessage());
+        } catch (Exception e) {
+            log.error("Loi khi lay lich su don hang (Firestore index hoac khac): {}", e.getMessage());
+            return new ArrayList<>();
         }
     }
 
@@ -504,6 +650,9 @@ public class DeliveryOrderService {
                     }
                     if ("ORDER_ALREADY_ASSIGNED".equals(msg)) {
                         throw BusinessException.donHangDaCoTaiXe(orderId);
+                    }
+                    if (msg.startsWith("DRIVER_AT_MAX_ORDERS:")) {
+                        throw BusinessException.loiHeThong("Tai xe da nhan toi da " + MAX_CONCURRENT_ORDERS + " don hang cung luc. Vui long hoan thanh cac don dang co truoc khi nhan them.");
                     }
                 }
                 throw BusinessException.loiHeThong(e.getMessage());
@@ -710,6 +859,7 @@ public class DeliveryOrderService {
                 .updatedAt(toInstant(data.get("updatedAt")))
                 .note((String) data.get("note"))
                 .deliveryStep((String) data.get("deliveryStep"))
+                .deliveryPhotoUrl((String) data.get("deliveryPhotoUrl"))
                 .build();
     }
 
@@ -768,8 +918,31 @@ public class DeliveryOrderService {
 
         dto.setItemsSubtotal(roundCurrency(itemsSubtotal));
         dto.setOptionsSubtotal(roundCurrency(optionsSubtotal));
-        dto.setDeliveryDistanceKm(dto.getDistance());
-        dto.setEstimatedDurationMinutes(estimateDurationMinutes(dto.getDeliveryDistanceKm()));
+
+        if (mapboxService.isEnabled()) {
+            Double storeLat = toDouble(data.get("storeLat"));
+            Double storeLng = toDouble(data.get("storeLng"));
+            Double deliveryLat = toDouble(data.get("deliveryLat"));
+            Double deliveryLng = toDouble(data.get("deliveryLng"));
+            if (storeLat != null && storeLng != null && deliveryLat != null && deliveryLng != null) {
+                RouteInfo route = mapboxService.getStoreToDeliveryRoute(storeLat, storeLng, deliveryLat, deliveryLng);
+                if (route != null) {
+                    dto.setDistance(route.getDistanceKm());
+                    dto.setDeliveryDistanceKm(route.getDistanceKm());
+                    dto.setEstimatedDurationMinutes(route.getDurationMinutes());
+                } else {
+                    dto.setDeliveryDistanceKm(dto.getDistance());
+                    dto.setEstimatedDurationMinutes(estimateDurationMinutes(dto.getDeliveryDistanceKm()));
+                }
+            } else {
+                dto.setDeliveryDistanceKm(dto.getDistance());
+                dto.setEstimatedDurationMinutes(estimateDurationMinutes(dto.getDeliveryDistanceKm()));
+            }
+        } else {
+            dto.setDeliveryDistanceKm(dto.getDistance());
+            dto.setEstimatedDurationMinutes(estimateDurationMinutes(dto.getDeliveryDistanceKm()));
+        }
+
         dto.setDriverCollectAmount(resolveDriverCollectAmount(dto));
         dto.setStatusCode(DeliveryOrderStatus.getCode(dto.getStatus() != null ? dto.getStatus() : 0));
         dto.setStatusDescription(DeliveryOrderStatus.getDescription(dto.getStatus() != null ? dto.getStatus() : 0));
@@ -784,8 +957,9 @@ public class DeliveryOrderService {
         if (orderId == null || orderId.isBlank()) {
             return null;
         }
-        String suffix = orderId.length() > 6 ? orderId.substring(orderId.length() - 6) : orderId;
-        return "FG" + suffix.toUpperCase();
+        return String.format("FG-%s-%04d",
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+                Math.abs(orderId.hashCode() % 10000));
     }
 
     private Integer calculateExpiresInSeconds(Instant expiresAt) {
@@ -846,6 +1020,12 @@ public class DeliveryOrderService {
         if (dto == null || dto.getStatus() == null) {
             return "UNKNOWN";
         }
+
+        String storedStep = dto.getDeliveryStep();
+        if (storedStep != null && !storedStep.isBlank()) {
+            return storedStep;
+        }
+
         int status = dto.getStatus();
         if (status == DeliveryOrderStatus.CANCELLED) {
             return "CANCELLED";
@@ -912,6 +1092,16 @@ public class DeliveryOrderService {
             return null;
         }
 
+        if (mapboxService.isEnabled()) {
+            RouteInfo route = mapboxService.getStoreToDeliveryRoute(storeLat, storeLng, deliveryLat, deliveryLng);
+            if (route != null) {
+                log.debug("Mapbox route distance for order: {} km (vs Haversine {} km)",
+                        route.getDistanceKm(),
+                        calculateDistanceKm(storeLat, storeLng, deliveryLat, deliveryLng));
+                return route.getDistanceKm();
+            }
+        }
+
         return calculateDistanceKm(storeLat, storeLng, deliveryLat, deliveryLng);
     }
 
@@ -930,6 +1120,42 @@ public class DeliveryOrderService {
         if (value == null) return null;
         if (value instanceof Number) return ((Number) value).longValue();
         return null;
+    }
+
+    public Map<String, Object> reportIssue(String orderId, String driverId, String reason, String additionalNote) {
+        log.info("Tai xe {} bao cao su co cho don hang {}", driverId, orderId);
+        try {
+            Map<String, Object> orderData = statsRepository.findOrderRawById(orderId);
+            if (orderData == null) {
+                throw new BusinessException(HttpStatus.NOT_FOUND, "Khong tim thay don hang.");
+            }
+
+            String orderDriverId = orderData.get("driverId") != null ? orderData.get("driverId").toString() : null;
+            if (!driverId.equals(orderDriverId)) {
+                throw new BusinessException(HttpStatus.FORBIDDEN, "Ban khong phai tai xe cua don hang nay.");
+            }
+
+            Map<String, Object> report = new HashMap<>();
+            report.put("id", UUID.randomUUID().toString());
+            report.put("orderId", orderId);
+            report.put("driverId", driverId);
+            report.put("reason", reason);
+            report.put("additionalNote", additionalNote != null ? additionalNote : "");
+            report.put("status", "open");
+            report.put("createdAt", Timestamp.now());
+            report.put("updatedAt", Timestamp.now());
+            report.put("type", "DRIVER_ISSUE");
+
+            firestore.collection("reports").document(report.get("id").toString()).set(report).get();
+
+            log.info("Da tao bao cao su co cho don hang {}: {}", orderId, report.get("id"));
+            return report;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Loi khi tao bao cao su co: {}", e.getMessage(), e);
+            throw new RuntimeException("Da xay ra loi khi tao bao cao su co.", e);
+        }
     }
 
     private Integer toInt(Object value) {
@@ -1013,5 +1239,30 @@ public class DeliveryOrderService {
         }
         String pmStr = paymentMethodObj.toString().toLowerCase().trim();
         return pmStr.equals("2") || pmStr.equals("cash") || pmStr.equals("tiền mặt") || pmStr.equals("tien mat");
+    }
+
+    private void xoaKhoiCurrentOrderIds(String userId, String orderId, boolean conDonDangGiao) {
+        try {
+            Map<String, Object> profile = walletRepository.findDriverProfileById(userId);
+            if (profile == null) return;
+            List<String> orderIds = new ArrayList<>();
+            Object existing = profile.get("currentOrderIds");
+            if (existing instanceof List<?>) {
+                for (Object id : (List<?>) existing) {
+                    if (id != null && !id.toString().equals(orderId)) {
+                        orderIds.add(id.toString());
+                    }
+                }
+            }
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("currentOrderIds", orderIds);
+            updates.put("isAvailable", !conDonDangGiao);
+            updates.put("updatedAt", Instant.now());
+            walletRepository.updateDriverProfileFields(userId, updates);
+            log.info("Da xoa order [{}] khoi currentOrderIds cua driver [{}], con {} don",
+                    orderId, userId, orderIds.size());
+        } catch (Exception e) {
+            log.warn("Loi khi xoa khoi currentOrderIds: {}", e.getMessage());
+        }
     }
 }
