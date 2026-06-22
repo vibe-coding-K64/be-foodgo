@@ -595,10 +595,11 @@ public class WalletService {
             
             // Cap nhat giao dich
             batch.update(transRef, "status", 1);
+            batch.update(transRef, "walletUpdated", true); // Chặn VPS cũ xử lý đúp
             
             // Cap nhat vi
             Map<String, Object> walletUpdates = new HashMap<>();
-            walletUpdates.put("balance", Math.max(0.0, balance - amount));
+            // Không trừ balance vì đã trừ lúc yêu cầu
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("totalWithdrawn", totalWithdrawn + amount);
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
@@ -670,10 +671,13 @@ public class WalletService {
             
             // Cap nhat giao dich
             batch.update(transRef, "status", 2);
-            batch.update(transRef, "description", "Tu choi rut tien: " + reason);
+            batch.update(transRef, "description", "Từ chối rút tiền: " + reason);
+            batch.update(transRef, "walletUpdated", true); // Chặn VPS cũ xử lý đúp
             
-            // Cap nhat vi: ko hoan tien vi tien chua tru
+            // Cap nhat vi: Hoan tien vi bi tu choi
+            Double balance = walletDoc.getDouble("balance") != null ? walletDoc.getDouble("balance") : 0.0;
             Map<String, Object> walletUpdates = new HashMap<>();
+            walletUpdates.put("balance", balance + amount);
             walletUpdates.put("pendingBalance", Math.max(0.0, pendingBalance - amount));
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             batch.update(walletRef, walletUpdates);

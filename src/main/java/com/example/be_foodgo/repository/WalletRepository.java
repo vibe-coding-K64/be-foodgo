@@ -284,7 +284,7 @@ public class WalletRepository {
             transaction.set(transRef, transData);
 
             Map<String, Object> walletUpdates = new HashMap<>();
-            // Không trừ balance ở đây, chỉ tăng pendingBalance
+            walletUpdates.put("balance", Math.max(0.0, balance - amount));
             walletUpdates.put("pendingBalance", currentPending + amount);
             walletUpdates.put("updatedAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
             transaction.update(walletRef, walletUpdates);
