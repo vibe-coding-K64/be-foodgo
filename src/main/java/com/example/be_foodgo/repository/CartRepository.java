@@ -1,5 +1,7 @@
 package com.example.be_foodgo.repository;
 
+import com.example.be_foodgo.dto.CartRequest.SelectedOption;
+import com.example.be_foodgo.dto.CartRequest.SelectedOptionGroup;
 import com.example.be_foodgo.model.CartItem;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
@@ -39,16 +41,15 @@ public class CartRepository {
         for (DocumentSnapshot doc : snapshot.getDocuments()) {
             CartItem item = CartItem.builder()
                     .id(doc.getId())
+                    .userId(userId)
                     .storeId(doc.getString("storeId"))
                     .foodId(doc.getString("foodId"))
                     .name(doc.getString("name"))
                     .price(doc.getDouble("price"))
                     .quantity(doc.getLong("quantity") != null ? doc.getLong("quantity").intValue() : 1)
-                    .size(doc.getString("size"))
-                    .sizePrice(doc.getDouble("sizePrice"))
                     .note(doc.getString("note"))
                     .imageUrl(doc.getString("imageUrl"))
-                    .toppings(toToppingItemList(doc.get("toppings")))
+                    .selectedOptions(toSelectedOptionGroups(doc.get("selectedOptions")))
                     .createdAt(toInstant(doc.get("createdAt")))
                     .updatedAt(toInstant(doc.get("updatedAt")))
                     .build();
@@ -60,22 +61,35 @@ public class CartRepository {
     }
 
     @SuppressWarnings("unchecked")
-    private List<CartItem.ToppingItem> toToppingItemList(Object toppingsObj) {
-        if (toppingsObj == null) {
+    private List<SelectedOptionGroup> toSelectedOptionGroups(Object selectedOptionsObj) {
+        if (selectedOptionsObj == null) {
             return null;
         }
-        List<?> toppingsRaw = (List<?>) toppingsObj;
-        List<CartItem.ToppingItem> toppings = new ArrayList<>();
-        for (Object t : toppingsRaw) {
-            if (t instanceof Map) {
-                Map<String, Object> tMap = (Map<String, Object>) t;
-                toppings.add(CartItem.ToppingItem.builder()
-                        .name((String) tMap.get("name"))
-                        .price(toDouble(tMap.get("price")))
-                        .build());
+        List<?> rawList = (List<?>) selectedOptionsObj;
+        List<SelectedOptionGroup> groups = new ArrayList<>();
+        for (Object item : rawList) {
+            if (!(item instanceof Map)) continue;
+            Map<String, Object> groupMap = (Map<String, Object>) item;
+            String groupName = (String) groupMap.get("name");
+            if (groupName == null) continue;
+
+            List<SelectedOption> options = new ArrayList<>();
+            Object optionsObj = groupMap.get("options");
+            if (optionsObj instanceof List) {
+                for (Object opt : (List<?>) optionsObj) {
+                    if (!(opt instanceof Map)) continue;
+                    Map<String, Object> optMap = (Map<String, Object>) opt;
+                    String optName = (String) optMap.get("name");
+                    if (optName == null) continue;
+                    options.add(SelectedOption.builder().name(optName).build());
+                }
             }
+            groups.add(SelectedOptionGroup.builder()
+                    .name(groupName)
+                    .options(options.isEmpty() ? null : options)
+                    .build());
         }
-        return toppings;
+        return groups;
     }
 
     private Double toDouble(Object value) {
@@ -103,9 +117,7 @@ public class CartRepository {
                 .document(userId)
                 .collection("cart");
 
-        String cartItemId = cartRef.document().getId();
-
-        WriteBatch batch = firestore.batch();
+        String cartItemId = item.getId() != null ? item.getId() : cartRef.document().getId();
         DocumentReference newDoc = cartRef.document(cartItemId);
 
         Map<String, Object> data = Map.ofEntries(
@@ -116,23 +128,36 @@ public class CartRepository {
                 Map.entry("quantity", item.getQuantity()),
                 Map.entry("note", item.getNote() != null ? item.getNote() : ""),
                 Map.entry("imageUrl", item.getImageUrl() != null ? item.getImageUrl() : ""),
-                Map.entry("createdAt", FieldValue.serverTimestamp()),
-                Map.entry("updatedAt", FieldValue.serverTimestamp()),
-                Map.entry("size", item.getSize() != null ? item.getSize() : ""),
-                Map.entry("sizePrice", item.getSizePrice() != null ? item.getSizePrice() : 0.0)
+                Map.entry("createdAt", item.getCreatedAt() != null ? item.getCreatedAt() : FieldValue.serverTimestamp()),
+                Map.entry("updatedAt", FieldValue.serverTimestamp())
         );
 
+        WriteBatch batch = firestore.batch();
         batch.set(newDoc, data);
 
-        if (item.getToppings() != null && !item.getToppings().isEmpty()) {
-            List<Map<String, Object>> toppingMaps = item.getToppings().stream()
-                    .map(t -> Map.<String, Object>of("name", t.getName(), "price", t.getPrice()))
+        if (item.getSelectedOptions() != null && !item.getSelectedOptions().isEmpty()) {
+            List<Map<String, Object>> selectedOptionsMaps = item.getSelectedOptions().stream()
+                    .map(g -> {
+                        List<Map<String, String>> options = g.getOptions() == null ? List.of()
+                                : g.getOptions().stream()
+                                        .map(o -> Map.<String, String>of("name", o.getName()))
+                                        .toList();
+                        return (Map<String, Object>) Map.of(
+                                "name", g.getName(),
+                                "options", options
+                        );
+                    })
                     .toList();
-            batch.update(newDoc, "toppings", toppingMaps);
+            batch.update(newDoc, "selectedOptions", selectedOptionsMaps);
         }
 
-        batch.commit();
-        log.info("Đã lưu món [{}] vào giỏ hàng với ID: {}", item.getFoodId(), cartItemId);
+        try {
+            batch.commit().get();
+            log.info("Đã lưu món [{}] vào giỏ hàng với ID: {}", item.getFoodId(), cartItemId);
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Lỗi khi commit giỏ hàng vào Firestore: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        }
         return cartItemId;
     }
 
@@ -185,16 +210,14 @@ public class CartRepository {
                 .name(doc.getString("name"))
                 .price(doc.getDouble("price"))
                 .quantity(doc.getLong("quantity") != null ? doc.getLong("quantity").intValue() : 1)
-                .size(doc.getString("size"))
-                .sizePrice(doc.getDouble("sizePrice"))
                 .note(doc.getString("note"))
                 .imageUrl(doc.getString("imageUrl"))
-                .toppings(toToppingItemList(doc.get("toppings")))
+                .selectedOptions(toSelectedOptionGroups(doc.get("selectedOptions")))
                 .createdAt(toInstant(doc.get("createdAt")))
                 .updatedAt(toInstant(doc.get("updatedAt")))
                 .build();
 
-        log.info("Tìm thấy món [{}] trong giỏ hàng của người dùng {}", itemId, userId);
+        log.info("Tim thay mon [{}] trong gio hang cua nguoi dung {}", itemId, userId);
         return item;
     }
 
@@ -220,6 +243,90 @@ public class CartRepository {
         log.info("Đã cập nhật số lượng món [{}] thành {} trong giỏ hàng người dùng {}", itemId, quantity, userId);
     }
 
+    public void capNhatCartItem(String userId, CartItem item) {
+        log.info("Cap nhat cart item {} trong gio hang nguoi dung {} - so luong: {}, gia: {}",
+                item.getId(), userId, item.getQuantity(), item.getPrice());
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(item.getId());
+
+        try {
+            FirestoreExecutor executor = new FirestoreExecutor(docRef);
+            executor.add("quantity", item.getQuantity());
+            executor.add("price", item.getPrice());
+            executor.add("note", item.getNote() != null ? item.getNote() : "");
+            executor.add("updatedAt", FieldValue.serverTimestamp());
+
+            if (item.getSelectedOptions() != null && !item.getSelectedOptions().isEmpty()) {
+                List<Map<String, Object>> selectedOptionsMaps = item.getSelectedOptions().stream()
+                        .map(g -> {
+                            List<Map<String, String>> options = g.getOptions() == null ? List.of()
+                                    : g.getOptions().stream()
+                                            .map(o -> Map.<String, String>of("name", o.getName()))
+                                            .toList();
+                            return (Map<String, Object>) Map.of(
+                                    "name", g.getName(),
+                                    "options", options
+                            );
+                        })
+                        .toList();
+                executor.add("selectedOptions", selectedOptionsMaps);
+            } else {
+                executor.add("selectedOptions", null);
+            }
+
+            executor.commit().get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Loi khi cap nhat cart item [{}]: {}", item.getId(), e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("Da cap nhat cart item [{}] trong gio hang nguoi dung {}", item.getId(), userId);
+    }
+
+    private static class FirestoreExecutor {
+        private final DocumentReference docRef;
+        private final Map<String, Object> updates = new java.util.HashMap<>();
+
+        FirestoreExecutor(DocumentReference docRef) {
+            this.docRef = docRef;
+        }
+
+        void add(String field, Object value) {
+            updates.put(field, value);
+        }
+
+        ApiFuture<WriteResult> commit() {
+            return docRef.update(updates);
+        }
+    }
+
+    public void capNhatSoLuongVaGia(String userId, String itemId, Integer quantity, Double price) {
+        log.info("Cap nhat so luong va gia mon {} trong gio hang nguoi dung {} - so luong moi: {}, gia moi: {}",
+                itemId, userId, quantity, price);
+        DocumentReference docRef = firestore
+                .collection(CART_COLLECTION)
+                .document(userId)
+                .collection("cart")
+                .document(itemId);
+
+        try {
+            docRef.update(
+                    "quantity", quantity,
+                    "price", price,
+                    "updatedAt", FieldValue.serverTimestamp()
+            ).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Loi khi cap nhat so luong va gia mon [{}]: {}", itemId, e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        log.info("Da cap nhat so luong va gia mon [{}] thanh ({}, {}) trong gio hang nguoi dung {}",
+                itemId, quantity, price, userId);
+    }
+
     public void xoaMotMonTrongGio(String userId, String itemId) {
         log.info("Xóa món {} khỏi giỏ hàng người dùng {}", itemId, userId);
         DocumentReference docRef = firestore
@@ -239,6 +346,18 @@ public class CartRepository {
         DocumentSnapshot doc = future.get();
         if (!doc.exists()) {
             log.warn("Sản phẩm [{}] không tồn tại", foodId);
+            return null;
+        }
+        return new FirestoreDocument(doc.getData());
+    }
+
+    public FirestoreDocument layThongTinCuaHang(String storeId) throws ExecutionException, InterruptedException {
+        log.info("Truy vấn thông tin cửa hàng: {}", storeId);
+        DocumentReference storeRef = firestore.collection("stores").document(storeId);
+        ApiFuture<DocumentSnapshot> future = storeRef.get();
+        DocumentSnapshot doc = future.get();
+        if (!doc.exists()) {
+            log.warn("Cửa hàng [{}] không tồn tại", storeId);
             return null;
         }
         return new FirestoreDocument(doc.getData());

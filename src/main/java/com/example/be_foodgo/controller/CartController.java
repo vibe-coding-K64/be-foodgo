@@ -1,6 +1,7 @@
 package com.example.be_foodgo.controller;
 
 import com.example.be_foodgo.dto.CartRequest;
+import com.example.be_foodgo.dto.CartResponse;
 import com.example.be_foodgo.exception.ApiResponse;
 import com.example.be_foodgo.model.CartItem;
 import com.example.be_foodgo.service.CartService;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/cart")
 @Tag(name = "Cart", description = "API quản lý giỏ hàng cho phân hệ Khách hàng")
+@SecurityRequirement(name = "bearerAuth")
 public class CartController {
 
     private static final Logger log = LoggerFactory.getLogger(CartController.class);
@@ -29,12 +32,46 @@ public class CartController {
         this.cartService = cartService;
     }
 
+    @GetMapping
+    @Operation(
+            summary = "Lấy giỏ hàng của người dùng",
+            description = "Truy xuất toàn bộ giỏ hàng của khách hàng, bao gồm thông tin cửa hàng và danh sách các món đã chọn."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Lấy giỏ hàng thành công",
+                    content = @Content(schema = @Schema(implementation = CartResponseSchema.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Lỗi hệ thống",
+                    content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
+            )
+    })
+    public ResponseEntity<ApiResponse<CartResponse>> layGioHang(
+            @RequestParam
+            @Parameter(description = "ID người dùng khách hàng")
+            String userId
+    ) {
+        log.info("Nhận yêu cầu lấy giỏ hàng - userId: {}", userId);
+
+        CartResponse cart = cartService.layGioHang(userId);
+
+        log.info("Trả giỏ hàng cho người dùng [{}] - {} món.", userId,
+                cart.getItems() != null ? cart.getItems().size() : 0);
+        return ResponseEntity.ok(ApiResponse.thatSuccess(cart, "Lấy giỏ hàng thành công."));
+    }
+
+    @Schema(name = "CartResponseSchema", description = "Schema cho CartResponse trong phản hồi thành công")
+    public static class CartResponseSchema extends CartResponse {
+    }
+
     @PostMapping("/add")
     @Operation(
             summary = "Thêm món vào giỏ hàng",
             description = "Thêm một món ăn vào giỏ hàng của khách hàng. " +
-                    "Nếu giỏ hàng đã có món từ cửa hàng khác, hệ thống sẽ trả về lỗi yêu cầu xác nhận xóa giỏ hàng cũ. " +
-                    "Giá tiền được tính toán từ phía server dựa trên basePrice, size và toppings từ collection products."
+                    "Giá tiền được tính toán từ phía server dựa trên basePrice và selectedOptions từ collection products."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -44,7 +81,7 @@ public class CartController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "Yêu cầu không hợp lệ - Món ăn hết hàng hoặc vi phạm quy tắc một cửa hàng",
+                    description = "Yêu cầu không hợp lệ - Món ăn hết hàng",
                     content = @Content(schema = @Schema(implementation = ApiResponseSchema.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

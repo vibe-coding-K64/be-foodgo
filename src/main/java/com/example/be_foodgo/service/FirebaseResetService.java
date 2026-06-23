@@ -5,8 +5,12 @@ import com.google.cloud.firestore.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -16,10 +20,12 @@ public class FirebaseResetService {
     private static final Logger log = LoggerFactory.getLogger(FirebaseResetService.class);
 
     private final Firestore firestore;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public FirebaseResetService(Firestore firestore) {
+    public FirebaseResetService(Firestore firestore, PasswordEncoder passwordEncoder) {
         this.firestore = firestore;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Map<String, Object> resetFirebase() {
@@ -48,6 +54,27 @@ public class FirebaseResetService {
         return result;
     }
 
+    public Map<String, Object> clearAllCollectionsOnly() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        long startTime = System.currentTimeMillis();
+
+        try {
+            result.put("step", "Clearing all collections...");
+            clearAllCollections();
+
+            long endTime = System.currentTimeMillis();
+            result.put("success", true);
+            result.put("message", "All data cleared in " + (endTime - startTime) + " ms");
+            log.info("Firebase data cleared in {} ms", (endTime - startTime));
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "Clear failed: " + e.getMessage());
+            log.error("Firebase clear failed: {}", e.getMessage(), e);
+        }
+
+        return result;
+    }
+
     private void clearAllCollections() throws ExecutionException, InterruptedException {
         Iterable<CollectionReference> topLevelCollections = firestore.listCollections();
         int totalDeleted = 0;
@@ -63,24 +90,19 @@ public class FirebaseResetService {
 
     private int deleteCollection(CollectionReference collection, int batchSize)
             throws ExecutionException, InterruptedException {
-
         int deleted = 0;
         while (true) {
             ApiFuture<QuerySnapshot> future = collection.limit(batchSize).get();
             List<QueryDocumentSnapshot> docs = future.get().getDocuments();
-
             if (docs.isEmpty()) {
                 break;
             }
-
             WriteBatch batch = firestore.batch();
             for (DocumentSnapshot doc : docs) {
                 batch.delete(doc.getReference());
             }
             batch.commit().get();
-
             deleted += docs.size();
-
             if (docs.size() < batchSize) {
                 break;
             }
@@ -94,11 +116,11 @@ public class FirebaseResetService {
         seedTransactions();
         seedUsers();
         seedSystemCategories();
+        seedStoreCategories();
         seedStores();
         seedProducts();
         seedBanners();
         seedVouchers();
-        seedSystemVouchers();
         seedReviews();
         seedOrders();
         seedCustomerProfiles();
@@ -182,6 +204,22 @@ public class FirebaseResetService {
                         Map.entry("pendingBalance", 0.0),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "wallet_004"), Map.entry("userId", "user_004"),
+                        Map.entry("role", "driver"), Map.entry("balance", 950000.0),
+                        Map.entry("totalEarned", 1800000.0), Map.entry("totalWithdrawn", 850000.0),
+                        Map.entry("pendingBalance", 0.0),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "wallet_005"), Map.entry("userId", "user_005"),
+                        Map.entry("role", "driver"), Map.entry("balance", 750000.0),
+                        Map.entry("totalEarned", 1500000.0), Map.entry("totalWithdrawn", 750000.0),
+                        Map.entry("pendingBalance", 0.0),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
         );
         seedDirect("wallets", wallets);
@@ -221,33 +259,111 @@ public class FirebaseResetService {
     }
 
     private void seedUsers() {
+        // Tu dong dang ky cac tai khoan mau vao Firebase Authentication neu chua ton tai
+        try {
+            com.google.firebase.auth.FirebaseAuth firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance();
+            
+            // 1. Seed tài khoản Admin
+            try {
+                firebaseAuth.getUserByEmail("admin@foodgo.com");
+                log.info("Tai khoan admin@foodgo.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_002") // Truoc sau nhu mot voi Firestore ID
+                        .setEmail("admin@foodgo.com")
+                        .setPassword("admin123")
+                        .setDisplayName("Quan Tri Vien")
+                        .setPhoneNumber("+84987654321")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Admin admin@foodgo.com len Firebase Auth.");
+            }
+
+            // 2. Seed tài khoản Khách Hàng
+            try {
+                firebaseAuth.getUserByEmail("khachhang@gmail.com");
+                log.info("Tai khoan khachhang@gmail.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_001")
+                        .setEmail("khachhang@gmail.com")
+                        .setPassword("password123")
+                        .setDisplayName("Khoi")
+                        .setPhoneNumber("+84123456789")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Khach Hang khachhang@gmail.com len Firebase Auth.");
+            }
+
+            // 3. Seed tài khoản Tài Xế
+            try {
+                firebaseAuth.getUserByEmail("taixe@gmail.com");
+                log.info("Tai khoan taixe@gmail.com da ton tai tren Firebase Auth.");
+            } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                com.google.firebase.auth.UserRecord.CreateRequest request = new com.google.firebase.auth.UserRecord.CreateRequest()
+                        .setUid("user_003")
+                        .setEmail("taixe@gmail.com")
+                        .setPassword("driver123")
+                        .setDisplayName("Le Van B")
+                        .setPhoneNumber("+84912345678")
+                        .setEmailVerified(true);
+                firebaseAuth.createUser(request);
+                log.info("==> Da seed thanh cong tai khoan Tai Xe taixe@gmail.com len Firebase Auth.");
+            }
+        } catch (Exception e) {
+            log.error("Loi khi seed du lieu Firebase Auth: {}", e.getMessage());
+        }
+
         List<Map<String, Object>> users = Arrays.asList(
                 Map.ofEntries(
                         Map.entry("id", "user_001"), Map.entry("email", "khachhang@gmail.com"),
-                        Map.entry("password", "password123"), Map.entry("fullName", "Khoi"),
+                        Map.entry("password", passwordEncoder.encode("password123")), Map.entry("fullName", "Khoi"),
                         Map.entry("phoneNumber", "0123456789"),
-                        Map.entry("photoUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("roles", Arrays.asList(1, 2, 3)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_002"), Map.entry("email", "admin@foodgo.com"),
-                        Map.entry("password", "admin123"), Map.entry("fullName", "Quan Tri Vien"),
+                        Map.entry("password", passwordEncoder.encode("admin123")), Map.entry("fullName", "Quan Tri Vien"),
                         Map.entry("phoneNumber", "0987654321"),
-                        Map.entry("photoUrl", "https://example.com/avatar/admin.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=admin.jpg"),
                         Map.entry("roles", Arrays.asList(4)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "user_003"), Map.entry("email", "taixe@gmail.com"),
-                        Map.entry("password", "driver123"), Map.entry("fullName", "Le Van B"),
+                        Map.entry("password", passwordEncoder.encode("driver123")), Map.entry("fullName", "Le Van B"),
                         Map.entry("phoneNumber", "0912345678"),
-                        Map.entry("photoUrl", "https://example.com/avatar/driver001.jpg"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver001.jpg"),
                         Map.entry("roles", Arrays.asList(2)),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_004"), Map.entry("email", "taixe2@gmail.com"),
+                        Map.entry("password", passwordEncoder.encode("driver456")), Map.entry("fullName", "Nguyen Van C"),
+                        Map.entry("phoneNumber", "0923456789"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver002.jpg"),
+                        Map.entry("roles", Arrays.asList(2)),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_005"), Map.entry("email", "taixe3@gmail.com"),
+                        Map.entry("password", passwordEncoder.encode("driver789")), Map.entry("fullName", "Tran Van D"),
+                        Map.entry("phoneNumber", "0934567890"),
+                        Map.entry("photoUrl", "https://placehold.co/150?text=driver003.jpg"),
+                        Map.entry("roles", Arrays.asList(2)),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("isEmailVerified", true)
                 )
         );
         seedDirect("users", users);
@@ -255,14 +371,17 @@ public class FirebaseResetService {
         List<Map<String, Object>> histories = Arrays.asList(
                 Map.ofEntries(
                         Map.entry("id", "sh_001"), Map.entry("keyword", "com tam"),
+                        Map.entry("keywordNormalized", "com tam"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "sh_002"), Map.entry("keyword", "tra sua"),
+                        Map.entry("keywordNormalized", "tra sua"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
                         Map.entry("id", "sh_003"), Map.entry("keyword", "ga ran"),
+                        Map.entry("keywordNormalized", "ga ran"),
                         Map.entry("createdAt", FieldValue.serverTimestamp())
                 )
         );
@@ -271,78 +390,44 @@ public class FirebaseResetService {
 
     private void seedSystemCategories() {
         List<Map<String, Object>> categories = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "cate_001"), Map.entry("name", "Com"),
-                        Map.entry("icon", "restaurant"), Map.entry("order", 1),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_002"), Map.entry("name", "Pho/Bun"),
-                        Map.entry("icon", "restaurant"), Map.entry("order", 2),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_003"), Map.entry("name", "Tra sua"),
-                        Map.entry("icon", "local_cafe"), Map.entry("order", 3),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_004"), Map.entry("name", "An vat"),
-                        Map.entry("icon", "fastfood"), Map.entry("order", 4),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_005"), Map.entry("name", "Ga ran"),
-                        Map.entry("icon", "fastfood"), Map.entry("order", 5),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_006"), Map.entry("name", "Mon Han"),
-                        Map.entry("icon", "restaurant"), Map.entry("order", 6),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_007"), Map.entry("name", "Mon Nhat"),
-                        Map.entry("icon", "restaurant"), Map.entry("order", 7),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_008"), Map.entry("name", "Banh mi"),
-                        Map.entry("icon", "bakery_dining"), Map.entry("order", 8),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_009"), Map.entry("name", "Lau/Buffet"),
-                        Map.entry("icon", "restaurant"), Map.entry("order", 9),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "cate_010"), Map.entry("name", "Tra cay"),
-                        Map.entry("icon", "local_cafe"), Map.entry("order", 10),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
+                createCategoryMap("syscate_001", null, "Com", "restaurant", 1, "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
+                createCategoryMap("syscate_002", null, "Pho/Bun", "restaurant", 2, "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
+                createCategoryMap("syscate_003", null, "Tra sua", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("syscate_004", null, "An vat", "fastfood", 4, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
+                createCategoryMap("syscate_005", null, "Ga ran", "fastfood", 5, "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
+                createCategoryMap("syscate_006", null, "Mon Han", "restaurant", 6, "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400&q=80"),
+                createCategoryMap("syscate_007", null, "Mon Nhat", "restaurant", 7, "https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&q=80"),
+                createCategoryMap("syscate_008", null, "Banh mi", "bakery_dining", 8, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
+                createCategoryMap("syscate_009", null, "Lau/Buffet", "restaurant", 9, "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80"),
+                createCategoryMap("syscate_010", null, "Tra cay", "local_cafe", 10, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80")
         );
-        seedDirect("system_categories", categories);
+        seedDirect("categories", categories);
+    }
+
+    private void seedStoreCategories() {
+        List<Map<String, Object>> categories = Arrays.asList(
+                createCategoryMap("stocate_001", "store_001", "Mon chinh", "restaurant", 1, "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
+                createCategoryMap("stocate_002", "store_001", "Mon phu", "restaurant", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
+                createCategoryMap("stocate_003", "store_001", "Nuoc uong", "local_cafe", 3, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("stocate_004", "store_002", "Tra sua", "local_cafe", 1, "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
+                createCategoryMap("stocate_005", "store_002", "Tra trai cay", "local_cafe", 2, "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
+                createCategoryMap("stocate_006", "store_003", "Banh mi", "bakery_dining", 1, "https://images.unsplash.com/photo-1605478371119-43802a1c79f5?w=400&q=80"),
+                createCategoryMap("stocate_007", "store_003", "Do an them", "fastfood", 2, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80")
+        );
+        seedDirect("categories", categories);
+    }
+
+    private Map<String, Object> createCategoryMap(String id, String storeId, String name, String icon, int order, String imageUrl) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("storeId", storeId);
+        map.put("name", name);
+        map.put("icon", icon);
+        map.put("order", order);
+        map.put("imageUrl", imageUrl);
+        map.put("createdAt", FieldValue.serverTimestamp());
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        return map;
     }
 
     private void seedStores() {
@@ -350,7 +435,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_001"), Map.entry("name", "Com tam Phuc Loc Tho"),
                         Map.entry("address", "123 Le Van Viet, TP. Thu Duc"),
-                        Map.entry("rating", 4.8), Map.entry("reviewCount", 500),
+                        Map.entry("rating", 4.3), Map.entry("reviewCount", 3),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "20-30 phut"),
@@ -371,7 +456,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_002"), Map.entry("name", "Tra sua Tocotoco"),
                         Map.entry("address", "456 Nguyen Thi Dinh, TP. Thu Duc"),
-                        Map.entry("rating", 4.6), Map.entry("reviewCount", 300),
+                        Map.entry("rating", 5.0), Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1557992260-ec58fa23b80b?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "15-25 phut"),
@@ -384,7 +469,7 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_003"), Map.entry("name", "Ga ran KFC Nguyen Cuu"),
                         Map.entry("address", "789 Nguyen Cuu, TP. Thu Duc"),
-                        Map.entry("rating", 4.5), Map.entry("reviewCount", 800),
+                        Map.entry("rating", 3.5), Map.entry("reviewCount", 2),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "25-35 phut"),
@@ -397,13 +482,39 @@ public class FirebaseResetService {
                 Map.ofEntries(
                         Map.entry("id", "store_004"), Map.entry("name", "Bun bo Hue Ba Le"),
                         Map.entry("address", "101 Pho Hue, Q.1, TP.HCM"),
-                        Map.entry("rating", 4.7), Map.entry("reviewCount", 450),
+                        Map.entry("rating", 5.0), Map.entry("reviewCount", 1),
                         Map.entry("avtUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
                         Map.entry("backUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80"),
                         Map.entry("isOpen", true), Map.entry("deliveryTime", "30-40 phut"),
                         Map.entry("deliveryFee", 20000.0),
                         Map.entry("categoryIds", Arrays.asList("cate_002")),
                         Map.entry("lat", 10.8460), Map.entry("lng", 106.7880),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "store_005"),
+                        Map.entry("name", "Quan Bun Cha"),
+                        Map.entry("description", "Bun cha Ha Noi chuan vi voi thit nuong than hoa thom lung."),
+                        Map.entry("address", "Le Van Viet"),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1),
+                        Map.entry("avtUrl", "https://tse3.mm.bing.net/th?id=OIF.k%2fmH6P9NM9GRsGE1VREFSw&pid=Api&P=0&h=180"),
+                        Map.entry("backUrl", "https://tse3.mm.bing.net/th?id=OIF.0%2fwhOkeGa%2brJy%2f4BHVY9RA&pid=Api&P=0&h=180"),
+                        Map.entry("isOpen", true),
+                        Map.entry("deliveryTime", "20-30 phut"),
+                        Map.entry("deliveryFee", 20000.0),
+                        Map.entry("categoryIds", Arrays.asList("cate_002")),
+                        Map.entry("lat", 10.8510),
+                        Map.entry("lng", 106.7860),
+                        Map.entry("restaurant_categories", Map.of(
+                                "rest_cate_003", Map.of(
+                                        "name", "Bun cha",
+                                        "order", 1,
+                                        "createdAt", FieldValue.serverTimestamp(),
+                                        "updatedAt", FieldValue.serverTimestamp()
+                                )
+                        )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -422,13 +533,15 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Kich thuoc", "options", List.of(
+                                Map.of("name", "Kich thuoc", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "Vua", "price", 0.0),
                                         Map.of("name", "Lon", "price", 10000.0)
                                 ))
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_002"), Map.entry("storeId", "store_001"),
@@ -439,7 +552,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 4.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_003"), Map.entry("storeId", "store_001"),
@@ -461,18 +576,20 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Kich thuoc", "options", List.of(
+                                Map.of("name", "Kich thuoc", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "M", "price", 0.0),
                                         Map.of("name", "L", "price", 5000.0)
                                 )),
-                                Map.of("name", "Topping", "options", List.of(
+                                Map.of("name", "Topping", "isSingleSelect", false, "options", List.of(
                                         Map.of("name", "Tran chau", "price", 5000.0),
                                         Map.of("name", "Thach", "price", 3000.0),
                                         Map.of("name", "Pudding", "price", 6000.0)
                                 ))
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_005"), Map.entry("storeId", "store_002"),
@@ -480,10 +597,12 @@ public class FirebaseResetService {
                         Map.entry("name", "Tra dao cam"),
                         Map.entry("description", "Tra dao cam that huong vi dai"),
                         Map.entry("basePrice", 25000.0),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=400&q=80"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_006"), Map.entry("storeId", "store_002"),
@@ -494,7 +613,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1557992260-ec58fa23b80b?w=400&q=80"),
                         Map.entry("isOutOfStock", true), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 3.5),
+                        Map.entry("reviewCount", 2)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_007"), Map.entry("storeId", "store_003"),
@@ -505,7 +626,7 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("optionGroups", List.of(
-                                Map.of("name", "Phan an", "options", List.of(
+                                Map.of("name", "Phan an", "isSingleSelect", true, "options", List.of(
                                         Map.of("name", "1 phan", "price", 0.0),
                                         Map.of("name", "2 phan", "price", 20000.0)
                                 ))
@@ -544,7 +665,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", true),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_011"), Map.entry("storeId", "store_004"),
@@ -566,7 +689,9 @@ public class FirebaseResetService {
                         Map.entry("imageUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80"),
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                        Map.entry("updatedAt", FieldValue.serverTimestamp()),
+                        Map.entry("rating", 5.0),
+                        Map.entry("reviewCount", 1)
                 ),
                 Map.ofEntries(
                         Map.entry("id", "prod_013"), Map.entry("storeId", "store_001"),
@@ -600,6 +725,30 @@ public class FirebaseResetService {
                         Map.entry("isOutOfStock", false), Map.entry("isFeatured", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "prod_016"),
+                        Map.entry("storeId", "store_005"),
+                        Map.entry("categoryId", "cate_002"),
+                        Map.entry("categoryName", "Pho/Bun"),
+                        Map.entry("name", "Bun cha Ha Noi"),
+                        Map.entry("description", "Bun cha chuan vi Ha Noi voi thit nuong than hoa thom lung"),
+                        Map.entry("basePrice", 50000.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80"),
+                        Map.entry("isOutOfStock", false),
+                        Map.entry("isFeatured", true),
+                        Map.entry("optionGroups", List.of(
+                                Map.of(
+                                        "name", "Kich thuoc",
+                                        "isSingleSelect", true,
+                                        "options", List.of(
+                                                Map.of("name", "Phan nho", "price", 0.0),
+                                                Map.of("name", "Phan dac biet", "price", 15000.0)
+                                        )
+                                )
+                        )),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
         );
         seedDirect("products", products);
@@ -619,7 +768,7 @@ public class FirebaseResetService {
 
         Map<String, Object> banner2 = new HashMap<>();
         banner2.put("id", "banner_002"); banner2.put("title", "Freeship 0 dong");
-        banner2.put("imageUrl", "https://images.unsplash.com/photo-1550508776-b6a354f5f66d?w=800&q=80");
+        banner2.put("imageUrl", "https://images.unsplash.com/photo-1526367790999-015070fc4449?w=800&q=80");
         banner2.put("storeId", null); banner2.put("storeName", null);
         banner2.put("isActive", true); banner2.put("order", 2);
         banner2.put("createdAt", FieldValue.serverTimestamp());
@@ -649,88 +798,80 @@ public class FirebaseResetService {
 
     private void seedVouchers() {
         List<Map<String, Object>> vouchers = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "voucher_001"), Map.entry("title", "Giam 20K cho don tu 100K"),
-                        Map.entry("subtitle", "Danh cho khach hang moi"),
-                        Map.entry("code", "GIAM20K"), Map.entry("type", 2),
-                        Map.entry("value", 20000.0), Map.entry("pointsRequired", 200),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 100), Map.entry("terms", "Ap dung cho tat ca quan an."),
-                        Map.entry("minOrderValue", 100000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "voucher_002"), Map.entry("title", "Freeship 0 dong"),
-                        Map.entry("subtitle", "Mien phi giao hang"),
-                        Map.entry("code", "FREESHIP0"), Map.entry("type", 2),
-                        Map.entry("value", 15000.0), Map.entry("pointsRequired", 300),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"),
-                        Map.entry("remaining", 50), Map.entry("terms", "Ap dung cho don tu 50K tro len."),
-                        Map.entry("minOrderValue", 50000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "voucher_003"), Map.entry("title", "Giam 10% cho don tu 200K"),
-                        Map.entry("subtitle", "Khuyen mai dac biet cuoi tuan"),
-                        Map.entry("code", "SAVE10P"), Map.entry("type", 1),
-                        Map.entry("value", 10.0), Map.entry("pointsRequired", 500),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 30), Map.entry("terms", "Giam toi da 50K. Ap dung cuoi tuan."),
-                        Map.entry("minOrderValue", 200000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
+                createVoucherMap("voucher_001", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "GIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 0, 0),
+                createVoucherMap("voucher_002", "Freeship Quan ABC", "Chi ap dung tai Quan ABC.", "store_001", "ABC15K", 2, 15000.0, false, 50, "Chi ap dung tai Quan ABC.", 80000.0, "2026-06-01T23:59:59Z", 0, 0),
+                createVoucherMap("fs_001", "Mien phi giao hang", "Ap dung cho don tu 50K.", null, "FREESHIP", 2, 15000.0, true, 200, "Ap dung cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 0, 0),
+                createVoucherMap("fs_002", "Freeship Quan XYZ", "Chi ap dung tai Quan XYZ.", "store_002", "XYZSHIP", 2, 15000.0, true, 30, "Chi ap dung tai Quan XYZ.", 30000.0, "2026-06-10T23:59:59Z", 0, 0),
+                createVoucherMap("sys_voucher_001", "Giam 20K cho don tu 100K", "Ap dung cho tat ca quan an.", null, "SYSGIAM20K", 2, 20000.0, false, 100, "Ap dung cho tat ca quan an.", 100000.0, "2026-05-30T23:59:59Z", 400, 30),
+                createVoucherMap("sys_voucher_002", "Giam 15% cho don tu 150K", "Giam toi da 40K. Ap dung toan he thong.", null, "SYSGIAM15P", 1, 15.0, false, 75, "Giam toi da 40K. Ap dung toan he thong.", 150000.0, "2026-06-30T23:59:59Z", 500, 30),
+                createVoucherMap("sys_fs_001", "Mien phi giao hang", "Mien phi giao hang cho don tu 50K.", null, "SYSFREESHIP", 2, 15000.0, true, 200, "Mien phi giao hang cho don tu 50K.", 50000.0, "2026-06-15T23:59:59Z", 300, 30)
         );
         seedDirect("vouchers", vouchers);
     }
 
-    private void seedSystemVouchers() {
-        List<Map<String, Object>> systemVouchers = Arrays.asList(
-                Map.ofEntries(
-                        Map.entry("id", "sys_voucher_001"), Map.entry("title", "Giam 20K cho don tu 100K"),
-                        Map.entry("subtitle", "Danh cho khach hang moi"),
-                        Map.entry("pointsRequired", 200),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
-                        Map.entry("remaining", 100), Map.entry("terms", "Ap dung cho tat ca quan an."),
-                        Map.entry("minOrderValue", 100000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                ),
-                Map.ofEntries(
-                        Map.entry("id", "sys_voucher_002"), Map.entry("title", "Giam 15% cho don tu 150K"),
-                        Map.entry("subtitle", "Khuyen mai he thong"),
-                        Map.entry("pointsRequired", 400),
-                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"),
-                        Map.entry("remaining", 75), Map.entry("terms", "Giam toi da 40K. Ap dung toan he thong."),
-                        Map.entry("minOrderValue", 150000.0),
-                        Map.entry("createdAt", FieldValue.serverTimestamp()),
-                        Map.entry("updatedAt", FieldValue.serverTimestamp())
-                )
-        );
-        seedDirect("system_vouchers", systemVouchers);
+    private Map<String, Object> createVoucherMap(String id, String title, String subtitle, String storeId, String code,
+            int type, double value, boolean isFreeship, int remaining, String terms,
+            double minOrderValue, String expiryDate, int pointsRequired, int validityDays) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("title", title);
+        map.put("subtitle", subtitle);
+        map.put("storeId", storeId);
+        map.put("code", code);
+        map.put("type", type);
+        map.put("value", value);
+        map.put("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80");
+        map.put("remaining", remaining);
+        map.put("limitCount", remaining);
+        map.put("usedCount", 0);
+        map.put("isActive", true);
+        map.put("isFreeship", isFreeship);
+        map.put("terms", terms);
+        map.put("minOrderValue", minOrderValue);
+        com.google.cloud.Timestamp expTimestamp;
+        try {
+            java.time.Instant instant = java.time.Instant.parse(expiryDate);
+            expTimestamp = com.google.cloud.Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), 0);
+        } catch (Exception e) {
+            expTimestamp = com.google.cloud.Timestamp.now();
+        }
+        map.put("expiryDate", expTimestamp);
+        map.put("pointsRequired", pointsRequired);
+        map.put("validityDays", validityDays);
+        map.put("createdAt", FieldValue.serverTimestamp());
+        map.put("updatedAt", FieldValue.serverTimestamp());
+        return map;
     }
 
     private void seedReviews() {
         List<Map<String, Object>> reviews = Arrays.asList(
                 Map.ofEntries(
-                        Map.entry("id", "rev_001"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("id", "rev_001"),
+                        Map.entry("orderId", "order_001"),
+                        Map.entry("itemId", "item_001"),
+                        Map.entry("foodId", "prod_001"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Do an rat ngon, giao hang nhanh, dong goi ky luong."),
                         Map.entry("imageUrls", List.of(
-                                "https://example.com/review/rev001_1.jpg",
-                                "https://example.com/review/rev001_2.jpg"
+                                "https://placehold.co/600x400?text=rev001_1.jpg",
+                                "https://placehold.co/600x400?text=rev001_2.jpg"
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_002"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_002"), Map.entry("userName", "Quan Tri Vien"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/admin.jpg"),
+                        Map.entry("id", "rev_002"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_002"),
+                        Map.entry("foodId", "prod_001"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_002"),
+                        Map.entry("userName", "Quan Tri Vien"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=admin.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Mon an ngon, nhung giao hang tre hon 15 phut."),
                         Map.entry("imageUrls", List.of()),
@@ -738,19 +879,29 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_003"), Map.entry("storeId", "store_002"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("id", "rev_003"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_003"),
+                        Map.entry("foodId", "prod_004"),
+                        Map.entry("storeId", "store_002"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Tra sua rat ngon, topping nhieu, uong la lanh."),
-                        Map.entry("imageUrls", List.of("https://example.com/review/rev003_1.jpg")),
+                        Map.entry("imageUrls", List.of("https://placehold.co/600x400?text=rev003_1.jpg")),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_004"), Map.entry("storeId", "store_003"),
-                        Map.entry("userId", "user_002"), Map.entry("userName", "Quan Tri Vien"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/admin.jpg"),
+                        Map.entry("id", "rev_004"),
+                        Map.entry("orderId", "order_003"),
+                        Map.entry("itemId", "item_004"),
+                        Map.entry("foodId", "prod_006"),
+                        Map.entry("storeId", "store_003"),
+                        Map.entry("userId", "user_002"),
+                        Map.entry("userName", "Quan Tri Vien"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=admin.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Ga ran gion, an bieu nhu ham thit ngot."),
                         Map.entry("imageUrls", List.of()),
@@ -758,22 +909,32 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_005"), Map.entry("storeId", "store_004"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("id", "rev_005"),
+                        Map.entry("orderId", "order_004"),
+                        Map.entry("itemId", "item_005"),
+                        Map.entry("foodId", "prod_010"),
+                        Map.entry("storeId", "store_004"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Bun bo Hue ngon chuan, nuoc dung ngot thanh."),
                         Map.entry("imageUrls", List.of(
-                                "https://example.com/review/rev005_1.jpg",
-                                "https://example.com/review/rev005_2.jpg"
+                                "https://placehold.co/600x400?text=rev005_1.jpg",
+                                "https://placehold.co/600x400?text=rev005_2.jpg"
                         )),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_006"), Map.entry("storeId", "store_001"),
-                        Map.entry("userId", "user_003"), Map.entry("userName", "Le Van B"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/driver001.jpg"),
+                        Map.entry("id", "rev_006"),
+                        Map.entry("orderId", "order_001"),
+                        Map.entry("itemId", "item_006"),
+                        Map.entry("foodId", "prod_002"),
+                        Map.entry("storeId", "store_001"),
+                        Map.entry("userId", "user_003"),
+                        Map.entry("userName", "Le Van B"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=driver001.jpg"),
                         Map.entry("starRating", 4),
                         Map.entry("comment", "Com tam ngon, phan an vua du."),
                         Map.entry("imageUrls", List.of()),
@@ -781,21 +942,46 @@ public class FirebaseResetService {
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_007"), Map.entry("storeId", "store_002"),
-                        Map.entry("userId", "user_003"), Map.entry("userName", "Le Van B"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/driver001.jpg"),
+                        Map.entry("id", "rev_007"),
+                        Map.entry("orderId", "order_002"),
+                        Map.entry("itemId", "item_007"),
+                        Map.entry("foodId", "prod_005"),
+                        Map.entry("storeId", "store_002"),
+                        Map.entry("userId", "user_003"),
+                        Map.entry("userName", "Le Van B"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=driver001.jpg"),
                         Map.entry("starRating", 5),
                         Map.entry("comment", "Quan nay ban tra sua ngon lam, giao hang cung nhanh."),
-                        Map.entry("imageUrls", List.of("https://example.com/review/rev007_1.jpg")),
+                        Map.entry("imageUrls", List.of("https://placehold.co/600x400?text=rev007_1.jpg")),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "rev_008"), Map.entry("storeId", "store_003"),
-                        Map.entry("userId", "user_001"), Map.entry("userName", "Khoi"),
-                        Map.entry("userAvatarUrl", "https://example.com/avatar/user001.jpg"),
+                        Map.entry("id", "rev_008"),
+                        Map.entry("orderId", "order_007"),
+                        Map.entry("itemId", "item_008"),
+                        Map.entry("foodId", "prod_006"),
+                        Map.entry("storeId", "store_003"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=user001.jpg"),
                         Map.entry("starRating", 3),
                         Map.entry("comment", "An cung duoc nhung gia ca hoi cao."),
+                        Map.entry("imageUrls", List.of()),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "rev_009"),
+                        Map.entry("orderId", "order_008"),
+                        Map.entry("itemId", "item_009"),
+                        Map.entry("foodId", "prod_012"),
+                        Map.entry("storeId", "store_005"),
+                        Map.entry("userId", "user_001"),
+                        Map.entry("userName", "Khoi"),
+                        Map.entry("userAvatarUrl", "https://placehold.co/150?text=user001.jpg"),
+                        Map.entry("starRating", 5),
+                        Map.entry("comment", "Bun cha sieu ngon, thit nuong thom, nuoc cham dam da!"),
                         Map.entry("imageUrls", List.of()),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
@@ -807,141 +993,242 @@ public class FirebaseResetService {
     private void seedOrders() {
         List<Map<String, Object>> orders = new ArrayList<>();
 
-        List<Map<String, Object>> order1Items = List.of(
-                Map.of("foodId", "prod_001", "name", "Com tam suon bi cha",
-                        "price", 45000.0, "quantity", 2,
-                        "imageUrl", "https://example.com/comtam.jpg")
-        );
+        List<Map<String, Object>> order1Items = new ArrayList<>();
+        Map<String, Object> order1Item1 = new HashMap<>();
+        order1Item1.put("foodId", "prod_001"); order1Item1.put("name", "Com tam suon bi cha");
+        order1Item1.put("price", 45000.0); order1Item1.put("quantity", 2);
+        order1Item1.put("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80");
+        order1Items.add(order1Item1);
         Map<String, Object> order1 = new HashMap<>();
         order1.put("id", "order_001"); order1.put("userId", "user_001");
-        order1.put("storeId", "store_001"); order1.put("storeName", "Com tam Phuc Loc Tho");
-        order1.put("items", order1Items); order1.put("totalAmount", 140000.0);
-        order1.put("deliveryFee", 15000.0); order1.put("status", 2);
+        order1.put("storeId", "store_001");         order1.put("storeName", "Com tam Phuc Loc Tho");
+        order1.put("code", "FG001");
         order1.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
-        order1.put("paymentMethod", "momo");
+        order1.put("receiverName", "Khoi"); order1.put("receiverPhone", "0123456789");
+        order1.put("items", order1Items); order1.put("totalAmount", 140000.0);
+        order1.put("deliveryFee", 15000.0);
+        order1.put("discountAmount", 0.0);
+        order1.put("shopDiscountAmount", 0.0);
+        order1.put("freeshipDiscountAmount", 0.0);
+        order1.put("finalAmount", 155000.0);
+        order1.put("status", 2); order1.put("deliveryStep", "WAITING_PICKUP");
+        order1.put("paymentMethod", 1);
         order1.put("driverId", "user_001"); order1.put("driverName", "Le Van B");
         order1.put("driverPhone", "0912345678"); order1.put("vehiclePlate", "59A-123.45");
         order1.put("createdAt", FieldValue.serverTimestamp());
         order1.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order1);
 
-        List<Map<String, Object>> order2ItemOptions = List.of(
-                Map.of("name", "Tran chau", "price", 5000.0)
-        );
-        List<Map<String, Object>> order2Items = List.of(
-                Map.of("foodId", "prod_004", "name", "Tra sua trach tang",
-                        "price", 34000.0, "quantity", 2,
-                        "imageUrl", "https://example.com/trasua.jpg",
-                        "options", order2ItemOptions)
-        );
+        List<Map<String, Object>> order2Item1Options = new ArrayList<>();
+        Map<String, Object> order2Item1Opt = new HashMap<>();
+        order2Item1Opt.put("name", "Tran chau"); order2Item1Opt.put("price", 5000.0);
+        order2Item1Options.add(order2Item1Opt);
+        List<Map<String, Object>> order2Items = new ArrayList<>();
+        Map<String, Object> order2Item1 = new HashMap<>();
+        order2Item1.put("foodId", "prod_004"); order2Item1.put("name", "Tra sua trach tang");
+        order2Item1.put("price", 34000.0); order2Item1.put("quantity", 2);
+        order2Item1.put("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80");
+        order2Item1.put("options", order2Item1Options);
+        order2Items.add(order2Item1);
         Map<String, Object> order2 = new HashMap<>();
         order2.put("id", "order_002"); order2.put("userId", "user_001");
-        order2.put("storeId", "store_002"); order2.put("storeName", "Tra sua Tocotoco");
-        order2.put("items", order2Items); order2.put("totalAmount", 79000.0);
-        order2.put("deliveryFee", 12000.0); order2.put("status", 3);
+        order2.put("storeId", "store_002");         order2.put("storeName", "Tra sua Tocotoco");
+        order2.put("code", "FG002");
         order2.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
-        order2.put("paymentMethod", "cash");
+        order2.put("receiverName", "Khoi"); order2.put("receiverPhone", "0123456789");
+        order2.put("items", order2Items); order2.put("totalAmount", 79000.0);
+        order2.put("deliveryFee", 12000.0);
+        order2.put("discountAmount", 0.0);
+        order2.put("shopDiscountAmount", 0.0);
+        order2.put("freeshipDiscountAmount", 0.0);
+        order2.put("finalAmount", 91000.0);
+        order2.put("status", 3); order2.put("deliveryStep", "DELIVERED");
+        order2.put("paymentMethod", 2);
         order2.put("driverId", "user_003"); order2.put("driverName", "Le Van B");
         order2.put("driverPhone", "0912345678"); order2.put("vehiclePlate", "59A-123.45");
         order2.put("createdAt", FieldValue.serverTimestamp());
         order2.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order2);
 
-        List<Map<String, Object>> order3Items = List.of(
-                Map.of("foodId", "prod_007", "name", "Ga lap xuong",
-                        "price", 55000.0, "quantity", 1,
-                        "imageUrl", "https://example.com/ga.jpg"),
-                Map.of("foodId", "prod_009", "name", "Khoai tay chien",
-                        "price", 20000.0, "quantity", 1,
-                        "imageUrl", "https://example.com/khoai.jpg")
-        );
+        List<Map<String, Object>> order3Items = new ArrayList<>();
+        Map<String, Object> order3Item1 = new HashMap<>();
+        order3Item1.put("foodId", "prod_007"); order3Item1.put("name", "Ga lap xuong");
+        order3Item1.put("price", 55000.0); order3Item1.put("quantity", 1);
+        order3Item1.put("imageUrl", "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400&q=80");
+        order3Items.add(order3Item1);
+        Map<String, Object> order3Item2 = new HashMap<>();
+        order3Item2.put("foodId", "prod_009"); order3Item2.put("name", "Khoai tay chien");
+        order3Item2.put("price", 20000.0); order3Item2.put("quantity", 1);
+        order3Item2.put("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
+        order3Items.add(order3Item2);
         Map<String, Object> order3 = new HashMap<>();
         order3.put("id", "order_003"); order3.put("userId", "user_002");
-        order3.put("storeId", "store_003"); order3.put("storeName", "Ga ran KFC Nguyen Cuu");
-        order3.put("items", order3Items); order3.put("totalAmount", 93000.0);
-        order3.put("deliveryFee", 18000.0); order3.put("status", 1);
+        order3.put("storeId", "store_003");         order3.put("storeName", "Ga ran KFC Nguyen Cuu");
+        order3.put("code", "FG003");
         order3.put("deliveryAddress", "123 Le Van Viet, TP. Thu Duc");
-        order3.put("paymentMethod", "momo");
+        order3.put("receiverName", "Quan Tri Vien"); order3.put("receiverPhone", "0987654321");
+        order3.put("items", order3Items); order3.put("totalAmount", 93000.0);
+        order3.put("deliveryFee", 18000.0);
+        order3.put("discountAmount", 0.0);
+        order3.put("shopDiscountAmount", 0.0);
+        order3.put("freeshipDiscountAmount", 0.0);
+        order3.put("finalAmount", 111000.0);
+        order3.put("status", 1); order3.put("deliveryStep", "WAITING_DRIVER");
+        order3.put("paymentMethod", 1);
         order3.put("driverId", null); order3.put("driverName", null);
         order3.put("driverPhone", null); order3.put("vehiclePlate", null);
         order3.put("createdAt", FieldValue.serverTimestamp());
         order3.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order3);
 
-        List<Map<String, Object>> order4Items = List.of(
-                Map.of("foodId", "prod_010", "name", "Bun bo Hue",
-                        "price", 45000.0, "quantity", 1,
-                        "imageUrl", "https://example.com/bunbo.jpg")
-        );
+        List<Map<String, Object>> order4Items = new ArrayList<>();
+        Map<String, Object> order4Item1 = new HashMap<>();
+        order4Item1.put("foodId", "prod_010"); order4Item1.put("name", "Bun bo Hue");
+        order4Item1.put("price", 45000.0); order4Item1.put("quantity", 1);
+        order4Item1.put("imageUrl", "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80");
+        order4Items.add(order4Item1);
         Map<String, Object> order4 = new HashMap<>();
         order4.put("id", "order_004"); order4.put("userId", "user_002");
-        order4.put("storeId", "store_004"); order4.put("storeName", "Bun bo Hue Ba Le");
-        order4.put("items", order4Items); order4.put("totalAmount", 65000.0);
-        order4.put("deliveryFee", 20000.0); order4.put("status", 0);
+        order4.put("storeId", "store_004");         order4.put("storeName", "Bun bo Hue Ba Le");
+        order4.put("code", "FG004");
         order4.put("deliveryAddress", "456 Nguyen Thi Dinh, TP. Thu Duc");
-        order4.put("paymentMethod", "cash");
+        order4.put("receiverName", "Quan Tri Vien"); order4.put("receiverPhone", "0987654321");
+        order4.put("items", order4Items); order4.put("totalAmount", 65000.0);
+        order4.put("deliveryFee", 20000.0);
+        order4.put("discountAmount", 0.0);
+        order4.put("shopDiscountAmount", 0.0);
+        order4.put("freeshipDiscountAmount", 0.0);
+        order4.put("finalAmount", 85000.0);
+        order4.put("status", 0); order4.put("deliveryStep", "PENDING_STORE_CONFIRMATION");
+        order4.put("paymentMethod", 2);
         order4.put("driverId", null); order4.put("driverName", null);
         order4.put("driverPhone", null); order4.put("vehiclePlate", null);
         order4.put("createdAt", FieldValue.serverTimestamp());
         order4.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order4);
 
-        List<Map<String, Object>> order5Items = List.of(
-                Map.of("foodId", "prod_002", "name", "Com tam ga xoi mo",
-                        "price", 50000.0, "quantity", 1,
-                        "imageUrl", "https://example.com/comga.jpg")
-        );
+        List<Map<String, Object>> order5Items = new ArrayList<>();
+        Map<String, Object> order5Item1 = new HashMap<>();
+        order5Item1.put("foodId", "prod_002"); order5Item1.put("name", "Com tam ga xoi mo");
+        order5Item1.put("price", 50000.0); order5Item1.put("quantity", 1);
+        order5Item1.put("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80");
+        order5Items.add(order5Item1);
         Map<String, Object> order5 = new HashMap<>();
         order5.put("id", "order_005"); order5.put("userId", "user_001");
-        order5.put("storeId", "store_001"); order5.put("storeName", "Com tam Phuc Loc Tho");
-        order5.put("items", order5Items); order5.put("totalAmount", 65000.0);
-        order5.put("deliveryFee", 15000.0); order5.put("status", 4);
+        order5.put("storeId", "store_001");         order5.put("storeName", "Com tam Phuc Loc Tho");
+        order5.put("code", "FG005");
         order5.put("deliveryAddress", "Ky tuc xa UTC2, Quan 9, TP.HCM");
-        order5.put("paymentMethod", "zalo");
+        order5.put("receiverName", "Khoi"); order5.put("receiverPhone", "0123456789");
+        order5.put("items", order5Items); order5.put("totalAmount", 65000.0);
+        order5.put("deliveryFee", 15000.0);
+        order5.put("discountAmount", 0.0);
+        order5.put("shopDiscountAmount", 0.0);
+        order5.put("freeshipDiscountAmount", 0.0);
+        order5.put("finalAmount", 80000.0);
+        order5.put("status", 4); order5.put("deliveryStep", "CANCELLED");
+        order5.put("paymentMethod", 3);
         order5.put("driverId", null); order5.put("driverName", null);
         order5.put("driverPhone", null); order5.put("vehiclePlate", null);
         order5.put("createdAt", FieldValue.serverTimestamp());
         order5.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order5);
 
-        List<Map<String, Object>> order6Items = List.of(
-                Map.of("foodId", "prod_005", "name", "Tra dao cam",
-                        "price", 25000.0, "quantity", 2,
-                        "imageUrl", "https://example.com/tradao.jpg"),
-                Map.of("foodId", "prod_014", "name", "Tra sua trai cay",
-                        "price", 32000.0, "quantity", 1,
-                        "imageUrl", "https://example.com/tratraitac.jpg")
-        );
+        List<Map<String, Object>> order6Items = new ArrayList<>();
+        Map<String, Object> order6Item1 = new HashMap<>();
+        order6Item1.put("foodId", "prod_005"); order6Item1.put("name", "Tra dao cam");
+        order6Item1.put("price", 25000.0); order6Item1.put("quantity", 2);
+        order6Item1.put("imageUrl", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80");
+        order6Items.add(order6Item1);
+        Map<String, Object> order6Item2 = new HashMap<>();
+        order6Item2.put("foodId", "prod_014"); order6Item2.put("name", "Tra sua trai cay");
+        order6Item2.put("price", 32000.0); order6Item2.put("quantity", 1);
+        order6Item2.put("imageUrl", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
+        order6Items.add(order6Item2);
         Map<String, Object> order6 = new HashMap<>();
         order6.put("id", "order_006"); order6.put("userId", "user_003");
-        order6.put("storeId", "store_002"); order6.put("storeName", "Tra sua Tocotoco");
-        order6.put("items", order6Items); order6.put("totalAmount", 87000.0);
-        order6.put("deliveryFee", 12000.0); order6.put("status", 2);
+        order6.put("storeId", "store_002");         order6.put("storeName", "Tra sua Tocotoco");
+        order6.put("code", "FG006");
         order6.put("deliveryAddress", "101 Pho Hue, Q.1, TP.HCM");
-        order6.put("paymentMethod", "card");
+        order6.put("receiverName", "Le Van B"); order6.put("receiverPhone", "0912345678");
+        order6.put("items", order6Items); order6.put("totalAmount", 87000.0);
+        order6.put("deliveryFee", 12000.0);
+        order6.put("discountAmount", 0.0);
+        order6.put("shopDiscountAmount", 0.0);
+        order6.put("freeshipDiscountAmount", 0.0);
+        order6.put("finalAmount", 99000.0);
+        order6.put("status", 2); order6.put("deliveryStep", "ON_THE_WAY");
+        order6.put("paymentMethod", 4);
         order6.put("driverId", "user_001"); order6.put("driverName", "Le Van B");
         order6.put("driverPhone", "0912345678"); order6.put("vehiclePlate", "59A-123.45");
         order6.put("createdAt", FieldValue.serverTimestamp());
         order6.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order6);
 
-        List<Map<String, Object>> order7Items = List.of(
-                Map.of("foodId", "prod_008", "name", "Mi ga chua cay",
-                        "price", 35000.0, "quantity", 2,
-                        "imageUrl", "https://example.com/miga.jpg")
-        );
+        List<Map<String, Object>> order7Items = new ArrayList<>();
+        Map<String, Object> order7Item1 = new HashMap<>();
+        order7Item1.put("foodId", "prod_008"); order7Item1.put("name", "Mi ga chua cay");
+        order7Item1.put("price", 35000.0); order7Item1.put("quantity", 2);
+        order7Item1.put("imageUrl", "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&q=80");
+        order7Items.add(order7Item1);
         Map<String, Object> order7 = new HashMap<>();
         order7.put("id", "order_007"); order7.put("userId", "user_002");
-        order7.put("storeId", "store_003"); order7.put("storeName", "Ga ran KFC Nguyen Cuu");
-        order7.put("items", order7Items); order7.put("totalAmount", 88000.0);
-        order7.put("deliveryFee", 18000.0); order7.put("status", 3);
+        order7.put("storeId", "store_003");         order7.put("storeName", "Ga ran KFC Nguyen Cuu");
+        order7.put("code", "FG007");
         order7.put("deliveryAddress", "789 Nguyen Cuu, TP. Thu Duc");
-        order7.put("paymentMethod", "momo");
+        order7.put("receiverName", "Quan Tri Vien"); order7.put("receiverPhone", "0987654321");
+        order7.put("items", order7Items); order7.put("totalAmount", 88000.0);
+        order7.put("deliveryFee", 18000.0);
+        order7.put("discountAmount", 0.0);
+        order7.put("shopDiscountAmount", 0.0);
+        order7.put("freeshipDiscountAmount", 0.0);
+        order7.put("finalAmount", 106000.0);
+        order7.put("status", 3); order7.put("deliveryStep", "DELIVERED");
+        order7.put("paymentMethod", 1);
         order7.put("driverId", "user_003"); order7.put("driverName", "Le Van B");
         order7.put("driverPhone", "0912345678"); order7.put("vehiclePlate", "59A-123.45");
         order7.put("createdAt", FieldValue.serverTimestamp());
         order7.put("updatedAt", FieldValue.serverTimestamp());
         orders.add(order7);
+
+        List<Map<String, Object>> order8Items = new ArrayList<>();
+        Map<String, Object> order8Item1 = new HashMap<>();
+        order8Item1.put("foodId", "prod_016");
+        order8Item1.put("name", "Bún chả Hà Nội");
+        order8Item1.put("price", 65000.0);
+        order8Item1.put("quantity", 2);
+        order8Item1.put("imageUrl", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80");
+        List<Map<String, Object>> order8Item1Options = new ArrayList<>();
+        Map<String, Object> order8Item1Opt = new HashMap<>();
+        order8Item1Opt.put("name", "Phần đặc biệt");
+        order8Item1Opt.put("price", 15000.0);
+        order8Item1Options.add(order8Item1Opt);
+        order8Item1.put("options", order8Item1Options);
+        order8Items.add(order8Item1);
+
+        Map<String, Object> order8 = new HashMap<>();
+        order8.put("id", "order_008");
+        order8.put("userId", "user_001");
+        order8.put("storeId", "store_005");
+        order8.put("storeName", "Quán Bún Chả");
+        order8.put("code", "FG008");
+        order8.put("addressId", "addr_001");
+        order8.put("items", order8Items);
+        order8.put("totalAmount", 150000.0);
+        order8.put("deliveryFee", 20000.0);
+        order8.put("discountAmount", 0.0);
+        order8.put("shopDiscountAmount", 0.0);
+        order8.put("freeshipDiscountAmount", 0.0);
+        order8.put("finalAmount", 170000.0);
+        order8.put("status", 3); order8.put("deliveryStep", "DELIVERED");
+        order8.put("deliveryAddress", "123 Lê Văn Việt, TP Thủ Đức");
+        order8.put("receiverName", "Khôi");
+        order8.put("receiverPhone", "0123456789");
+        order8.put("paymentMethod", 1);
+        order8.put("driverName", "Lê Văn B");
+        order8.put("driverPhone", "0912345678");
+        order8.put("createdAt", FieldValue.serverTimestamp());
+        order8.put("updatedAt", FieldValue.serverTimestamp());
+        orders.add(order8);
 
         seedDirect("orders", orders);
     }
@@ -1040,7 +1327,7 @@ public class FirebaseResetService {
                         Map.entry("id", "cart_item_001"), Map.entry("storeId", "store_001"),
                         Map.entry("foodId", "prod_001"), Map.entry("name", "Com tam suon bi cha"),
                         Map.entry("price", 45000.0), Map.entry("quantity", 2),
-                        Map.entry("imageUrl", "https://example.com/comtam.jpg"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&q=80"),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
@@ -1054,7 +1341,7 @@ public class FirebaseResetService {
                                 Map.of("name", "Thach trai cay", "price", 8000.0)
                         )),
                         Map.entry("note", "It duong"),
-                        Map.entry("imageUrl", "https://example.com/trasua.jpg"),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1558857563-b371033873b8?w=400&q=80"),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -1063,22 +1350,36 @@ public class FirebaseResetService {
 
         List<Map<String, Object>> myVouchers = Arrays.asList(
                 Map.ofEntries(
-                        Map.entry("id", "mv_001"), Map.entry("name", "Giam 20K phi giao hang"),
+                        Map.entry("id", "mv_001"),
+                        Map.entry("title", "Giam 20K phi giao hang"),
+                        Map.entry("subtitle", "Ap dung cho don tu 50K."),
                         Map.entry("code", "FREESHIP20"),
                         Map.entry("description", "Ap dung cho don tu 100K"),
-                        Map.entry("expiryDate", java.time.Instant.parse("2026-12-31T23:59:59Z")),
-                        Map.entry("discountValue", 20000.0), Map.entry("isPercentage", false),
+                        Map.entry("expiryDate", FieldValue.serverTimestamp()),
+                        Map.entry("type", 2),
+                        Map.entry("value", 20000.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
+                        Map.entry("terms", "Ap dung cho don tu 50K."),
                         Map.entry("minOrderValue", 50000.0),
+                        Map.entry("isActive", true),
+                        Map.entry("isFreeship", true),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 ),
                 Map.ofEntries(
-                        Map.entry("id", "mv_002"), Map.entry("name", "Giam 10% cho don hang"),
+                        Map.entry("id", "mv_002"),
+                        Map.entry("title", "Giam 10% cho don hang"),
+                        Map.entry("subtitle", "Giam 10% cho moi don hang."),
                         Map.entry("code", "SAVE10"),
                         Map.entry("description", "Giam 10% cho moi don hang"),
-                        Map.entry("expiryDate", java.time.Instant.parse("2026-12-31T23:59:59Z")),
-                        Map.entry("discountValue", 10.0), Map.entry("isPercentage", true),
+                        Map.entry("expiryDate", FieldValue.serverTimestamp()),
+                        Map.entry("type", 1),
+                        Map.entry("value", 10.0),
+                        Map.entry("imageUrl", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80"),
+                        Map.entry("terms", "Giam 10% cho moi don hang."),
                         Map.entry("minOrderValue", 50000.0),
+                        Map.entry("isActive", true),
+                        Map.entry("isFreeship", false),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -1103,6 +1404,24 @@ public class FirebaseResetService {
                         Map.entry("driverLicense", "DL987654321"),
                         Map.entry("isActive", true), Map.entry("rating", 4.7),
                         Map.entry("totalTrips", 80),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_004"), Map.entry("vehiclePlate", "60A-111.22"),
+                        Map.entry("vehicleType", "Honda Vision"),
+                        Map.entry("driverLicense", "DL456789123"),
+                        Map.entry("isActive", true), Map.entry("rating", 4.6),
+                        Map.entry("totalTrips", 120),
+                        Map.entry("createdAt", FieldValue.serverTimestamp()),
+                        Map.entry("updatedAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "user_005"), Map.entry("vehiclePlate", "61C-333.44"),
+                        Map.entry("vehicleType", "Yamaha Nozza"),
+                        Map.entry("driverLicense", "DL789123456"),
+                        Map.entry("isActive", true), Map.entry("rating", 4.8),
+                        Map.entry("totalTrips", 200),
                         Map.entry("createdAt", FieldValue.serverTimestamp()),
                         Map.entry("updatedAt", FieldValue.serverTimestamp())
                 )
@@ -1171,5 +1490,37 @@ public class FirebaseResetService {
                 )
         );
         seedDirect("admin_profiles", profiles);
+
+        List<Map<String, Object>> notifications = Arrays.asList(
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_001"),
+                        Map.entry("type", 11),
+                        Map.entry("title", "Đơn hàng mới phát sinh #FG008"),
+                        Map.entry("body", "Khách hàng Khôi vừa đặt đơn hàng trị giá 170.000đ tại Quán Bún Chả."),
+                        Map.entry("referenceId", "order_008"),
+                        Map.entry("orderId", "order_008"),
+                        Map.entry("isRead", false),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_002"),
+                        Map.entry("type", 12),
+                        Map.entry("title", "Yêu cầu rút tiền từ Cửa hàng"),
+                        Map.entry("body", "Quán Cơm Tấm Phúc Lộc Thọ gửi yêu cầu duyệt rút 500.000đ về ví liên kết."),
+                        Map.entry("referenceId", "wallet_trans_001"),
+                        Map.entry("isRead", false),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                ),
+                Map.ofEntries(
+                        Map.entry("id", "anotif_admin_003"),
+                        Map.entry("type", 31),
+                        Map.entry("title", "Đánh giá 5 sao toàn sàn"),
+                        Map.entry("body", "Khách hàng Khôi vừa gửi đánh giá 5 sao cho sản phẩm của Quán Bún Chả."),
+                        Map.entry("referenceId", "order_008"),
+                        Map.entry("isRead", true),
+                        Map.entry("createdAt", FieldValue.serverTimestamp())
+                )
+        );
+        seedSubCollection("admin_profiles/user_002/notifications", notifications);
     }
 }

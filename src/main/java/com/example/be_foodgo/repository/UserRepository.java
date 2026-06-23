@@ -9,8 +9,10 @@ import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.stereotype.Repository;
 
+import com.google.cloud.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -35,6 +37,11 @@ public class UserRepository {
         return !snapshot.isEmpty();
     }
 
+    public Map<String, Object> findById(String userId) throws ExecutionException, InterruptedException {
+        DocumentSnapshot doc = getCollection().document(userId).get().get();
+        return doc.exists() ? doc.getData() : null;
+    }
+
     public boolean tonTaiPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
         Query query = getCollection().whereEqualTo("phoneNumber", phoneNumber).limit(1);
         QuerySnapshot snapshot = query.get().get();
@@ -44,7 +51,10 @@ public class UserRepository {
     public User timTheoId(String id) throws ExecutionException, InterruptedException {
         DocumentSnapshot doc = getCollection().document(id).get().get();
         if (!doc.exists()) {
-            return null;
+            doc = getCollection().document("firebase:" + id).get().get();
+            if (!doc.exists()) {
+                return null;
+            }
         }
         return documentToUser(doc);
     }
@@ -73,6 +83,14 @@ public class UserRepository {
         docRef.update(updates).get();
     }
 
+    public void xacThucEmail(String userId) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isEmailVerified", true);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
     public void capNhatThongTinHoSo(String userId, String fullName, String photoUrl) throws ExecutionException, InterruptedException {
         DocumentReference docRef = getCollection().document(userId);
         Map<String, Object> updates = new HashMap<>();
@@ -82,6 +100,32 @@ public class UserRepository {
         if (photoUrl != null) {
             updates.put("photoUrl", photoUrl);
         }
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
+    public void capNhatHoSoDayDu(String userId, String fullName, String email, String photoUrl) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        if (fullName != null && !fullName.isBlank()) {
+            updates.put("fullName", fullName.trim());
+        }
+        if (email != null && !email.isBlank()) {
+            updates.put("email", email.trim().toLowerCase());
+        }
+        if (photoUrl != null) {
+            updates.put("photoUrl", photoUrl);
+        }
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
+    public void capNhatMerchantHoSo(String userId, String businessName, String phoneNumber, String photoUrl) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        if (businessName != null) updates.put("fullName", businessName);
+        if (phoneNumber != null) updates.put("phoneNumber", phoneNumber);
+        if (photoUrl != null) updates.put("photoUrl", photoUrl);
         updates.put("updatedAt", java.time.Instant.now().toString());
         docRef.update(updates).get();
     }
@@ -121,6 +165,10 @@ public class UserRepository {
                 }
             }
         }
+        Boolean active = true;
+        if (data.containsKey("isActive") && data.get("isActive") != null) {
+            active = (Boolean) data.get("isActive");
+        }
         return User.builder()
                 .id((String) data.get("id"))
                 .email((String) data.get("email"))
@@ -129,8 +177,10 @@ public class UserRepository {
                 .phoneNumber((String) data.get("phoneNumber"))
                 .photoUrl((String) data.get("photoUrl"))
                 .roles(roles)
-                .createdAt((String) data.get("createdAt"))
-                .updatedAt((String) data.get("updatedAt"))
+                .createdAt(objectToString(data.get("createdAt")))
+                .updatedAt(objectToString(data.get("updatedAt")))
+                .isEmailVerified(data.get("isEmailVerified") != null ? (Boolean) data.get("isEmailVerified") : false)
+                .isActive(active)
                 .build();
     }
 
@@ -145,6 +195,69 @@ public class UserRepository {
         map.put("roles", user.getRoles());
         map.put("createdAt", user.getCreatedAt());
         map.put("updatedAt", user.getUpdatedAt());
+        map.put("isEmailVerified", user.getIsEmailVerified() != null ? user.getIsEmailVerified() : false);
+        map.put("isActive", user.getIsActive() != null ? user.getIsActive() : true);
         return map;
+    }
+
+    public List<User> timTatCa(Integer role) throws ExecutionException, InterruptedException {
+        Query query = getCollection();
+        QuerySnapshot snapshot = query.get().get();
+        List<User> users = new ArrayList<>();
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            User u = documentToUser(doc);
+            if (u != null) {
+                if (role == null || (u.getRoles() != null && u.getRoles().contains(role))) {
+                    users.add(u);
+                }
+            }
+        }
+        return users;
+    }
+
+    public void updateActiveStatus(String userId, boolean isActive) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isActive", isActive);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
+    private String objectToString(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+        if (obj instanceof String) {
+            return (String) obj;
+        }
+        if (obj instanceof Timestamp) {
+            return ((Timestamp) obj).toString();
+        }
+        return obj.toString();
+    }
+
+    public void capNhatRoles(String userId, List<Integer> roles) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = getCollection().document(userId);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("roles", roles);
+        updates.put("updatedAt", java.time.Instant.now().toString());
+        docRef.update(updates).get();
+    }
+
+    public List<Integer> themRoleNeuChuaCo(String userId, Integer role) throws ExecutionException, InterruptedException {
+        User user = timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+
+        LinkedHashSet<Integer> mergedRoles = new LinkedHashSet<>();
+        if (user.getRoles() != null) {
+            mergedRoles.addAll(user.getRoles());
+        }
+        mergedRoles.add(role);
+
+        List<Integer> updatedRoles = new ArrayList<>(mergedRoles);
+        capNhatRoles(userId, updatedRoles);
+        return updatedRoles;
     }
 }

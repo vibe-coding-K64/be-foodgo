@@ -15,13 +15,14 @@ import java.util.Date;
 @Builder
 public class CategoryDTO {
     private String id;
+    // storeId = null => danh muc he thong (system)
+    // storeId != null => danh muc cua hang (store)
     private String storeId;
 
     @NotBlank(message = "Tên danh mục không được để trống")
     @jakarta.validation.constraints.Size(min = 2, max = 50, message = "Tên danh mục phải từ 2 đến 50 ký tự")
     private String name;
 
-    @NotBlank(message = "Mã icon không được để trống")
     private String icon;
 
     @NotNull(message = "Thứ tự không được để trống")

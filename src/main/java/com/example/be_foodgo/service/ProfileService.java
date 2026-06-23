@@ -1,14 +1,20 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.ChangePasswordRequest;
+import com.example.be_foodgo.dto.UpdateProfileMultipartRequest;
 import com.example.be_foodgo.dto.UpdateProfileRequest;
 import com.example.be_foodgo.dto.UserResponse;
 import com.example.be_foodgo.model.User;
+import com.example.be_foodgo.model.AdminProfile;
 import com.example.be_foodgo.repository.UserRepository;
+import com.example.be_foodgo.repository.AdminProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Service
 public class ProfileService {
@@ -17,10 +23,17 @@ public class ProfileService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CloudinaryService cloudinaryService;
+    private final AdminProfileRepository adminProfileRepository;
 
-    public ProfileService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public ProfileService(UserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          CloudinaryService cloudinaryService,
+                          AdminProfileRepository adminProfileRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.cloudinaryService = cloudinaryService;
+        this.adminProfileRepository = adminProfileRepository;
     }
 
     public UserResponse updateProfile(String userId, UpdateProfileRequest request) throws Exception {
@@ -32,11 +45,104 @@ public class ProfileService {
             throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
         }
 
-        userRepository.capNhatThongTinHoSo(userId, request.getFullName(), request.getAvatarUrl());
+        String newAvatarUrl = request.getAvatarUrl();
+        String oldAvatarUrl = user.getPhotoUrl();
+
+        if (newAvatarUrl != null && !newAvatarUrl.isBlank()
+                && !newAvatarUrl.equals(oldAvatarUrl)) {
+            if (oldAvatarUrl != null && !oldAvatarUrl.isBlank()
+                    && oldAvatarUrl.contains("cloudinary.com")) {
+                cloudinaryService.deleteAvatar(oldAvatarUrl);
+            }
+        }
+
+        userRepository.capNhatThongTinHoSo(userId, request.getFullName(), newAvatarUrl);
         log.info("Cap nhat ho so thanh cong cho userId: {}", userId);
 
         User userCapNhat = userRepository.timTheoId(userId);
         return mapToUserResponse(userCapNhat);
+    }
+
+    public UserResponse updateProfileMultipart(String userId,
+                                               UpdateProfileMultipartRequest request,
+                                               MultipartFile avatarFile) throws Exception {
+        log.info("Bat dau cap nhat ho so (multipart) cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            log.warn("Khong tim thay tai khoan voi userId: {}", userId);
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                log.warn("Mat khau xac thuc khong dung cho userId: {}", userId);
+                throw new IllegalArgumentException("Mat khau xac thuc khong dung.");
+            }
+        }
+
+        String newEmail = request.getEmail();
+        if (newEmail != null && !newEmail.isBlank()) {
+            String normalizedEmail = newEmail.trim().toLowerCase();
+            if (!normalizedEmail.equalsIgnoreCase(user.getEmail())) {
+                boolean tonTai = userRepository.tonTaiEmail(normalizedEmail);
+                if (tonTai) {
+                    log.warn("Email da ton tai: {}", normalizedEmail);
+                    throw new IllegalArgumentException("Email da duoc su dung boi tai khoan khac.");
+                }
+            }
+        }
+
+        String newPhotoUrl = null;
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            newPhotoUrl = cloudinaryService.uploadAvatar(avatarFile, userId);
+            String oldPhotoUrl = user.getPhotoUrl();
+            if (oldPhotoUrl != null && !oldPhotoUrl.isBlank()) {
+                cloudinaryService.deleteAvatar(oldPhotoUrl);
+            }
+        }
+
+        String fullName = request.getFullName();
+        userRepository.capNhatHoSoDayDu(userId, fullName, newEmail, newPhotoUrl);
+        log.info("Cap nhat ho so thanh cong cho userId: {}", userId);
+
+        User userCapNhat = userRepository.timTheoId(userId);
+        return mapToUserResponse(userCapNhat);
+    }
+
+    public UserResponse updateMerchantProfile(String userId, com.example.be_foodgo.dto.UpdateMerchantProfileRequest request) throws Exception {
+        log.info("Bắt đầu cập nhật hồ sơ merchant cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        userRepository.capNhatMerchantHoSo(userId, request.getBusinessName(), request.getPhoneNumber(), request.getPhotoUrl());
+
+        if (request.getTaxCode() != null) {
+            com.google.cloud.firestore.Firestore firestore = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            java.util.Map<String, Object> merchantUpdates = new java.util.HashMap<>();
+            merchantUpdates.put("taxCode", request.getTaxCode());
+            firestore.collection("merchant_profiles").document(userId).set(merchantUpdates, com.google.cloud.firestore.SetOptions.merge()).get();
+        }
+
+        log.info("Cập nhật hồ sơ merchant thành công cho userId: {}", userId);
+        User userCapNhat = userRepository.timTheoId(userId);
+        return mapToUserResponse(userCapNhat);
+    }
+
+    public UserResponse getProfile(String userId) throws Exception {
+        log.info("Bat dau lay ho so cho userId: {}", userId);
+
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            log.warn("Khong tim thay tai khoan voi userId: {}", userId);
+            throw new IllegalArgumentException("Khong tim thay tai khoan voi ID: " + userId);
+        }
+
+        log.info("Lay ho so thanh cong cho userId: {}", userId);
+        return mapToUserResponse(user);
     }
 
     public void changePassword(String userId, ChangePasswordRequest request) throws Exception {
@@ -50,12 +156,35 @@ public class ProfileService {
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             log.warn("Mat khau cu khong dung cho userId: {}", userId);
-            throw new IllegalArgumentException("Mat khau cu khong dung.");
+            throw new IllegalArgumentException("Mật khẩu cũ không đúng.");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getNewPassword());
         userRepository.capNhatPassword(userId, hashedPassword);
         log.info("Doi mat khau thanh cong cho userId: {}", userId);
+    }
+
+    public java.util.List<UserResponse> timTatCaUsers(Integer role) throws Exception {
+        log.info("Admin lay danh sach nguoi dung, filter role={}", role);
+        java.util.List<com.example.be_foodgo.model.User> users = userRepository.timTatCa(role);
+        java.util.List<UserResponse> result = new java.util.ArrayList<>();
+        for (com.example.be_foodgo.model.User u : users) {
+            result.add(mapToUserResponse(u));
+        }
+        return result;
+    }
+
+    public boolean toggleUserActive(String userId) throws Exception {
+        log.info("Admin toggle trang thai active cho userId: {}", userId);
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+        boolean currentActive = user.getIsActive() != null ? user.getIsActive() : true;
+        boolean newActive = !currentActive;
+        userRepository.updateActiveStatus(userId, newActive);
+        log.info("Da thay doi active tu {} sang {} cho userId {}", currentActive, newActive, userId);
+        return newActive;
     }
 
     private UserResponse mapToUserResponse(User user) {
@@ -66,6 +195,125 @@ public class ProfileService {
                 .phoneNumber(user.getPhoneNumber())
                 .photoUrl(user.getPhotoUrl())
                 .roles(user.getRoles())
+                .isActive(user.getIsActive() != null ? user.getIsActive() : true)
                 .build();
+    }
+
+    public UserResponse createAdminUser(String email, String password, String fullName, String phoneNumber,
+                                       String department, Integer adminLevel, List<String> permissions) throws Exception {
+        log.info("Bat dau tao admin user voi email: {}", email);
+        String normalizedEmail = email.trim().toLowerCase();
+        if (userRepository.tonTaiEmail(normalizedEmail)) {
+            throw new IllegalArgumentException("Email da ton tai trong he thong.");
+        }
+        if (phoneNumber != null && !phoneNumber.isBlank() && userRepository.tonTaiPhoneNumber(phoneNumber.trim())) {
+            throw new IllegalArgumentException("So dien thoai da ton tai trong he thong.");
+        }
+
+        String userId = userRepository.sinhNextUserId();
+        String hashedPassword = passwordEncoder.encode(password);
+        String now = java.time.Instant.now().toString();
+
+        User newUser = User.builder()
+                .id(userId)
+                .email(normalizedEmail)
+                .password(hashedPassword)
+                .fullName(fullName != null ? fullName.trim() : "Admin")
+                .phoneNumber(phoneNumber != null ? phoneNumber.trim() : "")
+                .photoUrl("")
+                .roles(List.of(4)) // 4 = Admin
+                .createdAt(now)
+                .updatedAt(now)
+                .isEmailVerified(true)
+                .isActive(true)
+                .build();
+
+        userRepository.taoUser(newUser);
+
+        AdminProfile adminProfile = AdminProfile.builder()
+                .id(userId)
+                .adminLevel(adminLevel != null ? adminLevel : 1)
+                .department(department != null ? department.trim() : "Management")
+                .permissions(permissions != null ? permissions : List.of())
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        adminProfileRepository.saveProfile(adminProfile);
+        log.info("Tao admin user va admin profile thanh cong cho userId: {}", userId);
+
+        return mapToUserResponse(newUser);
+    }
+
+    public void updateUserRoles(String userId, List<Integer> roles) throws Exception {
+        log.info("Admin cap nhat vai tro cho userId: {} -> {}", userId, roles);
+        User user = userRepository.timTheoId(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Khong tim thay nguoi dung voi ID: " + userId);
+        }
+        userRepository.capNhatRoles(userId, roles);
+
+        // Neu co vai tro Admin (4) ma chua co AdminProfile, tu dong tao mot cai mac dinh
+        if (roles.contains(4)) {
+            AdminProfile existingProfile = adminProfileRepository.getProfileById(userId);
+            if (existingProfile == null) {
+                String now = java.time.Instant.now().toString();
+                AdminProfile adminProfile = AdminProfile.builder()
+                        .id(userId)
+                        .adminLevel(1)
+                        .department("Staff")
+                        .permissions(List.of())
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build();
+                adminProfileRepository.saveProfile(adminProfile);
+            }
+        }
+    }
+
+    public AdminProfile getAdminProfile(String userId) throws Exception {
+        log.info("Lay thong tin phan quyen admin cho userId: {}", userId);
+        AdminProfile profile = adminProfileRepository.getProfileById(userId);
+        if (profile == null) {
+            // Tao moi mac dinh neu chua ton tai profile nhung co vai tro Admin
+            User user = userRepository.timTheoId(userId);
+            if (user != null && user.getRoles() != null && user.getRoles().contains(4)) {
+                String now = java.time.Instant.now().toString();
+                profile = AdminProfile.builder()
+                        .id(userId)
+                        .adminLevel(1)
+                        .department("Staff")
+                        .permissions(List.of())
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build();
+                adminProfileRepository.saveProfile(profile);
+            } else {
+                throw new IllegalArgumentException("Nguoi dung khong phai la Admin hoac khong ton tai.");
+            }
+        }
+        return profile;
+    }
+
+    public void updateAdminProfile(String userId, String department, Integer adminLevel, List<String> permissions) throws Exception {
+        log.info("Cap nhat ho so admin cho userId: {}", userId);
+        AdminProfile profile = adminProfileRepository.getProfileById(userId);
+        String now = java.time.Instant.now().toString();
+        if (profile == null) {
+            profile = AdminProfile.builder()
+                    .id(userId)
+                    .adminLevel(adminLevel != null ? adminLevel : 1)
+                    .department(department != null ? department.trim() : "Management")
+                    .permissions(permissions != null ? permissions : List.of())
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .build();
+        } else {
+            if (department != null) profile.setDepartment(department.trim());
+            if (adminLevel != null) profile.setAdminLevel(adminLevel);
+            if (permissions != null) profile.setPermissions(permissions);
+            profile.setUpdatedAt(now);
+        }
+        adminProfileRepository.saveProfile(profile);
     }
 }

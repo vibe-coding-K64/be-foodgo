@@ -33,6 +33,7 @@ public class StoreRepository {
             Store store = document.toObject(Store.class);
             if (store != null) {
                 store.setId(document.getId());
+                store.setIsOpen(document.getBoolean("isOpen") != null && document.getBoolean("isOpen"));
             }
             return store;
         }
@@ -65,7 +66,27 @@ public class StoreRepository {
             Store store = doc.toObject(Store.class);
             if (store != null) {
                 store.setId(doc.getId());
+                store.setIsOpen(doc.getBoolean("isOpen") != null && doc.getBoolean("isOpen"));
                 stores.add(store);
+            }
+        }
+        return stores;
+    }
+
+    public List<Store> findOpenStores() throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
+                .whereEqualTo("isOpen", true).get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        List<Store> stores = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : documents) {
+            Store store = doc.toObject(Store.class);
+            if (store != null) {
+                store.setId(doc.getId());
+                store.setIsOpen(doc.getBoolean("isOpen") != null && doc.getBoolean("isOpen"));
+                String status = store.getApprovalStatus();
+                if (status == null || "approved".equals(status)) {
+                    stores.add(store);
+                }
             }
         }
         return stores;

@@ -29,17 +29,22 @@ public class ProductDTO {
 
     private String imageUrl;
     
-    private boolean outOfStock; // note boolean outOfStock to match Jackson
-    private boolean featured;
+    private Boolean isOutOfStock;
+    private Boolean isFeatured;
 
     private List<ProductOptionGroupDTO> optionGroups;
+
+    @PositiveOrZero(message = "Rating phải >= 0")
+    private Double rating;
+
+    @PositiveOrZero(message = "Review count phải >= 0")
+    private Integer reviewCount;
 
     @Data
     public static class ProductOptionGroupDTO {
         @NotBlank(message = "Tên nhóm không được để trống")
         private String name;
-        private boolean isRequired;
-        private int maxChoices;
+        private Boolean isSingleSelect;
         private List<ProductOptionDTO> options;
     }
 

@@ -9,17 +9,19 @@ public class Voucher {
     private String title;
     private String subtitle;
     private String code;
-    private int type; // 1: %, 2: cash (không phần trăm)
+    private int type;
     private double value;
-    private String imageUrl;
-    private String terms;
     private int pointsRequired;
+    private String imageUrl;
     private int remaining;
+    private String terms;
     private double minOrderValue;
     private int limitCount;
     private int usedCount;
     private Date expiryDate;
     private boolean isActive;
+    private int validityDays;
+    private boolean isFreeship;
     private Date createdAt;
     private Date updatedAt;
 
@@ -47,17 +49,17 @@ public class Voucher {
     public double getValue() { return value; }
     public void setValue(double value) { this.value = value; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-
-    public String getTerms() { return terms; }
-    public void setTerms(String terms) { this.terms = terms; }
-
     public int getPointsRequired() { return pointsRequired; }
     public void setPointsRequired(int pointsRequired) { this.pointsRequired = pointsRequired; }
 
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
     public int getRemaining() { return remaining; }
     public void setRemaining(int remaining) { this.remaining = remaining; }
+
+    public String getTerms() { return terms; }
+    public void setTerms(String terms) { this.terms = terms; }
 
     public double getMinOrderValue() { return minOrderValue; }
     public void setMinOrderValue(double minOrderValue) { this.minOrderValue = minOrderValue; }
@@ -73,6 +75,12 @@ public class Voucher {
 
     public boolean getIsActive() { return isActive; }
     public void setIsActive(boolean isActive) { this.isActive = isActive; }
+
+    public int getValidityDays() { return validityDays; }
+    public void setValidityDays(int validityDays) { this.validityDays = validityDays; }
+
+    public boolean getIsFreeship() { return isFreeship; }
+    public void setIsFreeship(boolean isFreeship) { this.isFreeship = isFreeship; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

@@ -9,6 +9,8 @@ import java.util.List;
 public class Review {
     private String id;
     private String orderId;
+    private String itemId;
+    private String foodId;
     private String storeId;
     private String userId;
     private String userName;
@@ -18,4 +20,6 @@ public class Review {
     private List<String> imageUrls;
     private Date createdAt;
     private Date updatedAt;
+    private String replyComment;
+    private Date repliedAt;
 }

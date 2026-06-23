@@ -13,6 +13,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Category {
     private String id;
+    // storeId = null => danh muc he thong (system)
+    // storeId != null => danh muc cua hang (store)
     private String storeId;
     private String name;
     private String icon;

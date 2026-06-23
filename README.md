@@ -1,204 +1,106 @@
-# FoodGo Backend
+# FoodGo - Hệ Thống Giao Đồ Ăn
 
-> Backend REST API cho ứng dụng giao đồ ăn FoodGo, được xây dựng bằng **Spring Boot** kết nối **Firebase Firestore** làm cơ sở dữ liệu.
-
----
-
-## Mục lục
-
-1. [Tổng quan](#1-tổng-quan)
-2. [Công nghệ sử dụng](#2-công-nghệ-sử-dụng)
-3. [Kiến trúc hệ thống](#3-kiến-trúc-hệ-thống)
-4. [Cấu trúc dự án](#4-cấu-trúc-dự-án)
-5. [Cài đặt](#5-cài-đặt)
-6. [Cấu hình Firebase](#6-cấu-hình-firebase)
-7. [Chạy ứng dụng](#7-chạy-ứng-dụng)
-8. [Các collection Firestore](#8-các-collection-firestore)
-9. [Vai trò người dùng](#9-vai-trò-người-dùng)
-10. [Cấu trúc API](#10-cấu-trúc-api)
-11. [Quy tắc phát triển](#11-quy-tắc-phát-triển)
-12. [Tài liệu tham khảo](#12-tài-liệu-tham-khảo)
+> Hệ thống giao đồ ăn trực tuyến với 4 vai trò: Khách hàng, Tài xế, Người bán, Quản trị viên. Backend bằng Spring Boot + Firebase Firestore, Frontend bằng Flutter.
 
 ---
 
-## 1. Tổng quan
+## Công nghệ sử dụng
 
-FoodGo là hệ thống giao đồ ăn trực tuyến với 4 vai trò chính:
+### Backend (`be-foodgo`)
 
-| Vai trò         | Mã | Mô tả                                      |
-| --------------- | -- | ------------------------------------------ |
-| Khách hàng      | 1  | Tìm kiếm quán, đặt hàng, theo dõi đơn     |
-| Tài xế          | 2  | Nhận đơn, giao hàng, GPS tracking         |
-| Người bán       | 3  | Quản lý cửa hàng, thực đơn, xử lý đơn    |
-| Quản trị viên   | 4  | Cấu hình hệ thống, đối soát tài chính     |
+| Thành phần | Công nghệ |
+|---|---|
+| Ngôn ngữ | Java 21 |
+| Framework | Spring Boot 4.0.6 |
+| Database | Firebase Firestore, Firebase Realtime Database |
+| Authentication | Firebase Admin SDK + JWT |
+| Storage | Firebase Cloud Storage, Cloudinary |
+| API Docs | SpringDoc OpenAPI |
+| Build tool | Maven |
+| Email | Spring Boot Mail (Gmail SMTP) |
+| Real-time | Spring WebSocket (STOMP) |
 
-Một người dùng có thể sở hữu nhiều vai trò cùng lúc (ví dụ: vừa là khách hàng, vừa là tài xế).
+### Frontend (Flutter)
 
----
-
-## 2. Công nghệ sử dụng
-
-| Thành phần          | Công nghệ / Phiên bản         |
-| ------------------ | ---------------------------- |
-| Ngôn ngữ lập trình | Java 21                      |
-| Framework          | Spring Boot 4.0.6            |
-| Cơ sở dữ liệu     | Firebase Firestore           |
-| Authentication     | Firebase Admin SDK           |
-| Build tool         | Maven                        |
-| Validation         | Spring Boot Validation       |
-| Security           | Spring Security              |
-| API Documentation  | Swagger / SpringDoc (nếu có) |
-
----
-
-## 3. Kiến trúc hệ thống
-
-Hệ thống sử dụng **Layered Architecture** (Kiến trúc phân lớp):
-
-```
-Client (HTTP Request)
-       │
-       ▼
-┌─────────────────┐
-│   Controller     │  Nhận request → gọi Service
-└────────┬────────┘
-         │ call
-         ▼
-┌─────────────────┐
-│    Service      │  Logic nghiệp vụ → gọi Repository
-└────────┬────────┘
-         │ call
-         ▼
-┌─────────────────┐
-│  Repository     │  Truy vấn Firestore
-└────────┬────────┘
-         │ CRUD
-         ▼
-  Firebase Firestore
-```
+| Thành phần | Công nghệ |
+|---|---|
+| Framework | Flutter |
+| Ngôn ngữ | Dart |
+| State Management | flutter_bloc |
+| Database | Firebase Firestore, Firebase Realtime Database |
+| Maps | flutter_map (OpenStreetMap) |
+| Real-time | STOMP (WebSocket) |
+| Push Notification | Firebase Cloud Messaging (FCM) |
 
 ---
 
-## 4. Cấu trúc dự án
+## Phiên bản
 
-```
-be-foodgo/
-│
-├── .mvn/                              # Maven wrapper
-├── .vscode/                           # Cấu hình VS Code
-├── docs/                              # Tài liệu dự án
-│   ├── core_features.md               # Mô tả chức năng cốt lõi
-│   ├── firebase_collections.md        # Cấu trúc Firestore
-│   └── project_structure.md           # Tài liệu này
-├── src/
-│   ├── main/
-│   │   ├── java/com/example/be_foodgo/
-│   │   │   ├── BeFoodgoApplication.java   # Entry point
-│   │   │   ├── config/                   # Cấu hình hệ thống
-│   │   │   ├── constant/                 # Enum & hằng số
-│   │   │   ├── controller/              # REST API endpoints
-│   │   │   ├── dto/                     # Data Transfer Object
-│   │   │   ├── exception/               # Xử lý lỗi tập trung
-│   │   │   ├── model/                   # Firestore document mapping
-│   │   │   ├── repository/              # Giao tiếp Firestore
-│   │   │   ├── seeder/                  # Khởi tạo dữ liệu mẫu
-│   │   │   └── service/                 # Logic nghiệp vụ
-│   │   └── resources/
-│   │       ├── application.properties    # Cấu hình Spring
-│   │       └── firebase-service-account.json  # Firebase credentials
-│   └── test/
-│       └── java/com/example/be_foodgo/
-│
-├── pom.xml                            # Maven dependencies
-├── mvnw / mvnw.cmd                   # Maven wrapper scripts
-├── .gitignore
-└── README.md
-```
+| Thành phần | Phiên bản |
+|---|---|
+| Flutter SDK | 3.11.1 |
+| Dart SDK | 3.11.1 |
+| Java | 21 |
+| Spring Boot | 4.0.6 |
+| Maven | 3.6+ |
+| Android Gradle Plugin | 8.x |
+| Kotlin | 1.9.x |
 
-### Chi tiết từng package
-
-| Package      | Chức năng                                                                              |
-| ------------ | -------------------------------------------------------------------------------------- |
-| `config`     | Cấu hình Firebase SDK, Security, Swagger, CORS...                                      |
-| `constant`   | Enum (trạng thái, role...) và hằng số dùng chung                                      |
-| `controller` | REST API endpoints. Nhận request, trả response. Không chứa logic nghiệp vụ.          |
-| `dto`        | Data Transfer Object. Đóng gói dữ liệu gửi/nhận qua API.                              |
-| `exception`  | Global Exception Handler. Xử lý lỗi tập trung.                                        |
-| `model`      | Entity/document mapping với Firestore (annotation `@DocumentReference`...).            |
-| `repository` | Truy vấn Firestore bằng Firebase Admin SDK.                                          |
-| `seeder`     | Khởi tạo dữ liệu mẫu khi ứng dụng lên (chạy 1 lần nếu chưa có dữ liệu).             |
-| `service`    | Logic nghiệp vụ. Xử lý các tác vụ phức tạp, gọi repository để truy vấn dữ liệu.    |
-
----
-
-## 5. Cài đặt
-
-### Yêu cầu
-
-- **Java Development Kit (JDK) 21** trở lên
-- **Maven 3.6+** (hoặc sử dụng Maven wrapper có sẵn)
-- **Tài khoản Firebase** với Firestore được kích hoạt
-- **firebase-service-account.json** (file credentials từ Firebase Console)
-
-### Các bước
-
-1. **Clone dự án**
+Kiểm tra phiên bản Flutter:
 
 ```bash
-git clone <repository-url>
+flutter --version
+```
+
+---
+
+## Cài đặt và chạy project
+
+### Backend (`be-foodgo`)
+
+**Yêu cầu:** JDK 21+, Maven 3.6+, tài khoản Firebase.
+
+**1. Clone project:**
+
+```bash
+git clone https://github.com/vibe-coding-K64/be-foodgo.git
 cd be-foodgo
 ```
 
-2. **Cài đặt Java 21**
+**2. Cấu hình Firebase:**
 
-Đảm bảo JDK 21 được cài đặt và biến môi trường `JAVA_HOME` trỏ đúng:
+1. Truy cập [Firebase Console](https://console.firebase.google.com/)
+2. Tạo project mới hoặc chọn project hiện có
+3. Kích hoạt **Firestore Database**, **Realtime Database**, **Storage**
+4. Vào **Project Settings** → **Service accounts** → **Generate new private key**
+5. Tải file JSON về, đổi tên thành `firebase-service-account.json`
+6. Đặt file vào `src/main/resources/`
 
-```bash
-java -version  # Kiểm tra phiên bản Java
-```
+> **Lưu ý bảo mật:** File `firebase-service-account.json` đã được thêm vào `.gitignore`. Không commit file này lên Git.
 
-3. **Cài đặt Maven dependencies**
+**3. Cấu hình `application.properties`:**
 
-```bash
-./mvnw install      # macOS/Linux
-mvnw.cmd install    # Windows
-```
-
----
-
-## 6. Cấu hình Firebase
-
-### 6.1. Tạo project Firebase
-
-1. Truy cập [Firebase Console](https://console.firebase.google.com/).
-2. Tạo project mới hoặc chọn project hiện có.
-3. Kích hoạt **Firestore Database** ở chế độ **Test Mode** (hoặc Production với quy tắc phù hợp).
-4. (Tùy chọn) Kích hoạt **Realtime Database** cho GPS tracking của tài xế.
-
-### 6.2. Lấy Service Account Credentials
-
-1. Trong Firebase Console, vào **Project Settings** → tab **Service accounts**.
-2. Chọn **Generate new private key** → tải file JSON.
-3. Đổi tên file thành `firebase-service-account.json`.
-4. Đặt file vào thư mục `src/main/resources/`.
-
-> **Lưu ý bảo mật:** File `firebase-service-account.json` chứa credentials nhạy cảm, **không được commit lên Git**. File này đã được thêm vào `.gitignore`.
-
-### 6.3. Cấu hình application.properties
-
-File `src/main/resources/application.properties`:
+File `src/main/resources/application.properties` đã có sẵn. Kiểm tra các cấu hình quan trọng:
 
 ```properties
-spring.application.name=be-foodgo
+server.port=8086
+# Firebase
+firebase.database.url=https://food-go-17a5d-default-rtdb.asia-southeast1.firebasedatabase.app/
+firebase.storage.bucket=food-go-17a5d.appspot.com
+# JWT
+jwt.secret=FoodGoJwtSecretKey2026Nam3Ki2VeryLongAndSecure256BitSecretKeyForSigningTokens
+jwt.expiration=10800000
+# Email
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=foldershop83@gmail.com
+spring.mail.password=<app-password>
+app.email.enabled=true
 ```
 
-Các cấu hình khác (database URL, Firebase path...) được load tự động từ `firebase-service-account.json` qua `FirebaseConfig.java`.
+> **Lưu ý:** Để gửi email thực, cần tạo **App Password** từ Google Account → Security → 2-Step Verification → App passwords.
 
----
-
-## 7. Chạy ứng dụng
-
-### Chạy bằng Maven
+**4. Chạy Backend:**
 
 ```bash
 # macOS / Linux
@@ -206,184 +108,257 @@ Các cấu hình khác (database URL, Firebase path...) được load tự độ
 
 # Windows
 mvnw.cmd spring-boot:run
-```
 
-### Chạy bằng JAR đã build
-
-```bash
+# Hoặc build JAR
 ./mvnw clean package -DskipTests
 java -jar target/be-foodgo-0.0.1-SNAPSHOT.jar
 ```
 
-### Kiểm tra
+Backend chạy tại: `http://localhost:8086`
 
-Sau khi chạy thành công, ứng dụng sẽ khởi tạo Firebase và tự động seed dữ liệu mẫu vào Firestore (nếu chưa có dữ liệu). Kiểm tra output console để xác nhận:
+Dữ liệu mẫu được seed tự động khi khởi động (`FirebaseDataSeeder`).
 
+---
+
+### Frontend (Flutter)
+
+**Yêu cầu:** Flutter SDK 3.11.1+, Android SDK / Xcode (macOS).
+
+**1. Clone các app Flutter:**
+
+```bash
+# Ứng dụng Khách hàng
+git clone https://github.com/vibe-coding-K64/fe_foodgo_customer.git
+
+# Ứng dụng Tài xế
+git clone https://github.com/vibe-coding-K64/fe_food_go_driver.git
+
+# Ứng dụng Người bán
+git clone https://github.com/vibe-coding-K64/fe_food_go_portal.git
+
+# Ứng dụng Quản trị viên
+git clone https://github.com/vibe-coding-K64/fe_foodgo_admin.git
 ```
-Khoi tao Firebase thanh cong.
-Firestore bean da duoc tao thanh cong.
+
+**2. Cấu hình Firebase cho từng app:**
+
+a) Tạo project Firebase tại [Firebase Console](https://console.firebase.google.com/)
+
+b) **Android:** Tải `google-services.json` → đặt vào `android/app/google-services.json`
+
+c) **iOS (macOS):** Tải `GoogleService-Info.plist` → đặt vào `ios/Runner/GoogleService-Info.plist`
+
+d) Kích hoạt trong Firebase Console:
+- **Authentication** → Sign-in method → bật **Email/Password**
+- **Firestore Database**
+- **Realtime Database**
+- **Storage**
+- **Cloud Messaging**
+
+**3. Cài đặt dependencies:**
+
+```bash
+cd <ten-app>
+flutter pub get
 ```
 
-Mặc định, ứng dụng chạy tại: `http://localhost:8080`.
+**4. Cấu hình Android (`android/app/build.gradle`):**
 
-### Tài khoản test có sẵn
-
-| User ID    | Email                     | Vai trò                        |
-| ---------- | ------------------------- | ------------------------------ |
-| `user_001` | `khachhang@gmail.com`     | Khách hàng (1), Tài xế (2), Người bán (3) |
-| `user_002` | —                         | Quản trị viên (4)              |
-
----
-
-## 8. Các collection Firestore
-
-Hệ thống sử dụng các collection chính sau:
-
-### Root Collections
-
-| Collection           | Mô tả                                              |
-| -------------------- | -------------------------------------------------- |
-| `users`              | Tài khoản người dùng (email, password, roles)     |
-| `system_configs`      | Cấu hình hệ thống (phí platform, phí giao hàng...) |
-| `wallets`            | Ví tiền của merchant và driver                    |
-| `transactions`       | Lịch sử giao dịch                                  |
-| `system_categories`  | Danh mục hiển thị trang chủ (Cơm, Phở...)         |
-| `stores`             | Thông tin cửa hàng                                 |
-| `products`           | Sản phẩm / món ăn                                  |
-| `banners`            | Banner quảng cáo trang chủ                         |
-| `vouchers`           | Voucher hệ thống                                   |
-| `system_vouchers`    | Voucher đổi bằng điểm thưởng                       |
-| `reviews`            | Đánh giá cửa hàng                                  |
-| `orders`             | Đơn hàng                                           |
-| `customer_profiles`  | Profile khách hàng + sub-collections               |
-| `driver_profiles`    | Profile tài xế + sub-collections                   |
-| `merchant_profiles`   | Profile người bán + sub-collections                |
-| `admin_profiles`      | Profile quản trị viên                              |
-
-### Sub-collections
-
-| Collection                                             | Mô tả                              |
-| ----------------------------------------------------- | ---------------------------------- |
-| `users/{userId}/search_history`                       | Lịch sử tìm kiếm                   |
-| `customer_profiles/{userId}/addresses`                | Địa chỉ giao hàng                  |
-| `customer_profiles/{userId}/payment_methods`          | Phương thức thanh toán             |
-| `customer_profiles/{userId}/notifications`           | Thông báo khách hàng               |
-| `customer_profiles/{userId}/cart`                     | Giỏ hàng                           |
-| `customer_profiles/{userId}/my_vouchers`             | Voucher đã sở hữu                  |
-| `driver_profiles/{userId}/notifications`             | Thông báo tài xế                   |
-| `merchant_profiles/{userId}/notifications`           | Thông báo người bán                |
-
-### Realtime Database
-
-| Đường dẫn                    | Mô tả                              |
-| ---------------------------- | ---------------------------------- |
-| `active_drivers/{driverId}`  | Tọa độ GPS của tài xế đang hoạt động |
-
-> Chi tiết đầy đủ về cấu trúc fields, kiểu dữ liệu, và dữ liệu mẫu của từng collection, xem [docs/firebase_collections.md](./docs/firebase_collections.md).
-
----
-
-## 9. Vai trò người dùng
-
-Hệ thống phân quyền theo giá trị `roles` trong `users`:
-
-| Mã vai trò | Tên              | Quyền hạn chính                                             |
-| ---------- | ---------------- | ----------------------------------------------------------- |
-| 1          | Khách hàng       | Tìm quán, đặt hàng, theo dõi đơn, đánh giá, tích điểm     |
-| 2          | Tài xế           | Nhận đơn, giao hàng, GPS tracking, quản lý thu nhập       |
-| 3          | Người bán        | Quản lý cửa hàng, thực đơn, xử lý đơn, quản lý tài chính  |
-| 4          | Quản trị viên    | Cấu hình hệ thống, kiểm duyệt, đối soát tài chính         |
-
-### Trạng thái đơn hàng
-
-| Giá trị | Tên           | Mô tả                       |
-| ------- | ------------- | --------------------------- |
-| 0       | Chờ xác nhận  | Đơn hàng chờ quán xác nhận  |
-| 1       | Đang chuẩn bị | Quán đang chuẩn bị món      |
-| 2       | Đang giao     | Tài xế đang giao hàng       |
-| 3       | Hoàn thành   | Đã giao thành công           |
-| 4       | Đã hủy        | Đơn hàng đã bị hủy           |
-
-### Hạng thành viên (membershipTier)
-
-| Giá trị | Hạng       |
-| ------- | ---------- |
-| 0       | Đồng       |
-| 1       | Bạc        |
-| 2       | Vàng       |
-| 3       | Kim Cương  |
-
----
-
-## 10. Cấu trúc API
-
-Các REST API endpoints được tổ chức theo module. Chi tiết xem trong từng controller.
-
-### Cấu trúc chung response
-
-```json
-{
-  "success": true,
-  "message": "Thành công",
-  "data": { ... }
+```groovy
+defaultConfig {
+    minSdkVersion 21
 }
 ```
 
-### Authentication
+**5. Thêm Google Services plugin:**
 
-Hiện tại hệ thống sử dụng xác thực cơ bản qua email/password được lưu trong Firestore (`users` collection). Mật khẩu nên được mã hóa trước khi lưu.
+`android/build.gradle` (project-level):
+
+```groovy
+plugins {
+    id 'com.android.application' version '8.1.0' apply false
+    id 'com.google.gms.google-services' version '4.4.2' apply false
+}
+```
+
+`android/app/build.gradle` (app-level):
+
+```groovy
+plugins {
+    id 'com.google.gms.google-services'
+}
+```
+
+**6. Thêm quyền Android (`android/app/src/main/AndroidManifest.xml`):**
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+```
+
+**7. Chạy ứng dụng:**
+
+```bash
+flutter run                           # Chế độ debug
+flutter build apk --debug             # Build APK debug
+flutter build apk --release           # Build APK release
+```
+
+---
+
+## Các package/dependency cần cài
+
+### Backend (`be-foodgo` / `pom.xml`)
+
+| Package | Phiên bản | Mục đích |
+|---|---|---|
+| spring-boot-starter-webmvc | (parent) | REST API |
+| spring-boot-starter-security | (parent) | Security |
+| spring-boot-starter-websocket | (parent) | WebSocket |
+| spring-boot-starter-validation | (parent) | Validation |
+| spring-boot-starter-mail | (parent) | Email |
+| firebase-admin | 9.2.0 | Firebase SDK |
+| google-cloud-storage | 2.47.0 | Cloud Storage |
+| jjwt-api / jjwt-impl / jjwt-jackson | 0.12.6 | JWT authentication |
+| springdoc-openapi-starter-webmvc-ui | 2.8.4 | Swagger UI |
+| cloudinary-http5 | 2.3.2 | Cloudinary image hosting |
+| commons-csv | 1.10.0 | CSV export |
+| lombok | (parent) | Boilerplate reduction |
+
+### Frontend (Customer / Admin / Portal)
+
+| Package | Phiên bản | Mục đích |
+|---|---|---|
+| flutter_bloc | ^8.1.6 | State management |
+| firebase_core | ^4.9.0 | Firebase core |
+| firebase_auth | ^6.5.1 | Xác thực |
+| dio | ^5.9.2 | HTTP client |
+| fl_chart | ^0.66.0 | Biểu đồ thống kê |
+| shared_preferences | ^2.5.5 | Lưu trữ cục bộ |
+| image_picker | ^1.1.2 | Chọn hình |
+| flutter_map | ^8.3.0 | Bản đồ |
+| geolocator | ^14.0.2 | Lấy vị trí |
+| intl | ^0.20.2 | Định dạng ngày tháng |
+
+### Frontend (Driver)
+
+| Package | Phiên bản | Mục đích |
+|---|---|---|
+| flutter_bloc | ^8.1.6 | State management |
+| firebase_core | ^3.12.1 | Firebase core |
+| firebase_auth | ^5.5.3 | Xác thực |
+| cloud_firestore | ^5.6.6 | Cloud Firestore |
+| firebase_database | ^11.3.5 | Realtime Database |
+| firebase_messaging | ^15.2.4 | Push notification |
+| stomp_dart_client | ^3.0.1 | WebSocket STOMP |
+| geolocator | ^13.0.2 | Lấy vị trí |
+| permission_handler | ^11.3.1 | Xử lý quyền |
+| flutter_map | ^7.0.2 | Bản đồ |
+| get_it | ^8.0.3 | Dependency injection |
+
+---
+
+## Tài khoản test
+
+Khi chạy backend, `FirebaseDataSeeder` tự động tạo các tài khoản test trong Firestore:
+
+| User ID | Email | Mật khẩu | Vai trò |
+|---|---|---|---|
+| `user_001` | `khachhang@gmail.com` | `Khoi123@` | Khách hàng, Tài xế, Người bán |
+| `user_002` | `admin@foodgo.com` | `Admin123@` | Quản trị viên |
+| `user_003` | `taixe@gmail.com` | `Taixe123@` | Tài xế |
+| `user_004` | `luudinhnghia30012005@gmail.com` | `Nghia123@` | Người bán |
+| `user_005` | `taixe3@gmail.com` | `Taixe123@` | Tài xế |
+| `user_006` | `taixe2@gmail.com` | `Taixe123@` | Tài xế |
+
+> **Lưu ý:** Mật khẩu được lưu dưới dạng BCrypt hash. Nếu cần xác thực Firebase Authentication, cần tạo tay các tài khoản này trong Firebase Console.
+
+---
+
+## Các lưu ý cần thiết
+
+### Chung (Backend + Flutter)
+
+1. **Firebase Configuration bắt buộc:** File `google-services.json` (Android) và `GoogleService-Info.plist` (iOS) phải có, nếu không ứng dụng sẽ lỗi khi khởi động.
+2. **Dịch vụ Firebase cần bật:** Authentication (Email/Password), Firestore Database, Realtime Database, Storage, Cloud Messaging.
+3. **Kết nối Internet:** Tất cả các app cần internet để hoạt động.
+4. **CORS:** Backend đã cấu hình cho phép cross-origin từ Flutter.
+
+### Backend
+
+1. **Port mặc định:** `8086`. Đổi port bằng cách sửa `server.port` trong `application.properties`.
+2. **JWT Secret:** Chuỗi hiện tại là test. Trong production, cần đổi thành chuỗi ngẫu nhiên 256-bit.
+3. **Firebase Service Account:** Không commit `firebase-service-account.json` lên Git. Nếu mất, vào Firebase Console → Project Settings → Service accounts → Generate new private key.
+4. **Email:** Nếu `app.email.enabled=false`, email chỉ hiển thị trên console. Cần tạo App Password từ Google để gửi email thực.
+5. **Cloudinary:** Nếu mất API secret, tạo tài khoản Cloudinary mới và cập nhật trong `application.properties`.
+
+### Frontend
+
+1. **Quyền Vị trí:** Tất cả app đều cần quyền vị trí (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION). Không cấp quyền sẽ ảnh hưởng đến một số chức năng.
+2. **Android minSdkVersion:** Phải >= 21. Kiểm tra trong `android/app/build.gradle`.
+3. **API URL:** Backend mặc định là `http://10.0.2.2:8086` (Android Emulator) hoặc `http://localhost:8086` (iOS Simulator). Cấu hình trong `lib/core/api/api_constants.dart` của từng app.
+4. **WebSocket/STOMP:** App driver kết nối backend qua WebSocket (STOMP) để nhận đơn giao hàng real-time.
+5. **Foreground Service (Driver):** Sử dụng Foreground Service để cập nhật vị trí khi ở nền.
+6. **Push Notification:** Cần cấu hình FCM server key phía backend để gửi notification.
+
+### Các lỗi thường gặp
+
+| Lỗi | Giải pháp |
+|---|---|
+| `Unable to find git` | Cài đặt git và thêm vào PATH |
+| `google-services.json` không hợp lệ | Tải lại từ Firebase Console, kiểm tra tên package |
+| `minSdkVersion too low` | Tăng `minSdkVersion` trong `build.gradle` lên 21+ |
+| `pod install` thất bại (iOS) | Chạy `cd ios && pod install --repo-update` |
+| Không gửi được email | Tạo App Password từ Google, kiểm tra `app.email.enabled=true` |
+| WebSocket không kết nối | Kiểm tra backend đã chạy, kiểm tra URL API trong Flutter |
+| Firestore permission denied | Kiểm tra rules Firestore trong Firebase Console |
+
+---
+
+## Cấu trúc dự án
+
+```
+be-foodgo/                          # Backend Spring Boot
+fe_foodgo_customer/                 # Ứng dụng Khách hàng (Flutter)
+fe_food_go_driver/                  # Ứng dụng Tài xế (Flutter)
+fe_food_go_portal/                  # Ứng dụng Người bán (Flutter)
+fe_foodgo_admin/                    # Ứng dụng Quản trị viên (Flutter)
+```
+
+### Vai trò người dùng
+
+| Vai trò | Mã | Mô tả |
+|---|---|---|
+| Khách hàng | 1 | Tìm kiếm quán, đặt hàng, theo dõi đơn |
+| Tài xế | 2 | Nhận đơn, giao hàng, GPS tracking |
+| Người bán | 3 | Quản lý cửa hàng, thực đơn, xử lý đơn |
+| Quản trị viên | 4 | Cấu hình hệ thống, đối soát tài chính |
+
+### Trạng thái đơn hàng
+
+| Giá trị | Trạng thái |
+|---|---|
+| 0 | Chờ xác nhận |
+| 1 | Đang chuẩn bị |
+| 2 | Đang giao |
+| 3 | Hoàn thành |
+| 4 | Đã hủy |
 
 ### Phương thức thanh toán
 
-| Giá trị    | Mô tả             |
-| ---------- | ----------------- |
-| `cash`     | Tiền mặt (COD)    |
-| `momo`     | Ví MoMo           |
-| `zalo`     | ZaloPay           |
-| `vnpay`    | VNPay             |
-| `card`     | Thẻ ngân hàng     |
-
----
-
-## 11. Quy tắc phát triển
-
-### Quy tắc đặt tên
-
-| Loại            | Quy tắc            | Ví dụ                   |
-| --------------- | ------------------ | ----------------------- |
-| Class Java      | PascalCase         | `UserController.java`   |
-| Method          | camelCase          | `getUserById()`         |
-| Variable        | camelCase          | `userId`, `isActive`    |
-| Package         | lowercase          | `controller`, `dto`     |
-| Enum            | PascalCase         | `OrderStatus.java`      |
-| Enum constant   | SCREAMING_SNAKE_CASE | `PENDING`, `COMPLETED` |
-| Firestore field | camelCase          | `createdAt`, `userId`   |
-
-### Quy tắc commit Git
-
-| Prefix     | Môi trường sử dụng                           |
-| ---------- | --------------------------------------------- |
-| `feat`     | Thêm chức năng mới                            |
-| `fix`      | Sửa lỗi                                       |
-| `docs`     | Cập nhật tài liệu                             |
-| `refactor` | Tái cấu trúc code, không thay đổi chức năng  |
-| `chore`    | Cập nhật phụ thuộc, build script              |
-
-### Data Seeding
-
-`FirebaseDataSeeder` tự động chạy khi ứng dụng khởi động. Nó sẽ seed dữ liệu mẫu nếu collection chưa có dữ liệu. Để xóa toàn bộ dữ liệu seed và seed lại, gọi `DataSeeder.clearAllSeededData()` rồi khởi động lại ứng dụng.
-
----
-
-## 12. Tài liệu tham khảo
-
-| Tài liệu                    | Mô tả                                     |
-| -------------------------- | ----------------------------------------- |
-| `docs/project_structure.md` | Cấu trúc dự án chi tiết                  |
-| `docs/firebase_collections.md` | Cấu trúc Firestore đầy đủ              |
-| `docs/core_features.md`    | Mô tả chức năng cốt lõi theo từng vai trò |
-| [Firebase Admin Java SDK](https://firebase.google.com/docs/admin/java) | Tài liệu chính thức Firebase |
-| [Spring Boot Documentation](https://spring.io/projects/spring-boot) | Tài liệu Spring Boot |
+| Giá trị | Mô tả |
+|---|---|
+| `cash` | Tiền mặt (COD) |
+| `momo` | Ví MoMo |
+| `zalo` | ZaloPay |
+| `vnpay` | VNPay |
+| `card` | Thẻ ngân hàng |
 
 ---
 

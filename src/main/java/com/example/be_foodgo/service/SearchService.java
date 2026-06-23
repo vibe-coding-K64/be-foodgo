@@ -1,6 +1,8 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.SearchResultResponse;
+import com.example.be_foodgo.dto.SearchResultResponse.OptionDTO;
+import com.example.be_foodgo.dto.SearchResultResponse.OptionGroupDTO;
 import com.example.be_foodgo.model.Product;
 import com.example.be_foodgo.model.Store;
 import com.example.be_foodgo.repository.ProductRepository;
@@ -113,6 +115,25 @@ public class SearchService {
                     Integer reviewCount = storeGoc != null ? storeGoc.getReviewCount() : 0;
                     Double distance = khoangCachTheoStore.getOrDefault(storeId, null);
 
+                    List<OptionGroupDTO> optionGroupDTOs = null;
+                    if (p.getOptionGroups() != null) {
+                        optionGroupDTOs = p.getOptionGroups().stream()
+                                .map(og -> OptionGroupDTO.builder()
+                                        .name(og.getName())
+                                        .isSingleSelect(og.getIsSingleSelect())
+                                        .isSingleSelect(og.getIsSingleSelect())
+                                        .options(og.getOptions() != null
+                                                ? og.getOptions().stream()
+                                                        .map(o -> OptionDTO.builder()
+                                                                .name(o.getName())
+                                                                .price(o.getPrice())
+                                                                .build())
+                                                        .collect(Collectors.toList())
+                                                : null)
+                                        .build())
+                                .collect(Collectors.toList());
+                    }
+
                     return SearchResultResponse.builder()
                             .productId(p.getId())
                             .productName(p.getName())
@@ -123,6 +144,7 @@ public class SearchService {
                             .reviewCount(reviewCount)
                             .distance(distance)
                             .imageUrl(p.getImageUrl())
+                            .optionGroups(optionGroupDTOs)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -139,17 +161,37 @@ public class SearchService {
 
     private void luuLichSuTimKiem(String userId, String query) {
         try {
-            DocumentReference docRef = firestore
-                    .collection("users")
-                    .document(userId)
-                    .collection("search_history")
-                    .document();
-            Map<String, Object> data = new HashMap<>();
-            data.put("keyword", query);
-            data.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
-            docRef.set(data);
-            log.info("Da luu lich su tim kiem - userId: {}, query: '{}', historyId: {}",
-                    userId, query, docRef.getId());
+            String queryNormalized = xuLyChuoiTimKiem(query);
+            log.info("[DEBUG] bat dau kiem tra trung - userId: '{}', query: '{}', queryNormalized: '{}'",
+                    userId, query, queryNormalized);
+
+            firestore.runTransaction(transaction -> {
+                com.google.cloud.firestore.CollectionReference historyRef = firestore
+                        .collection("users")
+                        .document(userId)
+                        .collection("search_history");
+
+                com.google.cloud.firestore.QuerySnapshot snapshot = transaction
+                        .get(historyRef.whereEqualTo("keywordNormalized", queryNormalized).limit(1))
+                        .get();
+
+                if (!snapshot.getDocuments().isEmpty()) {
+                    log.info("[DEBUG] tim thay doc trung trong transaction - id: {}, skip saving",
+                            snapshot.getDocuments().get(0).getId());
+                    return null;
+                }
+
+                DocumentReference docRef = historyRef.document();
+                Map<String, Object> data = new HashMap<>();
+                data.put("keyword", query);
+                data.put("keywordNormalized", queryNormalized);
+                data.put("createdAt", com.google.cloud.firestore.FieldValue.serverTimestamp());
+                transaction.set(docRef, data);
+                log.info("[DEBUG] da luu trong transaction - userId: {}, query: '{}', historyId: {}",
+                        userId, query, docRef.getId());
+                return null;
+            });
+            log.info("Da luu lich su tim kiem - userId: {}, query: '{}'", userId, query);
         } catch (Exception e) {
             log.warn("Khong the luu lich su tim kiem - userId: {}, query: '{}', loi: {}",
                     userId, query, e.getMessage());

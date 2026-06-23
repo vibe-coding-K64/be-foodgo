@@ -4026,3 +4026,361 @@ http://localhost:8080/v3/api-docs
 ```
 VD: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
 ```
+
+---
+
+## 20. API Phuong thuc Thanh toan (Payment)
+
+### 20.1. Thong tin chung
+
+|| Thuoc tinh | Gia tri |
+|| --- | --- |
+|| **Endpoint** | `/api/payments` |
+|| **Phan he** | Khach hang |
+|| **Muc do truy cap** | Xac thuc (can Bearer Token JWT) |
+
+### 20.2. Chi tiet API
+
+#### 20.2.1. GET /api/payments - Lay danh sach phuong thuc thanh toan
+
+**Mo ta**: Tra ve danh sach tat ca phuong thuc thanh toan da dang ky cua nguoi dung hien tai.
+
+**Request Headers**:
+
+|| Header | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `Authorization` | String | Co | `Bearer <token>` - Token JWT |
+|| `Content-Type` | String | Co | `application/json` |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Lay danh sach phuong thuc thanh toan thanh cong.",
+  "data": [
+    {
+      "id": "pm_001",
+      "name": "Vi MoMo cua toi",
+      "type": "momo",
+      "details": "",
+      "isDefault": true,
+      "cardBrand": null,
+      "last4Digits": null,
+      "walletBrand": "momo",
+      "isLinked": true,
+      "createdAt": "2026-05-26T00:00:00Z",
+      "updatedAt": "2026-05-26T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Response loi** (HTTP 401):
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "message": "Chua xac thuc. Vui long dang nhap de tiep tuc.",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+#### 20.2.2. GET /api/payments/{id} - Lay mot phuong thuc thanh toan
+
+**Mo ta**: Tra ve thong tin chi tiet cua mot phuong thuc thanh toan theo ID.
+
+**Request Headers**:
+
+|| Header | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `Authorization` | String | Co | `Bearer <token>` - Token JWT |
+
+**Path Parameters**:
+
+|| Tham so | Kieu | Mo ta |
+|| --- | --- | --- |
+|| `id` | String | ID phuong thuc thanh toan |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Lay phuong thuc thanh toan thanh cong.",
+  "data": {
+    "id": "pm_001",
+    "name": "Vi MoMo cua toi",
+    "type": "momo",
+    "details": "",
+    "isDefault": true,
+    "cardBrand": null,
+    "last4Digits": null,
+    "walletBrand": "momo",
+    "isLinked": true,
+    "createdAt": "2026-05-26T00:00:00Z",
+    "updatedAt": "2026-05-26T00:00:00Z"
+  },
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Response loi** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay phuong thuc thanh toan voi ID [pm_xyz].",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+#### 20.2.3. POST /api/payments - Them phuong thuc thanh toan moi
+
+**Mo ta**: Them mot phuong thuc thanh toan moi cho nguoi dung. Neu `isDefault=true`, cac phuong thuc mac dinh cu se bi bo danh dau bang WriteBatch (atomic).
+
+**Request Headers**:
+
+|| Header | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `Authorization` | String | Co | `Bearer <token>` - Token JWT |
+|| `Content-Type` | String | Co | `application/json` |
+
+**Request Body** (JSON):
+
+```json
+{
+  "type": "momo",
+  "name": "Vi MoMo cua toi",
+  "details": "0123456789",
+  "isDefault": true
+}
+```
+
+**Cac truong bat buoc**: `type`, `name`
+**Cac truong tuy chon**: `details`, `isDefault` (mac dinh: `false`)
+
+**Gia tri `type`**:
+
+|| Gia tri | Mo ta |
+|| --- | --- |
+|| `momo` | Vi MoMo |
+|| `zalo` | Vi ZaloPay |
+|| `card` | The ngan hang |
+|| `cash` | Tien mat |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Them phuong thuc thanh toan thanh cong.",
+  "data": {
+    "id": "pm_new_auto_id",
+    "name": "Vi MoMo cua toi",
+    "type": "momo",
+    "details": "0123456789",
+    "isDefault": true,
+    "cardBrand": null,
+    "last4Digits": null,
+    "walletBrand": "momo",
+    "isLinked": true,
+    "createdAt": "2026-05-26T00:00:00Z",
+    "updatedAt": "2026-05-26T00:00:00Z"
+  },
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Response loi** (HTTP 400 - Loai khong hop le):
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Loai phuong thuc thanh toan khong hop le: abc. Chi chap nhan: momo, zalo, card, cash.",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Quy tac nghiep vu**:
+- Khi `isDefault=true`, he thong su dung `Firestore WriteBatch` de dong thoi:
+  1. Bo danh dau `isDefault=false` tat ca phuong thuc mac dinh cu
+  2. Tao phuong thuc moi voi `isDefault=true`
+- Tat ca thao tac duoc thuc hien atomic trong mot transaction
+
+#### 20.2.4. PUT /api/payments/{id}/default - Dat phuong thuc mac dinh
+
+**Mo ta**: Dat mot phuong thuc thanh toan lam phuong thuc mac dinh. Su dung `WriteBatch` (atomic) de dong thoi bo danh dau cu va dat danh dau moi.
+
+**Request Headers**:
+
+|| Header | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `Authorization` | String | Co | `Bearer <token>` - Token JWT |
+
+**Path Parameters**:
+
+|| Tham so | Kieu | Mo ta |
+|| --- | --- | --- |
+|| `id` | String | ID phuong thuc thanh toan |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Dat phuong thuc thanh toan mac dinh thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Response loi** (HTTP 404):
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Khong tim thay phuong thuc thanh toan voi ID [pm_xyz].",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+**Quy tac nghiep vu**:
+- Su dung `Firestore WriteBatch` de dam bao tinh atomic
+- Tim phuong thuc hien tai co `isDefault=true`, dat thanh `false`
+- Dat phuong thuc target thanh `isDefault=true`
+- Neu phuong thuc target da la mac dinh, khong lam gi
+
+#### 20.2.5. DELETE /api/payments/{id} - Xoa phuong thuc thanh toan
+
+**Mo ta**: Xoa mot phuong thuc thanh toan. Tra ve 200 OK ngay ca khi phuong thuc khong ton tai (idempotent).
+
+**Request Headers**:
+
+|| Header | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `Authorization` | String | Co | `Bearer <token>` - Token JWT |
+
+**Path Parameters**:
+
+|| Tham so | Kieu | Mo ta |
+|| --- | --- | --- |
+|| `id` | String | ID phuong thuc thanh toan |
+
+**Response thanh cong** (HTTP 200):
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Xoa phuong thuc thanh toan thanh cong.",
+  "data": null,
+  "timestamp": "2026-05-26T00:00:00Z"
+}
+```
+
+### 20.3. Cau truc du lieu
+
+#### 20.3.1. PaymentRequest
+
+|| Thuoc tinh | Kieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- |
+|| `type` | String | Co | Loai: momo, zalo, card, cash |
+|| `name` | String | Co | Ten hien thi |
+|| `details` | String | Khong | Chi tiet bo sung |
+|| `isDefault` | Boolean | Khong | Dat lam mac dinh (mac dinh: false) |
+
+#### 20.3.2. PaymentResponse
+
+|| Thuoc tinh | Kieu | Mo ta |
+|| --- | --- | --- |
+|| `id` | String | ID phuong thuc thanh toan |
+|| `name` | String | Ten hien thi |
+|| `type` | String | Loai: momo, zalo, card, cash |
+|| `details` | String | Chi tiet bo sung |
+|| `isDefault` | Boolean | La phuong thuc mac dinh |
+|| `cardBrand` | String | Thuong hieu the (neu co) |
+|| `last4Digits` | String | 4 chu so cuoi (neu co) |
+|| `walletBrand` | String | Thuong hieu vi dien tu (neu co) |
+|| `isLinked` | Boolean | Da lien ket chua |
+|| `createdAt` | Instant | Thoi diem tao |
+|| `updatedAt` | Instant | Thoi diem cap nhat gan nhat |
+
+### 20.4. Firestore Collection
+
+**Duong dan**: `customer_profiles/{userId}/payment_methods/{paymentMethodId}`
+
+**Cac truong**:
+
+|| STT | Ten truong | Kieu du lieu | Bat buoc | Mo ta |
+|| --- | --- | --- | --- | --- |
+|| 1 | `id` | String | Co | ID document tu Firestore |
+|| 2 | `name` | String | Co | Ten hien thi |
+|| 3 | `type` | String | Co | Loai: momo, zalo, card, cash |
+|| 4 | `details` | String | Co | Chi tiet bo sung |
+|| 5 | `isDefault` | Boolean | Co | La phuong thuc mac dinh |
+|| 6 | `cardBrand` | String | Khong | Thuong hieu the |
+|| 7 | `last4Digits` | String | Khong | 4 chu so cuoi the |
+|| 8 | `walletBrand` | String | Khong | Thuong hieu vi |
+|| 9 | `isLinked` | Boolean | Co | Da lien ket chua |
+|| 10 | `createdAt` | Timestamp | Co | Thoi diem tao |
+|| 11 | `updatedAt` | Timestamp | Co | Thoi diem cap nhat gan nhat |
+
+### 20.5. Luong xu ly (Flow)
+
+```
+1. Client gui request (POST/PUT/DELETE) kem Bearer Token
+   |
+2. JwtAuthenticationFilter trich xuat va xac thuc token
+   |
+3. Controller trich xuat userId tu token (khong nhan tu client)
+   |
+4. Service goi Repository de xu ly nghiem vu:
+   |
+   a) POST /api/payments (isDefault=true):
+      - Tao WriteBatch
+      - Tim va bo mac dinh tat ca phuong thuc cu (batch.update)
+      - Tao phuong thuc moi voi isDefault=true (batch.set)
+      - Commit batch (atomic)
+   |
+   b) PUT /api/payments/{id}/default:
+      - Tim phuong thuc cu hien tai co isDefault=true
+      - Tao WriteBatch
+      - Bo mac dinh phuong thuc cu (batch.update)
+      - Dat mac dinh phuong thuc moi (batch.update)
+      - Commit batch (atomic)
+   |
+   c) DELETE /api/payments/{id}:
+      - Kiem tra ton tai (idempotent - tra ve 200 ngay ca khi khong ton tai)
+      - Xoa document khoi Firestore
+   |
+5. Tra ve response cho client
+```
+
+### 20.6. Huong dan su dung Bearer Token tren Swagger UI cho API Thanh toan
+
+1. Mo Swagger UI
+2. Chon endpoint muon test (VD: GET /api/payments)
+3. Nhap du lieu request
+4. Click nut "Authorize" (o goc phai man hinh)
+5. Nhap "Bearer <token>" vao o BearerAuth
+6. Click "Authorize" de xac nhan
+7. Cac API Thanh toan bay gio se su dung token nay
+8. Click "Execute" de test endpoint
+
+```
+VD: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzAwMSJ9...
+```

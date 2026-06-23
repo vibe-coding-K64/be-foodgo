@@ -30,4 +30,17 @@ public class FirebaseResetController {
         }
         return ResponseEntity.internalServerError().body(result);
     }
+
+    @DeleteMapping("/data")
+    @Operation(
+            summary = "Delete all Firebase data",
+            description = "Xoa tat ca du lieu hien tai tren Firebase (khong reseed). Chi nen su dung trong moi truong dev."
+    )
+    public ResponseEntity<Map<String, Object>> deleteAllData() {
+        Map<String, Object> result = firebaseResetService.clearAllCollectionsOnly();
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.internalServerError().body(result);
+    }
 }

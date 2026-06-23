@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -25,6 +26,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
+    @ExceptionHandler(TokenInvalidException.class)
+    public ResponseEntity<ApiResponse<Void>> xuLyTokenInvalidException(TokenInvalidException ex) {
+        log.warn("Token invalid: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.thatError(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> xuLyIllegalArgumentException(IllegalArgumentException ex) {
         log.warn("Illegal argument exception - Thông báo: {}", ex.getMessage());
@@ -37,13 +48,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> xuLyValidationException(MethodArgumentNotValidException ex) {
-        String thongBao = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
-        log.warn("Validation error: {}", thongBao);
+        List<FieldError> errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> FieldError.builder()
+                        .field(error.getField())
+                        .message(error.getDefaultMessage())
+                        .build())
+                .collect(Collectors.toList());
+        log.warn("Validation error: {}", errors);
         ApiResponse<Void> response = ApiResponse.thatError(
                 HttpStatus.BAD_REQUEST.value(),
-                "Dữ liệu không hợp lệ: " + thongBao
+                "Dữ liệu không hợp lệ",
+                errors
         );
         return ResponseEntity.badRequest().body(response);
     }

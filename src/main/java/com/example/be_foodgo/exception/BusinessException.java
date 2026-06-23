@@ -1,5 +1,6 @@
 package com.example.be_foodgo.exception;
 
+import com.example.be_foodgo.constant.DeliveryOrderStatus;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
@@ -144,46 +145,22 @@ public class BusinessException extends RuntimeException {
     }
 
     public static BusinessException trangThaiKhongTheHuy(String orderId, int status) {
-        String tenTrangThai;
-        if (status == 0) {
-            tenTrangThai = "Chờ xác nhận";
-        } else if (status == 1) {
-            tenTrangThai = "Đang chuẩn bị";
-        } else if (status == 2) {
-            tenTrangThai = "Đang giao";
-        } else if (status == 3) {
-            tenTrangThai = "Hoàn thành";
-        } else if (status == 4) {
-            tenTrangThai = "Đã hủy";
-        } else {
-            tenTrangThai = "Không xác định";
-        }
+        String tenTrangThai = DeliveryOrderStatus.getDisplayName(status);
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,
                 "ORDER_STATUS_CANNOT_CANCEL",
-                "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái [Chờ xác nhận]."
+                "Không thể hủy đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể hủy đơn hàng đang ở trạng thái ["
+                        + DeliveryOrderStatus.getDisplayName(DeliveryOrderStatus.PENDING_STORE_CONFIRMATION) + "]."
         );
     }
 
     public static BusinessException trangThaiDonHangKhongChoPhepDanhGia(String orderId, int status) {
-        String tenTrangThai;
-        if (status == 0) {
-            tenTrangThai = "Chờ xác nhận";
-        } else if (status == 1) {
-            tenTrangThai = "Đang chuẩn bị";
-        } else if (status == 2) {
-            tenTrangThai = "Đang giao";
-        } else if (status == 3) {
-            tenTrangThai = "Hoàn thành";
-        } else if (status == 4) {
-            tenTrangThai = "Đã hủy";
-        } else {
-            tenTrangThai = "Không xác định";
-        }
+        String tenTrangThai = DeliveryOrderStatus.getDisplayName(status);
         return new BusinessException(
                 HttpStatus.BAD_REQUEST,
                 "ORDER_STATUS_CANNOT_REVIEW",
-                "Không thể đánh giá đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể đánh giá đơn hàng đang ở trạng thái [Hoàn thành] (status = 3)."
+                "Không thể đánh giá đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]. Chỉ có thể đánh giá đơn hàng đang ở trạng thái ["
+                        + DeliveryOrderStatus.getDisplayName(DeliveryOrderStatus.COMPLETED) + "] (status = " + DeliveryOrderStatus.COMPLETED + ")."
         );
     }
 
@@ -192,6 +169,177 @@ public class BusinessException extends RuntimeException {
                 HttpStatus.BAD_REQUEST,
                 "ORDER_ALREADY_REVIEWED",
                 "Đơn hàng [" + orderId + "] đã được đánh giá trước đó. Mỗi đơn hàng chỉ được phép đánh giá một lần."
+        );
+    }
+
+    public static BusinessException phuongThucThanhToanKhongTimThay(String paymentMethodId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "PAYMENT_METHOD_NOT_FOUND",
+                "Không tìm thấy phương thức thanh toán với ID [" + paymentMethodId + "]."
+        );
+    }
+
+    public static BusinessException diemKhongDu(int diemHienTai, int diemCan) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "NOT_ENOUGH_POINTS",
+                String.format("Diem hien tai cua ban la %d, can it nhat %d diem de doi voucher nay.", diemHienTai, diemCan)
+        );
+    }
+
+    public static BusinessException voucherDaDuocDoi(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_ALREADY_EXCHANGED",
+                "Ban da doi voucher [" + voucherId + "] roi."
+        );
+    }
+
+    public static BusinessException voucherInactive(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_INACTIVE",
+                "Voucher [" + voucherId + "] khong con kich hoat."
+        );
+    }
+
+    public static BusinessException userIdKhongKhop(String requestUserId) {
+        return new BusinessException(
+                HttpStatus.FORBIDDEN,
+                "USER_ID_MISMATCH",
+                "UserId trong request [" + requestUserId + "] khong khop voi nguoi dung dang nhap. Ban khong co quyen thuc hien hanh dong nay."
+        );
+    }
+
+    public static BusinessException donHangDaTonTai(String orderId) {
+        return new BusinessException(
+                HttpStatus.CONFLICT,
+                "DUPLICATE_ORDER",
+                "Don hang voi idempotency key nay da ton tai voi ID [" + orderId + "]. Vui long khong dat hang truoc khi don truoc duoc xu ly."
+        );
+    }
+
+    public static BusinessException diemKhongTimThay() {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "POINTS_NOT_FOUND",
+                "Khong tim thay diem cua tai khoan nay."
+        );
+    }
+
+    public static BusinessException thongBaoKhongTimThay(String notifId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "NOTIFICATION_NOT_FOUND",
+                "Không tìm thấy thông báo với ID [" + notifId + "]."
+        );
+    }
+
+    public static BusinessException soDuKhongDu(double soDu, double soTienRut) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "INSUFFICIENT_BALANCE",
+                String.format("Số dư hiện tại %.0f VND không đủ để rút %.0f VND.", soDu, soTienRut)
+        );
+    }
+
+    public static BusinessException hoSoTaiXeChuaTonTai(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "DRIVER_PROFILE_NOT_FOUND",
+                "Không tìm thấy hồ sơ tài xế với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, Integer status, String hanhDong) {
+        int resolvedStatus = status != null ? status : -1;
+        String tenTrangThai;
+        if (resolvedStatus == 0) {
+            tenTrangThai = "Chờ xác nhận";
+        } else if (resolvedStatus == 1) {
+            tenTrangThai = "Đang chuẩn bị";
+        } else if (resolvedStatus == 2) {
+            tenTrangThai = "Đang giao";
+        } else if (resolvedStatus == 3) {
+            tenTrangThai = "Hoàn thành";
+        } else if (resolvedStatus == 4) {
+            tenTrangThai = "Đã hủy";
+        } else {
+            tenTrangThai = "Không xác định";
+        }
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_STATUS_INVALID",
+                "Không thể " + hanhDong + " đơn hàng [" + orderId + "] vì đơn đang ở trạng thái [" + tenTrangThai + "]."
+        );
+    }
+
+    public static BusinessException trangThaiDonHangKhongHopLe(String orderId, int status, String hanhDong) {
+        return trangThaiDonHangKhongHopLe(orderId, Integer.valueOf(status), hanhDong);
+    }
+
+    public static BusinessException donHangDaCoTaiXe(String orderId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "ORDER_ALREADY_ASSIGNED",
+                "Đơn hàng [" + orderId + "] đã được assign cho tài xế khác."
+        );
+    }
+
+    public static BusinessException taiXeKhongTimThay(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "DRIVER_NOT_FOUND",
+                "Không tìm thấy tài xế với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException viKhongTonTai(String userId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "WALLET_NOT_FOUND",
+                "Không tìm thấy ví với user ID [" + userId + "]."
+        );
+    }
+
+    public static BusinessException voucherKhongTheDoiDiem(String voucherId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VOUCHER_CANNOT_EXCHANGE",
+                "Voucher [" + voucherId + "] không hỗ trợ đổi điểm. Voucher này chỉ sử dụng trực tiếp khi đặt hàng."
+        );
+    }
+
+    public static BusinessException vuotGioiHanRutTien(String message) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "WITHDRAWAL_LIMIT_EXCEEDED",
+                message
+        );
+    }
+
+    public static BusinessException loiDinhVi(String message) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "LOCATION_ERROR",
+                message
+        );
+    }
+
+    public static BusinessException taiXeKhongOnline(String userId) {
+        return new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "DRIVER_NOT_ONLINE",
+                "Tài xế [" + userId + "] hiện không online. Vui lòng bật trạng thái hoạt động trước khi cập nhật vị trí."
+        );
+    }
+
+    public static BusinessException cuaHangKhongTonTai(String storeId) {
+        return new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "STORE_NOT_FOUND",
+                "Cua hang khong ton tai."
         );
     }
 }

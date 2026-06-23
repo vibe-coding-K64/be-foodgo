@@ -22,10 +22,10 @@ Phân hệ có nhiều tương tác nhất, tập trung vào việc tìm kiếm,
 | Chức năng | Firestore Collections/Fields | Mô tả |
 |---|---|---|
 | Xem danh sách quán | `stores` | Lấy toàn bộ quán, hỗ trợ filter theo `categoryIds` |
-| Xem quán theo danh mục | `stores` + `system_categories` | Filter quán theo danh mục (Cơm, Phở/Bún, Trà sữa...) |
+| Xem quán theo danh mục | `stores` + `categories` | Filter quán theo danh mục (Cơm, Phở/Bún, Trà sữa...) |
 | Xem chi tiết quán | `stores` + `products` + `reviews` | Thông tin quán, thực đơn, và đánh giá |
 | Xem banner quảng cáo | `banners` | Carousel banner trên trang chủ (filter `isActive == true`, sort theo `order`) |
-| Xem danh mục trang chủ | `system_categories` | Grid danh mục món ăn/loại quán (sort theo `order`) |
+| Xem danh mục trang chủ | `categories` | Grid danh mục món ăn/loại quán (sort theo `order`) |
 | Lưu lịch sử tìm kiếm | `users/{userId}/search_history` | Ghi lại từ khóa tìm kiếm của khách |
 
 **Realtime Database (bổ sung):**
@@ -193,12 +193,10 @@ Phân hệ nắm quyền kiểm soát toàn cục, cấu hình hệ thống và 
 
 | Chức năng | Firestore Collections/Fields | Mô tả |
 |---|---|---|
-| Quản lý danh mục trang chủ | `system_categories` | CRUD danh mục hiển thị trên app (Cơm, Phở/Bún, Trà sữa...), sắp xếp theo `order` |
+| Quản lý danh mục trang chủ | `categories` | CRUD danh mục hiển thị trên app (Cơm, Phở/Bún, Trà sữa...), sắp xếp theo `order` |
 | Quản lý banner quảng cáo | `banners` | Tạo, sửa, xóa banner, gán cho quán cụ thể (`storeId`) hoặc banner chung |
-| Phát hành voucher hệ thống | `system_vouchers` | Tạo voucher cho toàn hệ thống (`title`, `pointsRequired`, `remaining`, `minOrderValue`) |
+| Phát hành voucher hệ thống | `vouchers` | Tạo voucher cho toàn hệ thống (`storeId=null`, `pointsRequired>0`) |
 | Quản lý voucher công khai | `vouchers` | CRUD voucher hiển thị tại trang Ưu đãi |
-
-**Lưu ý:** Hiện tại `system_vouchers` chưa có dữ liệu seed. Cần bổ sung seeder cho collection này khi phát triển chức năng Admin quản lý voucher.
 
 ### 4.3. Quản lý kiểm duyệt
 
@@ -240,11 +238,11 @@ Phân hệ nắm quyền kiểm soát toàn cục, cấu hình hệ thống và 
 | `admin_profiles` | — | — | — | Profile, quyền hạn |
 | `stores` | Xem quán | Quản lý quán | — | Duyệt quán |
 | `products` | Xem thực đơn | Quản lý thực đơn | — | — |
-| `system_categories` | Xem danh mục | — | — | Quản lý danh mục |
+| `categories` | Xem danh mục | — | — | Quản lý danh mục |
 | `banners` | Xem banner | — | — | Quản lý banner |
 | `reviews` | Viết/đọc review | — | — | Kiểm duyệt review |
 | `orders` | Đặt hàng, theo dõi | Xử lý đơn | Nhận/giao đơn | Can thiệp đơn |
-| `vouchers` / `system_vouchers` | Xem/đổi voucher | — | — | Phát hành voucher |
+| `vouchers` | Xem/đổi voucher | — | — | Phát hành voucher |
 | `customer_profiles/{userId}/addresses` | Quản lý địa chỉ | — | — | — |
 | `customer_profiles/{userId}/payment_methods` | Quản lý thanh toán | — | — | — |
 | `customer_profiles/{userId}/cart` | Giỏ hàng | — | — | — |

@@ -1,8 +1,13 @@
 package com.example.be_foodgo.service;
 
 import com.example.be_foodgo.dto.VoucherDTO;
+import com.example.be_foodgo.dto.VoucherListResponse;
+import com.example.be_foodgo.model.MyVoucher;
 import com.example.be_foodgo.model.Voucher;
 import com.example.be_foodgo.repository.VoucherRepository;
+import com.example.be_foodgo.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,15 +18,53 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class VoucherService {
 
+    private static final Logger log = LoggerFactory.getLogger(VoucherService.class);
+
     @Autowired
     private VoucherRepository voucherRepository;
 
-    public String createVoucher(VoucherDTO voucherDTO) throws ExecutionException, InterruptedException {
+    @Autowired
+    private StoreService storeService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public String createVoucher(VoucherDTO voucherDTO, String userId) throws ExecutionException, InterruptedException {
+        String storeId = voucherDTO.getStoreId();
+
+        boolean isSystemVoucher = false;
+        if (storeId == null || storeId.trim().isEmpty() || "system".equalsIgnoreCase(storeId.trim()) || "null".equalsIgnoreCase(storeId.trim())) {
+            storeId = null;
+            isSystemVoucher = true;
+        }
+
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
+        if (isSystemVoucher) {
+            if (!isAdmin) {
+                log.warn("User [{}] khong phai Admin - khong the tao voucher he thong", userId);
+                throw new IllegalArgumentException("Khong co quyen tao voucher he thong.");
+            }
+        } else {
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(storeId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the tao voucher", userId, storeId);
+                    throw new IllegalArgumentException("Khong co quyen tao voucher cho cua hang nay.");
+                }
+            }
+        }
+
         Voucher voucher = new Voucher();
         mapDTOToEntity(voucherDTO, voucher);
+        if (voucher.getStoreId() != null && (voucher.getStoreId().trim().isEmpty() || "system".equalsIgnoreCase(voucher.getStoreId().trim()) || "null".equalsIgnoreCase(voucher.getStoreId().trim()))) {
+            voucher.setStoreId(null);
+        }
         voucher.setId(generateNextVoucherId());
         voucher.setCreatedAt(new Date());
         voucher.setUpdatedAt(new Date());
+        log.info("User [{}] tao voucher [{}] cho cua hang [{}]", userId, voucher.getId(), storeId);
         return voucherRepository.saveVoucher(voucher);
     }
 
@@ -50,29 +93,110 @@ public class VoucherService {
         return voucherRepository.getAllVouchers(storeId);
     }
 
-    public String updateVoucher(String id, VoucherDTO voucherDTO) throws ExecutionException, InterruptedException {
-        Voucher existingVoucher = voucherRepository.getVoucher(id);
-        if (existingVoucher != null) {
-            mapDTOToEntity(voucherDTO, existingVoucher);
-            existingVoucher.setUpdatedAt(new Date());
-            return voucherRepository.updateVoucher(existingVoucher);
-        }
-        return "Voucher not found";
+    public VoucherListResponse getAvailableVouchers(String userId, String storeId)
+            throws ExecutionException, InterruptedException {
+        List<MyVoucher> myVouchers = voucherRepository.getAllMyVouchers(userId);
+        List<Voucher> vouchers = voucherRepository.getVouchersByStoreId(storeId);
+        List<Voucher> freeshipVouchers = voucherRepository.getFreeshipVouchersByStoreId(storeId);
+
+        return VoucherListResponse.builder()
+                .myVouchers(myVouchers)
+                .vouchers(vouchers)
+                .freeshipVouchers(freeshipVouchers)
+                .build();
     }
 
-    public String deleteVoucher(String id) {
+    public String updateVoucher(String id, VoucherDTO voucherDTO, String userId) throws ExecutionException, InterruptedException {
+        Voucher existingVoucher = voucherRepository.getVoucher(id);
+        if (existingVoucher == null) {
+            return "Voucher not found";
+        }
+
+        String voucherStoreId = existingVoucher.getStoreId();
+        boolean isSystemVoucher = false;
+        if (voucherStoreId == null || voucherStoreId.trim().isEmpty() || "system".equalsIgnoreCase(voucherStoreId.trim()) || "null".equalsIgnoreCase(voucherStoreId.trim())) {
+            voucherStoreId = null;
+            isSystemVoucher = true;
+        }
+
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
+        if (isSystemVoucher) {
+            if (!isAdmin) {
+                log.warn("User [{}] khong phai Admin - khong the cap nhat voucher he thong [{}]", userId, id);
+                throw new IllegalArgumentException("Khong co quyen cap nhat voucher he thong nay.");
+            }
+        } else {
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(voucherStoreId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the cap nhat voucher [{}]", userId, voucherStoreId, id);
+                    throw new IllegalArgumentException("Khong co quyen cap nhat voucher nay.");
+                }
+            }
+        }
+
+        mapDTOToEntity(voucherDTO, existingVoucher);
+        if (existingVoucher.getStoreId() != null && (existingVoucher.getStoreId().trim().isEmpty() || "system".equalsIgnoreCase(existingVoucher.getStoreId().trim()) || "null".equalsIgnoreCase(existingVoucher.getStoreId().trim()))) {
+            existingVoucher.setStoreId(null);
+        }
+        existingVoucher.setUpdatedAt(new Date());
+        log.info("User [{}] cap nhat voucher [{}]", userId, id);
+        return voucherRepository.updateVoucher(existingVoucher);
+    }
+
+    public String deleteVoucher(String id, String userId) throws ExecutionException, InterruptedException {
+        Voucher existingVoucher = voucherRepository.getVoucher(id);
+        if (existingVoucher == null) {
+            return "Voucher not found";
+        }
+
+        String voucherStoreId = existingVoucher.getStoreId();
+        boolean isSystemVoucher = false;
+        if (voucherStoreId == null || voucherStoreId.trim().isEmpty() || "system".equalsIgnoreCase(voucherStoreId.trim()) || "null".equalsIgnoreCase(voucherStoreId.trim())) {
+            voucherStoreId = null;
+            isSystemVoucher = true;
+        }
+
+        com.example.be_foodgo.model.User user = userRepository.timTheoId(userId);
+        boolean isAdmin = user != null && user.getRoles() != null && user.getRoles().contains(4);
+
+        if (isSystemVoucher) {
+            if (!isAdmin) {
+                log.warn("User [{}] khong phai Admin - khong the xoa voucher he thong [{}]", userId, id);
+                throw new IllegalArgumentException("Khong co quyen xoa voucher he thong nay.");
+            }
+        } else {
+            if (!isAdmin) {
+                List<String> ownedStoreIds = storeService.getStoreIdsByMerchantId(userId);
+                if (!ownedStoreIds.contains(voucherStoreId)) {
+                    log.warn("User [{}] khong so huu cua hang [{}] - khong the xoa voucher [{}]", userId, voucherStoreId, id);
+                    throw new IllegalArgumentException("Khong co quyen xoa voucher nay.");
+                }
+            }
+        }
+
+        log.info("User [{}] xoa voucher [{}]", userId, id);
         return voucherRepository.deleteVoucher(id);
     }
 
     private void mapDTOToEntity(VoucherDTO dto, Voucher entity) {
         if (dto.getStoreId() != null) entity.setStoreId(dto.getStoreId());
+        if (dto.getTitle() != null) entity.setTitle(dto.getTitle());
+        if (dto.getSubtitle() != null) entity.setSubtitle(dto.getSubtitle());
         if (dto.getCode() != null) entity.setCode(dto.getCode());
         entity.setType(dto.getType());
         entity.setValue(dto.getValue());
+        entity.setPointsRequired(dto.getStoreId() != null && !dto.getStoreId().isEmpty() && !"system".equalsIgnoreCase(dto.getStoreId()) && !"null".equalsIgnoreCase(dto.getStoreId()) ? 0 : dto.getPointsRequired());
+        if (dto.getImageUrl() != null) entity.setImageUrl(dto.getImageUrl());
+        entity.setRemaining(dto.getRemaining());
+        if (dto.getTerms() != null) entity.setTerms(dto.getTerms());
         entity.setMinOrderValue(dto.getMinOrderValue());
         entity.setLimitCount(dto.getLimitCount());
         entity.setUsedCount(dto.getUsedCount());
         if (dto.getExpiryDate() != null) entity.setExpiryDate(dto.getExpiryDate());
         entity.setIsActive(dto.getIsActive());
+        entity.setIsFreeship(dto.getIsFreeship());
     }
 }

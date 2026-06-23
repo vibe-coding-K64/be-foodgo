@@ -10,7 +10,12 @@ public class ReviewDTO {
 
     private String id;
     private String orderId;
+    private String itemId;
+    private String foodId;
+    private String orderCode;
+    private String orderItems;
     private String storeId;
+    private String storeName;
     private String userId;
     private String userName;
     private String userAvatarUrl;
@@ -19,4 +24,6 @@ public class ReviewDTO {
     private List<String> imageUrls;
     private Date createdAt;
     private Date updatedAt;
+    private String replyComment;
+    private Date repliedAt;
 }
